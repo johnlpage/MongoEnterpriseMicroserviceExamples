@@ -1,0 +1,158 @@
+{
+    "start": {
+        "template": {
+            "_id": "$TESTID",
+            "vehicleid": "$VEHICLEID",
+            "testdate": "$TESTDATE",
+            "testclass": "$TESTCLASSID",
+            "testtype": "@testtypesection",
+            "testresult": "@testresultsection",
+            "testmileage": "$TESTMILEAGE",
+            "postcode": "$POSTCODEREGION",
+            "make": "$MAKE",
+            "model": "$MODEL",
+            "colour": "$COLOUR",
+            "fuel": "@fuelsection",
+            "capacity": "$CYLCPCTY",
+            "firstusedate": "$FIRSTUSEDATE",
+            "faileditems": [ "@itemssection" ]
+        },
+        "source": {
+            "uri": "jdbc:mysql://localhost:3306/MOT?useUnicode=true&useServerPrepStmts=true&useSSL=false&zeroDateTimeBehavior=convertToNull",
+            "user": "root",
+            "NOTE": "Your password will be different :-) ",
+            "password": "1bh7562g8ska"
+        },
+        "target": {
+            "mode": "json" ,
+            "uri":"file://mot2022.json"
+        },
+        "query": {
+            "sql": "SELECT * FROM TESTRESULT ORDER BY TESTID"
+        }
+    },
+
+    "testtypesection": {
+        "template": {
+            "_value": "$TESTTYPE"
+        },
+        "query": {
+            "sql": "SELECT * FROM TEST_TYPES where TYPECODE=?"
+        },
+        "params": ["TESTTYPE"],
+        "cached": true
+    },
+
+    "testresultsection": {
+        "template": {
+            "_value": "$RESULT"
+        },
+        "query": {
+            "sql": "SELECT * FROM TEST_OUTCOME where RESULTCODE=?"
+        },
+        "params": ["TESTRESULT"],
+        "cached": true
+    },
+
+
+    "fuelsection": {
+        "template": {
+            "_value": "$FUEL_TYPE"
+        },
+        "query": {
+            "sql": "SELECT * FROM FUEL_TYPES where TYPECODE=?"
+        },
+        "params": ["FUELTYPE"],
+        "cached": true
+    },
+
+    "itemssection": {
+        "template": {
+            "rfrtype": "$RFRTYPE",
+            "rfrid" : "$RFRID",
+            "dangerous": "$DMARK",
+            "details" : "@itemdetailsection",
+            "location": "@itemlocationsection"
+        },
+        "query": {
+            "sql" : "SELECT TESTID,RFRID,RFRTYPE,LOCATIONID,IF(DMARK='',NULL,DMARK ) AS DMARK FROM TESTITEM ORDER BY TESTID"
+        },
+        "mergeon": "TESTID"
+    },
+
+      "itemdetailsection": {
+        "template": {
+            "testclassid":"$TESTCLASSID",
+            "item":"@itemidsection",
+            "minoritem":"$MINORITEM",
+            "description" : "$RFRDESC",
+            "rfrtype": "$RFRTYPE",
+            "rfrid" : "$RFRID",
+            "text":"$TEXT"
+        },
+        "query": {
+            "!! COMMENT" : "CANNOT CURRENTLY PASS TESTCLASS DOWN FROM TOP LEVEL WHEN USING MERGEON",
+            "sql": "SELECT RFRID,TSTITMID,RFRDESC,  MINORITEM, IF( ?  = 'A',RFRADVISORYTEXT,RFRINSPMANDESC ) AS TEXT FROM TESTITEM_DETAIL where RFRID=? LIMIT 1" 
+        },
+        "params": ["RFRTYPE","RFRID"],
+        "cached" : true
+    },
+
+    "itemlocationsection": {
+        "template": {
+            "lateral":"$LATERAL",
+            "longitudinal":"$LONGITUDINAL",
+            "vertical":"$VERTICAL"
+        },
+        "query": {
+            "sql": "SELECT * FROM FAILURE_LOCATION where FAILURELOCATIONID=?"
+        },
+        "params": ["LOCATIONID"],
+        "cached": true
+    },
+    "itemidsection" : {
+        "template" : {
+        "itemname" : "$ITEMNAME",
+        "category" : "@itemidsection2"
+         },
+         "query" : {
+            "sql" : "SELECT * FROM TESTITEM_GROUP WHERE TSTITMID=? AND TSTITMID > 0"
+         },
+         "params" : ["TSTITMID"],
+         "cached":true
+    }, 
+    "itemidsection2" : {
+        "template" : { 
+        "itemname" : "$ITEMNAME",
+        "category" : "@itemidsection3"
+         },
+         "query" : {
+            "sql" : "SELECT * FROM TESTITEM_GROUP WHERE TSTITMID=? AND TSTITMID > 0"
+         },
+         "params" : ["PARENTID"],
+         "cached":true
+    },
+
+    "itemidsection3" : {
+        "template" : { 
+        "itemname" : "$ITEMNAME",
+        "category" : "@itemidsection4"
+         },
+         "query" : {
+            "sql" : "SELECT * FROM TESTITEM_GROUP WHERE TSTITMID=? AND TSTITMID > 0"
+         },
+         "params" : ["PARENTID"],
+         "cached":true
+    },
+        "itemidsection4" : {
+        "template" : { 
+        "itemname" : "$ITEMNAME"
+         },
+         "query" : {
+            "sql" : "SELECT * FROM TESTITEM_GROUP WHERE TSTITMID=? AND TSTITMID > 0"
+         },
+         "params" : ["PARENTID"],
+         "cached":true
+    }
+
+}
