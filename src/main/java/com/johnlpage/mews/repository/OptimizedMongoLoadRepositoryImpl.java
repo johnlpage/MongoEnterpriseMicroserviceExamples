@@ -34,15 +34,16 @@ public class OptimizedMongoLoadRepositoryImpl<T extends MewsModel> implements Op
     private MappingMongoConverter mappingMongoConverter;
 
     @Override
-    public BulkWriteResult writeMany(List<T> items) {
-        return writeMany(items, false);
+    public BulkWriteResult writeMany(List<T> items,  Class<T> clazz ) {
+        return writeMany(items, clazz, false);
     }
     // Let's not reply on relection more than we need to.
 
     @Override
-    public BulkWriteResult writeMany(List<T> items, boolean useUpdateNotReplace) {
-        BulkOperations ops = mongoTemplate.bulkOps(BulkOperations.BulkMode.UNORDERED, OptimizedMongoLoadRepositoryImpl.class);
-        for (MewsModel t : items) {
+    public BulkWriteResult writeMany(List<T> items, Class<T> clazz, boolean useUpdateNotReplace) {
+        BulkOperations ops = mongoTemplate.bulkOps(BulkOperations.BulkMode.UNORDERED, clazz);
+
+        for (T t : items) {
 
             Query q = new Query(where("_id").is(t.getDocumentId()));
 
@@ -92,15 +93,15 @@ public class OptimizedMongoLoadRepositoryImpl<T extends MewsModel> implements Op
     }
 
     @Async("loadExecutor")
-    public void asyncWriteMany(List<T> toSave) {
-        asyncWriteMany(toSave, false);
+    public void asyncWriteMany(List<T> toSave,  Class<T> clazz ) {
+        asyncWriteMany(toSave,clazz, false);
     }
 
     @Async("loadExecutor")
-    public void asyncWriteMany(List<T> toSave, boolean useUpdateNotReplace) {
+    public void asyncWriteMany(List<T> toSave, Class<T> clazz ,  boolean useUpdateNotReplace) {
         try {
             // Update some thread safe counts for upsertes, deletes and modifications.
-            BulkWriteResult r = writeMany(toSave, useUpdateNotReplace);
+            BulkWriteResult r = writeMany(toSave, clazz, useUpdateNotReplace);
             updates.addAndGet(r.getModifiedCount());
             deletes.addAndGet(r.getDeletedCount());
             inserts.addAndGet(r.getUpserts().size());

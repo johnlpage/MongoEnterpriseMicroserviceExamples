@@ -7,13 +7,13 @@ import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 
 public interface OptimizedMongoLoadRepository<T extends MewsModel> {
-    BulkWriteResult writeMany(List<T> items);
+    BulkWriteResult writeMany(List<T> items,  Class<T> clazz );
 
-    void asyncWriteMany(List<T> items);
+    void asyncWriteMany(List<T> items, Class<T> clazz );
 
-    BulkWriteResult writeMany(List<T> items, boolean useUpdateNotReplace);
+    BulkWriteResult writeMany(List<T> items, Class<T> clazz, boolean useUpdateNotReplace);
 
-    void asyncWriteMany(List<T> items, boolean useUpdateNotReplace);
+    void asyncWriteMany(List<T> items,  Class<T> clazz , boolean useUpdateNotReplace);
 
     void resetStats();
 

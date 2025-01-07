@@ -1,5 +1,7 @@
 package com.johnlpage.mews.models;
 
+import com.fasterxml.jackson.annotation.JsonAnyGetter;
+import com.fasterxml.jackson.annotation.JsonAnySetter;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import org.springframework.data.annotation.Id;
 import org.springframework.data.annotation.Transient;
@@ -7,11 +9,12 @@ import org.springframework.data.mongodb.core.mapping.Document;
 
 
 import java.util.Date;
+import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Random;
 
 @JsonIgnoreProperties(ignoreUnknown = true)
-@Document(collection = "mottests")
+@Document(collection = "inspections")
 public class VehicleInspection implements MewsModel {
 
 
@@ -34,7 +37,11 @@ public class VehicleInspection implements MewsModel {
     Date firstusedate;
     Boolean _deleted;
 
-    org.bson.Document payload;
+    // Use this to capture any fields not captured explicitly
+    @JsonAnyGetter
+    @JsonAnySetter
+    private Map<String, Object> payload =  new LinkedHashMap<>();
+
     @Transient
     private Random rng;
 
@@ -67,11 +74,11 @@ public class VehicleInspection implements MewsModel {
         this.testid = testid;
     }
 
-    public org.bson.Document getPayload() {
+    public Map<String, Object> getPayload() {
         return payload;
     }
 
-    public void setPayload(org.bson.Document payload) {
+    public void setPayload(Map<String, Object>  payload) {
         this.payload = payload;
     }
 

@@ -7,7 +7,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.johnlpage.mews.models.MewsModel;
 import com.johnlpage.mews.repository.OptimizedMongoLoadRepository;
-import org.bson.Document;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -19,8 +19,8 @@ import java.util.HashMap;
 import java.util.Map;
 
 @Service
-public class MongoDBJSONLoaderService<R extends OptimizedMongoLoadRepository<M>, M extends MewsModel> {
-    private static final Logger logger = LoggerFactory.getLogger(MongoDBJSONLoaderService.class);
+public class MongoDbJsonLoaderService<R extends OptimizedMongoLoadRepository<M>, M extends MewsModel> {
+    private static final Logger logger = LoggerFactory.getLogger(MongoDbJsonLoaderService.class);
     ArrayList<M> toSave = null;
     private boolean useUpdateNotReplace;
     @Autowired
@@ -38,7 +38,6 @@ public class MongoDBJSONLoaderService<R extends OptimizedMongoLoadRepository<M>,
             try {
                 fuzzer = type.getDeclaredConstructor().newInstance();
             } catch (Exception e) {
-                logger.info("Here");
                 logger.error(e.getMessage());
                 return;
             }
@@ -56,33 +55,28 @@ public class MongoDBJSONLoaderService<R extends OptimizedMongoLoadRepository<M>,
                 if (token == JsonToken.START_OBJECT) {
                     // Move the parser to the end of the current object
                     JsonNode node = mapper.readTree(parser);
+
+                    //Map The JSON to a HashMap
                     @SuppressWarnings("unchecked") Map<String, Object> resultMap = mapper.convertValue(node, HashMap.class);
 
                     // If modifyForTesting is true then change some values in it.
                     if (fuzzer != null && modifyForTesting) {
                         fuzzer.modifyDataForTest(resultMap);
                     }
-
-                    // TODO
-                    // Add something here to save some parts in their own documents, i.e. break out an array
-                    // As 'Save' won't do it there is no cascade.
-
-
-                    // TODO: Optionally remove things from payload that are explicitly mapped
-                    // perhaps programatically. Payload could also be a (optionally compressed)
-                    // string.
-
-                    Document payload = new Document(resultMap);
                     M document = mapper.convertValue(resultMap, type);
-                    document.setPayload(payload);
+
+                    /* Optionally store the JSON as a String or the Whole Hashmap as an
+                    alternative to using @JsonAnySetter
+                    document.setPayload(resultMap);
+                    */
 
                     count++;
-                    loadItem(document);
+                    loadItem(document,type);
                 }
             }
             if (toSave != null && toSave.size() > 0) {
                 // Sync Version = repository.writeMany(toSave);
-                repository.asyncWriteMany(toSave, useUpdateNotReplace);
+                repository.asyncWriteMany(toSave, type, useUpdateNotReplace);
             }
             long endTime = System.nanoTime();
             logger.info("Processed " + count + " docs. Time taken: " + ((endTime - startTime) / 1000000L) + "ms.");
@@ -96,14 +90,14 @@ public class MongoDBJSONLoaderService<R extends OptimizedMongoLoadRepository<M>,
     // Load these into MongoDB as efficiently as we can, build up batches
     // Then load the bactch asyncronously.
 
-    private void loadItem(M item) {
+    private void loadItem(M item, Class<M> type) {
         if (toSave == null) {
             toSave = new ArrayList<M>();
         }
         toSave.add(item);
         if (toSave.size() >= 100) {
             // Sync Version = repository.writeMany(toSave);
-            repository.asyncWriteMany(toSave, useUpdateNotReplace);
+            repository.asyncWriteMany(toSave, type, useUpdateNotReplace);
             toSave = null; // Dont clear existing
         }
     }

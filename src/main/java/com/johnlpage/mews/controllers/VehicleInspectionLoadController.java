@@ -11,7 +11,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 import com.johnlpage.mews.models.VehicleInspection;
 import com.johnlpage.mews.repository.VehicleInspectionRepository;
-import com.johnlpage.mews.service.MongoDBJSONLoaderService;
+import com.johnlpage.mews.service.MongoDbJsonLoaderService;
 
 import jakarta.servlet.http.HttpServletRequest;
 
@@ -22,7 +22,7 @@ public class VehicleInspectionLoadController {
     private static final Logger logger = LoggerFactory.getLogger(VehicleInspectionLoadController.class);
 
     @Autowired
-    private MongoDBJSONLoaderService<VehicleInspectionRepository, VehicleInspection> motTestLoader;
+    private MongoDbJsonLoaderService<VehicleInspectionRepository, VehicleInspection> motTestLoader;
 
 
     /*
@@ -32,7 +32,7 @@ public class VehicleInspectionLoadController {
 
     @PostMapping("/mot")
     public void loadFromStream(HttpServletRequest request) {
-        motTestLoader.useUpdateNotReplace(true);
+        motTestLoader.useUpdateNotReplace(false);
 
         try {
             motTestLoader.loadFromJSONStream(request.getInputStream(), VehicleInspection.class, false);
