@@ -11,6 +11,7 @@ import com.johnlpage.mews.repository.OptimizedMongoLoadRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.mongodb.repository.MongoRepository;
 import org.springframework.stereotype.Service;
 
 import java.io.InputStream;
@@ -19,13 +20,13 @@ import java.util.HashMap;
 import java.util.Map;
 
 @Service
-public class MongoDbJsonLoaderService<R extends OptimizedMongoLoadRepository<M>, M extends MewsModel> {
+public class MongoDbJsonLoaderService<R extends OptimizedMongoLoadRepository<M> & MongoRepository<M,?>, M extends MewsModel> {
     private static final Logger logger = LoggerFactory.getLogger(MongoDbJsonLoaderService.class);
     ArrayList<M> toSave = null;
     private boolean useUpdateNotReplace;
     @Autowired
     private R repository;
-
+    
     // Parses a JSON stream object by object, assumes it's not an Array
 
     public void loadFromJSONStream(InputStream inputStream, Class<M> type, Boolean modifyForTesting) {
@@ -45,6 +46,7 @@ public class MongoDbJsonLoaderService<R extends OptimizedMongoLoadRepository<M>,
 
         int count = 0;
         repository.resetStats();
+        repository.
 
         long startTime = System.nanoTime();
         try (JsonParser parser = factory.createParser(inputStream)) {
@@ -75,8 +77,10 @@ public class MongoDbJsonLoaderService<R extends OptimizedMongoLoadRepository<M>,
                 }
             }
             if (toSave != null && toSave.size() > 0) {
-                // Sync Version = repository.writeMany(toSave);
-                 // Default Version = repository.saveAll(toSave);
+                 // Alternative Options
+                // repository.writeMany(toSave);
+                 // repository.saveAll(toSave);
+              
                 repository.asyncWriteMany(toSave, type, useUpdateNotReplace);
             }
             long endTime = System.nanoTime();
@@ -97,8 +101,10 @@ public class MongoDbJsonLoaderService<R extends OptimizedMongoLoadRepository<M>,
         }
         toSave.add(item);
         if (toSave.size() >= 100) {
-            // Sync Version = repository.writeMany(toSave);
-            // Default Version = repository.saveAll(toSave);
+            // Alternative Options
+            // repository.writeMany(toSave);
+            // repository.saveAll(toSave);
+            
             repository.asyncWriteMany(toSave, type, useUpdateNotReplace);
             toSave = null; // Dont clear existing
         }
