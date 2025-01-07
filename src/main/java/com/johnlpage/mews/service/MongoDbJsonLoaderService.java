@@ -76,6 +76,7 @@ public class MongoDbJsonLoaderService<R extends OptimizedMongoLoadRepository<M>,
             }
             if (toSave != null && toSave.size() > 0) {
                 // Sync Version = repository.writeMany(toSave);
+                 // Default Version = repository.saveAll(toSave);
                 repository.asyncWriteMany(toSave, type, useUpdateNotReplace);
             }
             long endTime = System.nanoTime();
@@ -97,6 +98,7 @@ public class MongoDbJsonLoaderService<R extends OptimizedMongoLoadRepository<M>,
         toSave.add(item);
         if (toSave.size() >= 100) {
             // Sync Version = repository.writeMany(toSave);
+            // Default Version = repository.saveAll(toSave);
             repository.asyncWriteMany(toSave, type, useUpdateNotReplace);
             toSave = null; // Dont clear existing
         }
