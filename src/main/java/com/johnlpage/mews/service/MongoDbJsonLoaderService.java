@@ -46,7 +46,7 @@ public class MongoDbJsonLoaderService<R extends OptimizedMongoLoadRepository<M> 
 
         int count = 0;
         repository.resetStats();
-        repository.
+       
 
         long startTime = System.nanoTime();
         try (JsonParser parser = factory.createParser(inputStream)) {
