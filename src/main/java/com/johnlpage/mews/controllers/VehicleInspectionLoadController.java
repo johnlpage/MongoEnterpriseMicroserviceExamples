@@ -9,20 +9,20 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-import com.johnlpage.mews.models.MOTTest;
-import com.johnlpage.mews.repository.MOTTestRepository;
+import com.johnlpage.mews.models.VehicleInspection;
+import com.johnlpage.mews.repository.VehicleInspectionRepository;
 import com.johnlpage.mews.service.MongoDBJSONLoaderService;
 
 import jakarta.servlet.http.HttpServletRequest;
 
 @RestController
 @RequestMapping("/vosa")
-public class MOTTestLoadController {
+public class VehicleInspectionLoadController {
 
-    private static final Logger logger = LoggerFactory.getLogger(MOTTestLoadController.class);
+    private static final Logger logger = LoggerFactory.getLogger(VehicleInspectionLoadController.class);
 
     @Autowired
-    private MongoDBJSONLoaderService<MOTTestRepository, MOTTest> motTestLoader;
+    private MongoDBJSONLoaderService<VehicleInspectionRepository, VehicleInspection> motTestLoader;
 
 
     /*
@@ -35,7 +35,7 @@ public class MOTTestLoadController {
         motTestLoader.useUpdateNotReplace(true);
 
         try {
-            motTestLoader.loadFromJSONStream(request.getInputStream(), MOTTest.class, false);
+            motTestLoader.loadFromJSONStream(request.getInputStream(), VehicleInspection.class, false);
         } catch (IOException e) {
            logger.error(e.getMessage());
         }
@@ -48,7 +48,7 @@ public class MOTTestLoadController {
     public void loadFuzzedFromStream(HttpServletRequest request) {
         motTestLoader.useUpdateNotReplace(true);
         try {
-            motTestLoader.loadFromJSONStream(request.getInputStream(),MOTTest.class, true);
+            motTestLoader.loadFromJSONStream(request.getInputStream(),VehicleInspection.class, true);
         } catch (IOException e) {
             logger.error(e.getMessage());
         }

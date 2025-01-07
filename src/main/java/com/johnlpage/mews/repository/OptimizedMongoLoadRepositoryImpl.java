@@ -1,9 +1,7 @@
 package com.johnlpage.mews.repository;
 
-import java.util.List;
-import java.util.Map;
-import java.util.concurrent.atomic.AtomicInteger;
-
+import com.johnlpage.mews.models.MewsModel;
+import com.mongodb.bulk.BulkWriteResult;
 import org.bson.Document;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -12,26 +10,24 @@ import org.springframework.data.mongodb.core.BulkOperations;
 import org.springframework.data.mongodb.core.FindAndReplaceOptions;
 import org.springframework.data.mongodb.core.MongoTemplate;
 import org.springframework.data.mongodb.core.convert.MappingMongoConverter;
-
 import org.springframework.data.mongodb.core.query.Query;
 import org.springframework.data.mongodb.core.query.Update;
 import org.springframework.scheduling.annotation.Async;
+import org.springframework.stereotype.Repository;
 
-import com.johnlpage.mews.models.MEWSModel;
-
-import com.mongodb.bulk.BulkWriteResult;
+import java.util.List;
+import java.util.Map;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.springframework.data.mongodb.core.query.Criteria.where;
 
-public class OptimizedMongoLoadRepositoryImpl<T extends MEWSModel> implements OptimizedMongoLoadRepository<T> {
+@Repository
+public class OptimizedMongoLoadRepositoryImpl<T extends MewsModel> implements OptimizedMongoLoadRepository<T> {
 
+    private static final Logger logger = LoggerFactory.getLogger(OptimizedMongoLoadRepositoryImpl.class);
     private final AtomicInteger updates = new AtomicInteger(0);
     private final AtomicInteger deletes = new AtomicInteger(0);
     private final AtomicInteger inserts = new AtomicInteger(0);
-
-    @SuppressWarnings("unused")
-    private static final Logger logger = LoggerFactory.getLogger(OptimizedMongoLoadRepositoryImpl.class);
-    
     @Autowired
     private MongoTemplate mongoTemplate;
     @Autowired
@@ -39,15 +35,14 @@ public class OptimizedMongoLoadRepositoryImpl<T extends MEWSModel> implements Op
 
     @Override
     public BulkWriteResult writeMany(List<T> items) {
-        return  writeMany(items,false);
+        return writeMany(items, false);
     }
-    // Lets not reply on relection more than we need to.
+    // Let's not reply on relection more than we need to.
 
     @Override
     public BulkWriteResult writeMany(List<T> items, boolean useUpdateNotReplace) {
-        BulkOperations ops = mongoTemplate.bulkOps(BulkOperations.BulkMode.UNORDERED,
-                OptimizedMongoLoadRepositoryImpl.class);
-        for (MEWSModel t : items) {
+        BulkOperations ops = mongoTemplate.bulkOps(BulkOperations.BulkMode.UNORDERED, OptimizedMongoLoadRepositoryImpl.class);
+        for (MewsModel t : items) {
 
             Query q = new Query(where("_id").is(t.getDocumentId()));
 
@@ -98,14 +93,14 @@ public class OptimizedMongoLoadRepositoryImpl<T extends MEWSModel> implements Op
 
     @Async("loadExecutor")
     public void asyncWriteMany(List<T> toSave) {
-         asyncWriteMany(toSave, false);
+        asyncWriteMany(toSave, false);
     }
 
     @Async("loadExecutor")
     public void asyncWriteMany(List<T> toSave, boolean useUpdateNotReplace) {
         try {
             // Update some thread safe counts for upsertes, deletes and modifications.
-            BulkWriteResult r = writeMany(toSave,useUpdateNotReplace);
+            BulkWriteResult r = writeMany(toSave, useUpdateNotReplace);
             updates.addAndGet(r.getModifiedCount());
             deletes.addAndGet(r.getDeletedCount());
             inserts.addAndGet(r.getUpserts().size());
@@ -113,7 +108,7 @@ public class OptimizedMongoLoadRepositoryImpl<T extends MEWSModel> implements Op
         } catch (Exception e) {
             logger.error(e.getMessage());
             // TODO Handle Failed writes going to a dead letter queue or similar.
-            
+
         }
     }
 
