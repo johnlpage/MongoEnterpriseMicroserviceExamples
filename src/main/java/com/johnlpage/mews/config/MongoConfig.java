@@ -7,8 +7,6 @@ import org.slf4j.LoggerFactory;
 import org.springframework.context.annotation.Bean;
 import org.springframework.transaction.annotation.EnableTransactionManagement;
 
-import com.johnlpage.mews.controllers.VehicleInspectionLoadController;
-
 @Configuration
 @EnableTransactionManagement
 public class MongoConfig {

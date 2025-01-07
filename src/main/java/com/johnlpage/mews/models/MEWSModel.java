@@ -1,7 +1,5 @@
 package com.johnlpage.mews.models;
 
-import org.bson.Document;
-
 import java.util.Map;
 
 /* Interface to reflect that:
