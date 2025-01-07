@@ -80,7 +80,7 @@ public class MongoDbJsonLoaderService<R extends OptimizedMongoLoadRepository<M>,
             }
             long endTime = System.nanoTime();
             logger.info("Processed " + count + " docs. Time taken: " + ((endTime - startTime) / 1000000L) + "ms.");
-            logger.info("Modified: " + repository.getUpdates() + " Added:" + repository.getInserts() + " Removed: " + repository.getInserts());
+            logger.info("Modified: " + repository.getUpdates() + " Added:" + repository.getInserts() + " Removed: " + repository.getDeletes());
 
         } catch (Exception e) {
             e.printStackTrace();

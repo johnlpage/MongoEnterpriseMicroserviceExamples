@@ -16,7 +16,7 @@ import com.johnlpage.mews.service.MongoDbJsonLoaderService;
 import jakarta.servlet.http.HttpServletRequest;
 
 @RestController
-@RequestMapping("/vosa")
+@RequestMapping("/vehicles")
 public class VehicleInspectionLoadController {
 
     private static final Logger logger = LoggerFactory.getLogger(VehicleInspectionLoadController.class);
@@ -30,7 +30,7 @@ public class VehicleInspectionLoadController {
      * as it gets a stream of JSON data - using an HTTP endpoint to demonstrate.
      */
 
-    @PostMapping("/mot")
+    @PostMapping("/inspections")
     public void loadFromStream(HttpServletRequest request) {
         motTestLoader.useUpdateNotReplace(false);
 
@@ -44,7 +44,7 @@ public class VehicleInspectionLoadController {
     //Difference is this tells the loader to futz with the data for testing purposes - not for 
     //Production use.
 
-    @PostMapping("/motfutz")
+    @PostMapping("/inspectionsfutz")
     public void loadFuzzedFromStream(HttpServletRequest request) {
         motTestLoader.useUpdateNotReplace(true);
         try {

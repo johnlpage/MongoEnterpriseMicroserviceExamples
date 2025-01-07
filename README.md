@@ -8,7 +8,7 @@ start with ` mvn spring-boot:run`
 Send data with cURL - You caould also have it just read a file
 
 ```
-  curl -X POST http://localhost:8080/api/mot -H "Content-Type: application/json" -T mot2022.json     
+  curl -X POST http://localhost:8080/vosa/mot -H "Content-Type: application/json" -T mot2022.json     
   ```
 
 
