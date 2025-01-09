@@ -1,7 +1,12 @@
 package com.johnlpage.mews.repository;
 
+import static org.springframework.data.mongodb.core.query.Criteria.where;
+
 import com.johnlpage.mews.models.MewsModel;
 import com.mongodb.bulk.BulkWriteResult;
+import java.util.List;
+import java.util.Map;
+import java.util.concurrent.atomic.AtomicInteger;
 import org.bson.Document;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -15,120 +20,115 @@ import org.springframework.data.mongodb.core.query.Update;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Repository;
 
-import java.util.List;
-import java.util.Map;
-import java.util.concurrent.atomic.AtomicInteger;
-
-import static org.springframework.data.mongodb.core.query.Criteria.where;
-
 @Repository
-public class OptimizedMongoLoadRepositoryImpl<T extends MewsModel> implements OptimizedMongoLoadRepository<T> {
+public class OptimizedMongoLoadRepositoryImpl<T extends MewsModel>
+    implements OptimizedMongoLoadRepository<T> {
 
-    private static final Logger logger = LoggerFactory.getLogger(OptimizedMongoLoadRepositoryImpl.class);
-    private final AtomicInteger updates = new AtomicInteger(0);
-    private final AtomicInteger deletes = new AtomicInteger(0);
-    private final AtomicInteger inserts = new AtomicInteger(0);
-    @Autowired
-    private MongoTemplate mongoTemplate;
-    @Autowired
-    private MappingMongoConverter mappingMongoConverter;
+  private static final Logger logger =
+      LoggerFactory.getLogger(OptimizedMongoLoadRepositoryImpl.class);
+  private final AtomicInteger updates = new AtomicInteger(0);
+  private final AtomicInteger deletes = new AtomicInteger(0);
+  private final AtomicInteger inserts = new AtomicInteger(0);
+  @Autowired private MongoTemplate mongoTemplate;
+  @Autowired private MappingMongoConverter mappingMongoConverter;
 
-    @Override
-    public BulkWriteResult writeMany(List<T> items,  Class<T> clazz ) {
-        return writeMany(items, clazz, false);
-    }
-    // Let's not reply on relection more than we need to.
+  @Override
+  public BulkWriteResult writeMany(List<T> items, Class<T> clazz) {
+    return writeMany(items, clazz, false);
+  }
 
-    @Override
-    public BulkWriteResult writeMany(List<T> items, Class<T> clazz, boolean useUpdateNotReplace) {
-        BulkOperations ops = mongoTemplate.bulkOps(BulkOperations.BulkMode.UNORDERED, clazz);
+  // Let's not reply on relection more than we need to.
 
-        for (T t : items) {
+  @Override
+  public BulkWriteResult writeMany(List<T> items, Class<T> clazz, boolean useUpdateNotReplace) {
+    BulkOperations ops = mongoTemplate.bulkOps(BulkOperations.BulkMode.UNORDERED, clazz);
 
-            Query q = new Query(where("_id").is(t.getDocumentId()));
+    for (T t : items) {
 
-            if (t.isDeleted()) {
-                ops.remove(q);
-            } else {
-                // Get the BSON Document from the item
-                if (useUpdateNotReplace) {
-                    Document bsonDocument = new Document();
-                    mappingMongoConverter.write(t, bsonDocument);
+      Query q = new Query(where("_id").is(t.getDocumentId()));
 
-                    // Create an Update object and add fields to it
-                    Update update = new Update();
-                    BuildUpdateFromDocument(bsonDocument, update);
+      if (t.isDeleted()) {
+        ops.remove(q);
+      } else {
+        // Get the BSON Document from the item
+        if (useUpdateNotReplace) {
+          Document bsonDocument = new Document();
+          mappingMongoConverter.write(t, bsonDocument);
 
-                    ops.upsert(q, update);
-                } else {
-                    // Replace is less network/storage/backup efficient as whole document is
-                    // replicated.
-                    ops.replaceOne(q, t, FindAndReplaceOptions.options().upsert());
-                }
-            }
+          // Create an Update object and add fields to it
+          Update update = new Update();
+          BuildUpdateFromDocument(bsonDocument, update);
+
+          ops.upsert(q, update);
+        } else {
+          // Replace is less network/storage/backup efficient as whole document is
+          // replicated.
+          ops.replaceOne(q, t, FindAndReplaceOptions.options().upsert());
         }
-        BulkWriteResult s = ops.execute();
-        return s;
+      }
     }
+    BulkWriteResult s = ops.execute();
+    return s;
+  }
 
-    private void BuildUpdateFromDocument(Document bsonDocument, Update update) {
-        BuildUpdateFromDocument(bsonDocument, update, "");
+  private void BuildUpdateFromDocument(Document bsonDocument, Update update) {
+    BuildUpdateFromDocument(bsonDocument, update, "");
+  }
+
+  // Recurse through A document turning each individual singleton field (not
+  // arrays) into a
+  // value in $set - i.e. { $set : { a:1, o.b: 2, o.c: 3 }}
+
+  private void BuildUpdateFromDocument(Document bsonDocument, Update update, String basekey) {
+    for (Map.Entry<String, Object> entry : bsonDocument.entrySet()) {
+      // If it's a document then recurse
+      // Dont recurese into Arrays (It's possible but there are catveates to think
+      // about like deletions)
+      if (entry.getValue() instanceof Document) {
+        BuildUpdateFromDocument(
+            (Document) entry.getValue(), update, basekey + entry.getKey() + ".");
+      } else {
+        update.set(basekey + entry.getKey(), entry.getValue());
+      }
     }
+  }
 
-    // Recurse through A document turning each individual singleton field (not
-    // arrays) into a
-    // value in $set - i.e. { $set : { a:1, o.b: 2, o.c: 3 }}
+  @Async("loadExecutor")
+  public void asyncWriteMany(List<T> toSave, Class<T> clazz) {
+    asyncWriteMany(toSave, clazz, false);
+  }
 
-    private void BuildUpdateFromDocument(Document bsonDocument, Update update, String basekey) {
-        for (Map.Entry<String, Object> entry : bsonDocument.entrySet()) {
-            // If it's a document then recurse
-            // Dont recurese into Arrays (It's possible but there are catveates to think
-            // about like deletions)
-            if (entry.getValue() instanceof Document) {
-                BuildUpdateFromDocument((Document) entry.getValue(), update, basekey + entry.getKey() + ".");
-            } else {
-                update.set(basekey + entry.getKey(), entry.getValue());
-            }
-        }
+  @Async("loadExecutor")
+  public void asyncWriteMany(List<T> toSave, Class<T> clazz, boolean useUpdateNotReplace) {
+    try {
+      // Update some thread safe counts for upsertes, deletes and modifications.
+      BulkWriteResult r = writeMany(toSave, clazz, useUpdateNotReplace);
+      updates.addAndGet(r.getModifiedCount());
+      deletes.addAndGet(r.getDeletedCount());
+      inserts.addAndGet(r.getUpserts().size());
+
+    } catch (Exception e) {
+      logger.error(e.getMessage());
+      // TODO Handle Failed writes going to a dead letter queue or similar.
+
     }
+  }
 
-    @Async("loadExecutor")
-    public void asyncWriteMany(List<T> toSave,  Class<T> clazz ) {
-        asyncWriteMany(toSave,clazz, false);
-    }
+  public void resetStats() {
+    inserts.set(0);
+    updates.set(0);
+    deletes.set(0);
+  }
 
-    @Async("loadExecutor")
-    public void asyncWriteMany(List<T> toSave, Class<T> clazz ,  boolean useUpdateNotReplace) {
-        try {
-            // Update some thread safe counts for upsertes, deletes and modifications.
-            BulkWriteResult r = writeMany(toSave, clazz, useUpdateNotReplace);
-            updates.addAndGet(r.getModifiedCount());
-            deletes.addAndGet(r.getDeletedCount());
-            inserts.addAndGet(r.getUpserts().size());
+  public AtomicInteger getUpdates() {
+    return updates;
+  }
 
-        } catch (Exception e) {
-            logger.error(e.getMessage());
-            // TODO Handle Failed writes going to a dead letter queue or similar.
+  public AtomicInteger getDeletes() {
+    return deletes;
+  }
 
-        }
-    }
-
-    public void resetStats() {
-        inserts.set(0);
-        updates.set(0);
-        deletes.set(0);
-    }
-
-    public AtomicInteger getUpdates() {
-        return updates;
-    }
-
-    public AtomicInteger getDeletes() {
-        return deletes;
-    }
-
-    public AtomicInteger getInserts() {
-        return inserts;
-    }
-
+  public AtomicInteger getInserts() {
+    return inserts;
+  }
 }

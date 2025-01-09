@@ -1,0 +1,80 @@
+package com.johnlpage.mews.controllers;
+
+
+import com.johnlpage.mews.models.VehicleInspection;
+import com.johnlpage.mews.repository.VehicleInspectionRepository;
+import com.johnlpage.mews.service.MongoDbJsonLoaderService;
+import com.johnlpage.mews.service.MongoDbJsonQueryService;
+import jakarta.servlet.http.HttpServletRequest;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
+
+@RestController
+@RequestMapping("/vehicles")
+public class VehicleInspectionController {
+
+  private static final Logger logger = LoggerFactory.getLogger(VehicleInspectionController.class);
+
+  @Autowired
+  private MongoDbJsonLoaderService<VehicleInspectionRepository, VehicleInspection>
+      inspectionLoaderService;
+
+  @Autowired
+  private MongoDbJsonQueryService<VehicleInspectionRepository, VehicleInspection, Long>
+      inspectionQueryService;
+
+  ;
+
+  /*
+   * This could be something that reads a file, or even from a Kafka Queue as long
+   * as it gets a stream of JSON data - using an HTTP endpoint to demonstrate.
+   */
+
+  @PostMapping("/inspections")
+  public void loadFromStream(
+      HttpServletRequest request,
+      @RequestParam(name = "futz", required = false, defaultValue = "false") boolean futz,
+      @RequestParam(name = "useUpdate", required = false, defaultValue = "false")
+          boolean useUpdate) {
+
+    inspectionLoaderService.useUpdateNotReplace(useUpdate);
+    logger.info("Load Starts futz=" + futz + ", useUpdate = " + useUpdate);
+    try {
+      inspectionLoaderService.loadFromJSONStream(
+          request.getInputStream(), VehicleInspection.class, futz);
+    } catch (Exception e) {
+      logger.error(e.getMessage());
+    }
+  }
+
+  // Get By ID
+  @GetMapping("/inspections/{id}")
+  public ResponseEntity<VehicleInspection> getInspectionById(@PathVariable Long id) {
+    return inspectionQueryService
+        .getModelById(id)
+        .map(ResponseEntity::ok)
+        .orElse(ResponseEntity.notFound().build());
+  }
+
+  // JPA Get By Example Query - Needs an Index to be efficient
+  // It still finds ALL the results each time and returns a subset
+
+  @GetMapping("/inspections/model/{model}")
+  public Page<VehicleInspection> getInspectionsByModel(
+      @PathVariable String model,
+      @RequestParam(name = "page", required = false, defaultValue = "0") int page,
+      @RequestParam(name = "size", required = false, defaultValue = "10") int size) {
+    VehicleInspection probe = new VehicleInspection();
+    probe.setModel(model);
+    return inspectionQueryService.getModelByExample(probe, page, size);
+  }
+}

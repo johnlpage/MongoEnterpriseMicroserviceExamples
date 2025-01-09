@@ -8,4 +8,6 @@ import org.springframework.stereotype.Repository;
 @Primary
 @Repository
 public interface VehicleInspectionRepository extends MongoRepository<VehicleInspection, Long>, OptimizedMongoLoadRepository<VehicleInspection> {
+
 }
+
