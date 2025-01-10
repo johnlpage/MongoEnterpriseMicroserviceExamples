@@ -1,0 +1,30 @@
+  /* Additional custom styling for the pre element */
+  .pre-box {
+      background-color: #f8f9fa;
+      /* Light background */
+      border-radius: 5px;
+      /* Rounded corners */
+      overflow-x: auto;
+      /* Enable horizontal scrolling */
+  }
+
+  /* Style to make the columns scroll independently */
+  .scrollable-column {
+      height: 100vh;
+      /* Full viewport height */
+      overflow-y: auto;
+      /* Enable vertical scrolling */
+      border-right: 1px solid #ccc;
+      /* Optional: border for visual separation */
+  }
+
+  .scrollable {
+      height: 50%;
+      /* Adjust this to your needs */
+      overflow-y: auto;
+  }
+
+  .right-column {
+      height: 100vh;
+      /* Makes the right column fill the screen vertically */
+  }

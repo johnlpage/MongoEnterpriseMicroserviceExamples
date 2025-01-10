@@ -9,8 +9,8 @@ import java.util.Map;
 */
 
 public interface MewsModel {
-  boolean isDeleted();
-
+  boolean toDelete();
+  // If we use get here it doesn't
   Object getDocumentId();
 
   void modifyDataForTest(

@@ -2,6 +2,7 @@ package com.johnlpage.mews.models;
 
 import com.fasterxml.jackson.annotation.JsonAnyGetter;
 import com.fasterxml.jackson.annotation.JsonAnySetter;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import java.util.Date;
 import java.util.LinkedHashMap;
@@ -40,7 +41,8 @@ public class VehicleInspection implements MewsModel {
   String files;
   Long capacity;
   Date firstusedate;
-  @Transient Boolean _deleted;
+  @Transient 
+  Boolean _toDelete = false;
 
   // Use this to capture any fields not captured explicitly
   @JsonAnyGetter @JsonAnySetter private Map<String, Object> payload = new LinkedHashMap<>();
@@ -48,16 +50,17 @@ public class VehicleInspection implements MewsModel {
   @Transient private Random rng;
 
   public VehicleInspection() {
-    // New ones are false
-    this._deleted = false;
   }
 
-  public Boolean get_deleted() {
-    return this._deleted;
+
+  @JsonIgnore
+  public Boolean get_toDelete() {
+      return _toDelete;
   }
 
-  public void set_deleted(Boolean _deleted) {
-    this._deleted = _deleted;
+
+  public void set_toDelete(Boolean _deleted) {
+    this._toDelete = _deleted;
   }
 
   public String getTestresult() {
@@ -157,14 +160,15 @@ public class VehicleInspection implements MewsModel {
   }
 
   @Override
-  public boolean isDeleted() {
-    return _deleted;
+  public boolean toDelete() {
+    return _toDelete;
   }
 
   // This code will be very specific to your data and how you want to test
   // May not be required.
 
   @Override
+  @JsonIgnore
   public Object getDocumentId() {
     return testid;
   }

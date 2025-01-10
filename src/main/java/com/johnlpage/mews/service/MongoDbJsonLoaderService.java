@@ -21,6 +21,7 @@ import org.springframework.stereotype.Service;
 @Service
 public class MongoDbJsonLoaderService<
     R extends OptimizedMongoLoadRepository<M> & MongoRepository<M, ?>, M extends MewsModel> {
+        
   private static final Logger logger = LoggerFactory.getLogger(MongoDbJsonLoaderService.class);
   ArrayList<M> toSave = null;
   private boolean useUpdateNotReplace;

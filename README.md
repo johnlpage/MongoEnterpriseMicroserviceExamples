@@ -26,3 +26,33 @@ the motupdates endpoint modifies the data as it's read to simulate getting a new
 ```
 curl -s http://localhost:8080/vehicles/inspections/model/POLO| jq
 ```
+
+```
+curl -X POST http://localhost:8080/vehicles/inspections/query -H "Content-Type: application/json" \
+-d \
+'
+{
+    "filter": {
+        "model": "POLO"
+    },
+    "limit" : 2,
+    "projection": {
+      "make":1,
+      "model":1
+    }
+}' | jq
+```
+
+
+
+```
+curl -X POST http://localhost:8080/vehicles/inspections/query -H "Content-Type: application/json" \
+-d \
+'
+{
+    "filter": {
+        "model": "POLO"
+    },
+    "limit" : 2
+}' | jq
+```

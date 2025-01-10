@@ -1,19 +1,24 @@
 package com.johnlpage.mews.controllers;
 
-
+import com.fasterxml.jackson.annotation.JsonInclude;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.johnlpage.mews.dto.PageDTO;
 import com.johnlpage.mews.models.VehicleInspection;
 import com.johnlpage.mews.repository.VehicleInspectionRepository;
 import com.johnlpage.mews.service.MongoDbJsonLoaderService;
 import com.johnlpage.mews.service.MongoDbJsonQueryService;
 import jakarta.servlet.http.HttpServletRequest;
+import java.util.List;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Slice;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
@@ -69,12 +74,37 @@ public class VehicleInspectionController {
   // It still finds ALL the results each time and returns a subset
 
   @GetMapping("/inspections/model/{model}")
-  public Page<VehicleInspection> getInspectionsByModel(
+  public ResponseEntity<PageDTO<VehicleInspection>> getInspectionsByModel(
       @PathVariable String model,
       @RequestParam(name = "page", required = false, defaultValue = "0") int page,
       @RequestParam(name = "size", required = false, defaultValue = "10") int size) {
     VehicleInspection probe = new VehicleInspection();
+
+    // This is where we are ahard coding a query for this endpoint.
     probe.setModel(model);
-    return inspectionQueryService.getModelByExample(probe, page, size);
+
+    Slice<VehicleInspection> returnPage =
+        inspectionQueryService.getModelByExample(probe, page, size);
+    PageDTO<VehicleInspection> response = new PageDTO<VehicleInspection>(returnPage);
+    return ResponseEntity.ok(response);
+  }
+
+  // This is a very "Raw" API interface that lets the caller design their own query and projection
+  // etc.
+
+  @PostMapping("/inspections/query")
+  public ResponseEntity<String> mongoQuery(@RequestBody String requestBody) {
+    logger.info(requestBody);
+    List<VehicleInspection> result =
+        inspectionQueryService.getModelByMongoQuery(requestBody, VehicleInspection.class);
+    try {
+      ObjectMapper objectMapper = new ObjectMapper();
+      objectMapper.setSerializationInclusion(JsonInclude.Include.NON_NULL);
+      // Convert list to JSON string
+      String jsonResult = objectMapper.writeValueAsString(result);
+      return ResponseEntity.ok(jsonResult);
+    } catch (JsonProcessingException e) {
+      return ResponseEntity.status(500).body("Error converting vehicles to JSON");
+    }
   }
 }

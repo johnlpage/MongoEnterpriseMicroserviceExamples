@@ -47,7 +47,7 @@ public class OptimizedMongoLoadRepositoryImpl<T extends MewsModel>
 
       Query q = new Query(where("_id").is(t.getDocumentId()));
 
-      if (t.isDeleted()) {
+      if (t.toDelete()) {
         ops.remove(q);
       } else {
         // Get the BSON Document from the item

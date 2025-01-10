@@ -1,0 +1,6 @@
+{
+   "make" : [ "FORD","VW"],
+   "model" : [ "ESCORT", "PROBE" ],
+   "mileage" : 1,
+   "notes" : ""
+}
