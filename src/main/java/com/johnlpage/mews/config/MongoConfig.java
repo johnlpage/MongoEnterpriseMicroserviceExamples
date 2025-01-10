@@ -16,28 +16,28 @@ import org.springframework.transaction.annotation.EnableTransactionManagement;
 @Configuration
 @EnableTransactionManagement
 public class MongoConfig implements InitializingBean {
-  private static final Logger logger = LoggerFactory.getLogger(MongoConfig.class);
+  private static final Logger LOG = LoggerFactory.getLogger(MongoConfig.class);
   private final MongoTemplate mongoTemplate;
+  @Autowired @Lazy private MappingMongoConverter mappingMongoConverter;
 
+  @Autowired
   public MongoConfig(MongoTemplate mongoTemplate) {
     this.mongoTemplate = mongoTemplate;
-  }
-
-  // This is important to ensure you are using Native database transactions.
-  @Bean
-  public MongoTransactionManager transactionManager() {
-    logger.info("MongoDB Native Transactions Enabled");
-    return new MongoTransactionManager(mongoTemplate.getMongoDatabaseFactory());
   }
 
   // We are disabling the _class field here as it has a significant impact on query performance
   // When it gets included in queries but is not in the index. You only need it when you have
   // polymorphism for a collection.
 
-  @Autowired @Lazy private MappingMongoConverter mappingMongoConverter;
+  // This is important to ensure you are using Native database transactions.
+  @Bean
+  public MongoTransactionManager transactionManager() {
+    LOG.info("MongoDB Native Transactions Enabled");
+    return new MongoTransactionManager(mongoTemplate.getMongoDatabaseFactory());
+  }
 
   @Override
-  public void afterPropertiesSet() throws Exception {
+  public void afterPropertiesSet() {
     mappingMongoConverter.setTypeMapper(new DefaultMongoTypeMapper(null));
   }
 }

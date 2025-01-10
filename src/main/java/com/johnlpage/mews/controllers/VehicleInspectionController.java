@@ -5,7 +5,6 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.johnlpage.mews.dto.PageDTO;
 import com.johnlpage.mews.models.VehicleInspection;
-import com.johnlpage.mews.repository.VehicleInspectionRepository;
 import com.johnlpage.mews.service.MongoDbJsonLoaderService;
 import com.johnlpage.mews.service.MongoDbJsonQueryService;
 import jakarta.servlet.http.HttpServletRequest;
@@ -27,23 +26,25 @@ import org.springframework.web.bind.annotation.RestController;
 @RequestMapping("/vehicles")
 public class VehicleInspectionController {
 
-  private static final Logger logger = LoggerFactory.getLogger(VehicleInspectionController.class);
+  private static final Logger LOG = LoggerFactory.getLogger(VehicleInspectionController.class);
+  private final MongoDbJsonLoaderService<VehicleInspection, Long> inspectionLoaderService;
+  private final MongoDbJsonQueryService<VehicleInspection, Long> inspectionQueryService;
+  private final ObjectMapper objectMapper;
 
   @Autowired
-  private MongoDbJsonLoaderService<VehicleInspectionRepository, VehicleInspection>
-      inspectionLoaderService;
+  public VehicleInspectionController(
+      MongoDbJsonLoaderService<VehicleInspection, Long> inspectionLoaderService,
+      MongoDbJsonQueryService<VehicleInspection, Long> inspectionQueryService,
+      ObjectMapper objectMapper) {
+    this.inspectionLoaderService = inspectionLoaderService;
+    this.inspectionQueryService = inspectionQueryService;
+    this.objectMapper = objectMapper;
+  }
 
-  @Autowired
-  private MongoDbJsonQueryService<VehicleInspectionRepository, VehicleInspection, Long>
-      inspectionQueryService;
-
-  ;
-
-  /*
-   * This could be something that reads a file, or even from a Kafka Queue as long
-   * as it gets a stream of JSON data - using an HTTP endpoint to demonstrate.
+  /**
+   * This could be something that reads a file, or even from a Kafka Queue as long as it gets a
+   * stream of JSON data - using an HTTP endpoint to demonstrate.
    */
-
   @PostMapping("/inspections")
   public void loadFromStream(
       HttpServletRequest request,
@@ -52,12 +53,12 @@ public class VehicleInspectionController {
           boolean useUpdate) {
 
     inspectionLoaderService.useUpdateNotReplace(useUpdate);
-    logger.info("Load Starts futz=" + futz + ", useUpdate = " + useUpdate);
+    LOG.info("Load Starts futz={}, useUpdate = {}", futz, useUpdate);
     try {
       inspectionLoaderService.loadFromJSONStream(
           request.getInputStream(), VehicleInspection.class, futz);
     } catch (Exception e) {
-      logger.error(e.getMessage());
+      LOG.error(e.getMessage());
     }
   }
 
@@ -80,12 +81,12 @@ public class VehicleInspectionController {
       @RequestParam(name = "size", required = false, defaultValue = "10") int size) {
     VehicleInspection probe = new VehicleInspection();
 
-    // This is where we are ahard coding a query for this endpoint.
+    // This is where we are hard coding a query for this endpoint.
     probe.setModel(model);
 
     Slice<VehicleInspection> returnPage =
         inspectionQueryService.getModelByExample(probe, page, size);
-    PageDTO<VehicleInspection> response = new PageDTO<VehicleInspection>(returnPage);
+    PageDTO<VehicleInspection> response = new PageDTO<>(returnPage);
     return ResponseEntity.ok(response);
   }
 
@@ -94,11 +95,10 @@ public class VehicleInspectionController {
 
   @PostMapping("/inspections/query")
   public ResponseEntity<String> mongoQuery(@RequestBody String requestBody) {
-    logger.info(requestBody);
+    LOG.info(requestBody);
     List<VehicleInspection> result =
         inspectionQueryService.getModelByMongoQuery(requestBody, VehicleInspection.class);
     try {
-      ObjectMapper objectMapper = new ObjectMapper();
       objectMapper.setSerializationInclusion(JsonInclude.Include.NON_NULL);
       // Convert list to JSON string
       String jsonResult = objectMapper.writeValueAsString(result);

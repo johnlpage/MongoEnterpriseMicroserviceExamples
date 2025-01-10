@@ -3,7 +3,6 @@ package com.johnlpage.mews.dto;
 import java.util.List;
 import org.springframework.data.domain.Slice;
 
-
 public class PageDTO<T> {
     private List<T> content;
     private int totalPages;
@@ -35,13 +34,12 @@ public class PageDTO<T> {
         this.content = returnPage.getContent();
         this.pageNumber = returnPage.getPageable().getPageNumber();
         this.pageSize = returnPage.getPageable().getPageSize();
-        
-        // If you want these use Page<T> but this need a full count for each query
-        // Which is definately not efficient.
 
-        // this.totalPages = returnPage.getTotalPages();
-        // this.totalElements = returnPage.getTotalElements();
+    // If you want these use Page<T> but this need a full count for each query
+    // Which is definitely not efficient.
 
-    }
+    // this.totalPages = returnPage.getTotalPages();
+    // this.totalElements = returnPage.getTotalElements();
 
+  }
 }
