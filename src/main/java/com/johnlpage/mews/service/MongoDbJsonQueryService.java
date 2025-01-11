@@ -4,10 +4,10 @@ import com.johnlpage.mews.models.MewsModel;
 import com.johnlpage.mews.repository.GenericOptimizedMongoLoadRepository;
 import java.util.List;
 import java.util.Optional;
+import lombok.RequiredArgsConstructor;
 import org.bson.Document;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Example;
 import org.springframework.data.domain.ExampleMatcher;
 import org.springframework.data.domain.PageRequest;
@@ -16,19 +16,13 @@ import org.springframework.data.mongodb.core.MongoTemplate;
 import org.springframework.data.mongodb.core.query.BasicQuery;
 import org.springframework.stereotype.Service;
 
+@RequiredArgsConstructor
 @Service
 public class MongoDbJsonQueryService<T extends MewsModel<ID>, ID> {
 
   private static final Logger LOG = LoggerFactory.getLogger(MongoDbJsonQueryService.class);
   private final GenericOptimizedMongoLoadRepository<T, ID> repository;
   private final MongoTemplate mongoTemplate;
-
-  @Autowired
-  public MongoDbJsonQueryService(
-      GenericOptimizedMongoLoadRepository<T, ID> repository, MongoTemplate mongoTemplate) {
-    this.repository = repository;
-    this.mongoTemplate = mongoTemplate;
-  }
 
   /** Find One by ID */
   public Optional<T> getModelById(ID id) {
