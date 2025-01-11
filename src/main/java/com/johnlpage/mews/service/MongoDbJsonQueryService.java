@@ -1,6 +1,5 @@
 package com.johnlpage.mews.service;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.johnlpage.mews.models.MewsModel;
 import com.johnlpage.mews.repository.GenericOptimizedMongoLoadRepository;
 import java.util.List;
@@ -23,16 +22,12 @@ public class MongoDbJsonQueryService<T extends MewsModel<ID>, ID> {
   private static final Logger LOG = LoggerFactory.getLogger(MongoDbJsonQueryService.class);
   private final GenericOptimizedMongoLoadRepository<T, ID> repository;
   private final MongoTemplate mongoTemplate;
-  private final ObjectMapper objectMapper;
 
   @Autowired
   public MongoDbJsonQueryService(
-      GenericOptimizedMongoLoadRepository<T, ID> repository,
-      MongoTemplate mongoTemplate,
-      ObjectMapper objectMapper) {
+      GenericOptimizedMongoLoadRepository<T, ID> repository, MongoTemplate mongoTemplate) {
     this.repository = repository;
     this.mongoTemplate = mongoTemplate;
-    this.objectMapper = objectMapper;
   }
 
   /** Find One by ID */

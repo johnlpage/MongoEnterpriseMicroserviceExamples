@@ -25,11 +25,7 @@ public class MongoConfig implements InitializingBean {
     this.mongoTemplate = mongoTemplate;
   }
 
-  // We are disabling the _class field here as it has a significant impact on query performance
-  // When it gets included in queries but is not in the index. You only need it when you have
-  // polymorphism for a collection.
-
-  // This is important to ensure you are using Native database transactions.
+  /** This is important to ensure you are using Native database transactions. */
   @Bean
   public MongoTransactionManager transactionManager() {
     LOG.info("MongoDB Native Transactions Enabled");
@@ -38,6 +34,9 @@ public class MongoConfig implements InitializingBean {
 
   @Override
   public void afterPropertiesSet() {
+    // We are disabling the _class field here as it has a significant impact on query performance
+    // When it gets included in queries but is not in the index. You only need it when you have
+    // polymorphism for a collection.
     mappingMongoConverter.setTypeMapper(new DefaultMongoTypeMapper(null));
   }
 }

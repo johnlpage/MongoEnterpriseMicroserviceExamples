@@ -62,7 +62,7 @@ public class VehicleInspectionController {
     }
   }
 
-  // Get By ID
+  /** Get By ID */
   @GetMapping("/inspections/{id}")
   public ResponseEntity<VehicleInspection> getInspectionById(@PathVariable Long id) {
     return inspectionQueryService
@@ -71,9 +71,10 @@ public class VehicleInspectionController {
         .orElse(ResponseEntity.notFound().build());
   }
 
-  // JPA Get By Example Query - Needs an Index to be efficient
-  // It still finds ALL the results each time and returns a subset
-
+  /**
+   * JPA Get By Example Query - Needs an Index to be efficient It still finds ALL the results each
+   * time and returns a subset
+   */
   @GetMapping("/inspections/model/{model}")
   public ResponseEntity<PageDTO<VehicleInspection>> getInspectionsByModel(
       @PathVariable String model,
@@ -90,9 +91,10 @@ public class VehicleInspectionController {
     return ResponseEntity.ok(response);
   }
 
-  // This is a very "Raw" API interface that lets the caller design their own query and projection
-  // etc.
-
+  /**
+   * This is a very "Raw" API interface that lets the caller design their own query and projection
+   * etc.
+   */
   @PostMapping("/inspections/query")
   public ResponseEntity<String> mongoQuery(@RequestBody String requestBody) {
     LOG.info(requestBody);

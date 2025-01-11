@@ -14,10 +14,8 @@ import java.util.Map;
 public interface MewsModel<ID> {
   boolean toDelete();
 
-  // If we use get here it doesn't
   ID getDocumentId();
 
-  void modifyDataForTest(
-      Map<String, Object>
-          document); // Somewhat optional function to take a HashMap and modify it for testing
+  /** Somewhat optional function to take a HashMap and modify it for testing */
+  void modifyDataForTest(Map<String, Object> document);
 }

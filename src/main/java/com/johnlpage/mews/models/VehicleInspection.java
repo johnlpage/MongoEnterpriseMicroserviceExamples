@@ -179,7 +179,7 @@ public class VehicleInspection implements MewsModel<Long> {
       return;
     }
 
-    // Make specific, realisetic changes
+    // Make specific, realistic changes
     // Change Mileage in 10%
     if (rng.nextDouble() < 0.1) {
       Integer mileage = (Integer) document.get("testmileage");
