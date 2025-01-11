@@ -43,13 +43,6 @@ public class OptimizedMongoLoadRepositoryImpl<T extends MewsModel<ID>, ID>
     return writeMany(items, clazz, false);
   }
 
-  // Let's not reply on relection more than we need to.
-
-  @Async("loadExecutor")
-  public void asyncWriteMany(List<T> toSave, Class<T> clazz) {
-    asyncWriteMany(toSave, clazz, false);
-  }
-
   @Override
   public BulkWriteResult writeMany(List<T> items, Class<T> clazz, boolean useUpdateNotReplace) {
     BulkOperations ops = mongoTemplate.bulkOps(BulkOperations.BulkMode.UNORDERED, clazz);
@@ -81,9 +74,32 @@ public class OptimizedMongoLoadRepositoryImpl<T extends MewsModel<ID>, ID>
     return ops.execute();
   }
 
-  // Recurse through A document turning each individual singleton field (not
-  // arrays) into a
-  // value in $set - i.e. { $set : { a:1, o.b: 2, o.c: 3 }}
+  private void BuildUpdateFromDocument(Document bsonDocument, Update update) {
+    BuildUpdateFromDocument(bsonDocument, update, "");
+  }
+
+  /**
+   * Recurse through A document turning each individual singleton field (not arrays) into a value in
+   * $set - i.e. { $set : { a:1, o.b: 2, o.c: 3 }}
+   */
+  private void BuildUpdateFromDocument(Document bsonDocument, Update update, String basekey) {
+    for (Map.Entry<String, Object> entry : bsonDocument.entrySet()) {
+      // If it's a document then recurse
+      // Don't recurse into Arrays (It's possible but there are caveats to think
+      // about like deletions)
+      if (entry.getValue() instanceof Document) {
+        BuildUpdateFromDocument(
+            (Document) entry.getValue(), update, basekey + entry.getKey() + ".");
+      } else {
+        update.set(basekey + entry.getKey(), entry.getValue());
+      }
+    }
+  }
+
+  @Async("loadExecutor")
+  public void asyncWriteMany(List<T> toSave, Class<T> clazz) {
+    asyncWriteMany(toSave, clazz, false);
+  }
 
   @Async("loadExecutor")
   public void asyncWriteMany(List<T> toSave, Class<T> clazz, boolean useUpdateNotReplace) {
@@ -117,23 +133,5 @@ public class OptimizedMongoLoadRepositoryImpl<T extends MewsModel<ID>, ID>
 
   public AtomicInteger getInserts() {
     return inserts;
-  }
-
-  private void BuildUpdateFromDocument(Document bsonDocument, Update update) {
-    BuildUpdateFromDocument(bsonDocument, update, "");
-  }
-
-  private void BuildUpdateFromDocument(Document bsonDocument, Update update, String basekey) {
-    for (Map.Entry<String, Object> entry : bsonDocument.entrySet()) {
-      // If it's a document then recurse
-      // Don't recurse into Arrays (It's possible but there are caveats to think
-      // about like deletions)
-      if (entry.getValue() instanceof Document) {
-        BuildUpdateFromDocument(
-            (Document) entry.getValue(), update, basekey + entry.getKey() + ".");
-      } else {
-        update.set(basekey + entry.getKey(), entry.getValue());
-      }
-    }
   }
 }
