@@ -10,8 +10,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.data.domain.Example;
 import org.springframework.data.domain.ExampleMatcher;
+import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
-import org.springframework.data.domain.Slice;
 import org.springframework.data.mongodb.core.MongoTemplate;
 import org.springframework.data.mongodb.core.query.BasicQuery;
 import org.springframework.stereotype.Service;
@@ -30,7 +30,7 @@ public class MongoDbJsonQueryService<T extends MewsModel<ID>, ID> {
   }
 
   /** Find By Example with Paging */
-  public Slice<T> getModelByExample(T probe, int page, int size) {
+  public Page<T> getModelByExample(T probe, int page, int size) {
     ExampleMatcher matcher = ExampleMatcher.matching().withIgnoreNullValues();
     Example<T> example = Example.of(probe, matcher);
     return repository.findAll(example, PageRequest.of(page, size));

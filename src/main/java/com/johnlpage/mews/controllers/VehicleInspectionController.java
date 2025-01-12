@@ -3,7 +3,7 @@ package com.johnlpage.mews.controllers;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.johnlpage.mews.dto.PageDTO;
+import com.johnlpage.mews.models.UpdateStrategy;
 import com.johnlpage.mews.models.VehicleInspection;
 import com.johnlpage.mews.service.MongoDbJsonLoaderService;
 import com.johnlpage.mews.service.MongoDbJsonQueryService;
@@ -12,7 +12,7 @@ import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.data.domain.Slice;
+import org.springframework.data.domain.Page;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -42,12 +42,12 @@ public class VehicleInspectionController {
       @RequestParam(name = "futz", required = false, defaultValue = "false") boolean futz,
       @RequestParam(name = "useUpdate", required = false, defaultValue = "false")
           boolean useUpdate) {
-
-    inspectionLoaderService.useUpdateNotReplace(useUpdate);
+    // todo: make this parameter instead of boolean
+    UpdateStrategy updateStrategy = useUpdate ? UpdateStrategy.UPSERT : UpdateStrategy.REPLACE;
     LOG.info("Load Starts futz={}, useUpdate = {}", futz, useUpdate);
     try {
-      inspectionLoaderService.loadFromJSONStream(
-          request.getInputStream(), VehicleInspection.class, futz);
+      inspectionLoaderService.loadFromJsonStream(
+          request.getInputStream(), VehicleInspection.class, futz, updateStrategy);
     } catch (Exception e) {
       LOG.error(e.getMessage());
     }
@@ -67,16 +67,15 @@ public class VehicleInspectionController {
    * time and returns a subset
    */
   @GetMapping("/inspections/model/{model}")
-  public ResponseEntity<PageDTO<VehicleInspection>> getInspectionsByModel(
+  public ResponseEntity<Page<VehicleInspection>> getInspectionsByModel(
       @PathVariable String model,
       @RequestParam(name = "page", required = false, defaultValue = "0") int page,
       @RequestParam(name = "size", required = false, defaultValue = "10") int size) {
     // This is where we are hard coding a query for this endpoint.
     VehicleInspection probe = VehicleInspection.builder().model(model).build();
-    Slice<VehicleInspection> returnPage =
+    Page<VehicleInspection> returnPage =
         inspectionQueryService.getModelByExample(probe, page, size);
-    PageDTO<VehicleInspection> response = new PageDTO<>(returnPage);
-    return ResponseEntity.ok(response);
+    return ResponseEntity.ok(returnPage);
   }
 
   /**
