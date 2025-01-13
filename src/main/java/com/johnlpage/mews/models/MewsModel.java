@@ -16,6 +16,8 @@ public interface MewsModel<ID> {
 
   ID getDocumentId();
 
-  /** Somewhat optional function to take a HashMap and modify it for testing */
-  void modifyDataForTest(Map<String, Object> document);
+  /** Optional function to take a HashMap and modify it for testing */
+  default Map<String, Object> modifyDataForTest(Map<String, Object> document) {
+    return document;
+  }
 }
