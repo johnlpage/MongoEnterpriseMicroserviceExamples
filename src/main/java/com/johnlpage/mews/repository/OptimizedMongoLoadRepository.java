@@ -1,11 +1,10 @@
 package com.johnlpage.mews.repository;
 
-import com.johnlpage.mews.models.MewsModel;
 import com.mongodb.bulk.BulkWriteResult;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 
-public interface OptimizedMongoLoadRepository<T extends MewsModel> {
+public interface OptimizedMongoLoadRepository<T> {
   BulkWriteResult writeMany(List<T> items, Class<T> clazz);
 
   void asyncWriteMany(List<T> items, Class<T> clazz);
