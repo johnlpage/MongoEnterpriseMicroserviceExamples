@@ -5,6 +5,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.johnlpage.mews.dto.PageDTO;
 import com.johnlpage.mews.models.VehicleInspection;
+import com.johnlpage.mews.repository.VehicleInspectionRepository;
 import com.johnlpage.mews.service.MongoDbJsonLoaderService;
 import com.johnlpage.mews.service.MongoDbJsonQueryService;
 import jakarta.servlet.http.HttpServletRequest;
@@ -26,25 +27,23 @@ import org.springframework.web.bind.annotation.RestController;
 @RequestMapping("/vehicles")
 public class VehicleInspectionController {
 
-  private static final Logger LOG = LoggerFactory.getLogger(VehicleInspectionController.class);
-  private final MongoDbJsonLoaderService<VehicleInspection, Long> inspectionLoaderService;
-  private final MongoDbJsonQueryService<VehicleInspection, Long> inspectionQueryService;
-  private final ObjectMapper objectMapper;
+  private static final Logger logger = LoggerFactory.getLogger(VehicleInspectionController.class);
 
   @Autowired
-  public VehicleInspectionController(
-      MongoDbJsonLoaderService<VehicleInspection, Long> inspectionLoaderService,
-      MongoDbJsonQueryService<VehicleInspection, Long> inspectionQueryService,
-      ObjectMapper objectMapper) {
-    this.inspectionLoaderService = inspectionLoaderService;
-    this.inspectionQueryService = inspectionQueryService;
-    this.objectMapper = objectMapper;
-  }
+  private MongoDbJsonLoaderService<VehicleInspectionRepository, VehicleInspection>
+      inspectionLoaderService;
 
-  /**
-   * This could be something that reads a file, or even from a Kafka Queue as long as it gets a
-   * stream of JSON data - using an HTTP endpoint to demonstrate.
+  @Autowired
+  private MongoDbJsonQueryService<VehicleInspectionRepository, VehicleInspection, Long>
+      inspectionQueryService;
+
+  ;
+
+  /*
+   * This could be something that reads a file, or even from a Kafka Queue as long
+   * as it gets a stream of JSON data - using an HTTP endpoint to demonstrate.
    */
+
   @PostMapping("/inspections")
   public void loadFromStream(
       HttpServletRequest request,
@@ -53,16 +52,16 @@ public class VehicleInspectionController {
           boolean useUpdate) {
 
     inspectionLoaderService.useUpdateNotReplace(useUpdate);
-    LOG.info("Load Starts futz={}, useUpdate = {}", futz, useUpdate);
+    logger.info("Load Starts futz=" + futz + ", useUpdate = " + useUpdate);
     try {
       inspectionLoaderService.loadFromJSONStream(
           request.getInputStream(), VehicleInspection.class, futz);
     } catch (Exception e) {
-      LOG.error(e.getMessage());
+      logger.error(e.getMessage());
     }
   }
 
-  /** Get By ID */
+  // Get By ID
   @GetMapping("/inspections/{id}")
   public ResponseEntity<VehicleInspection> getInspectionById(@PathVariable Long id) {
     return inspectionQueryService
@@ -71,10 +70,9 @@ public class VehicleInspectionController {
         .orElse(ResponseEntity.notFound().build());
   }
 
-  /**
-   * JPA Get By Example Query - Needs an Index to be efficient It still finds ALL the results each
-   * time and returns a subset
-   */
+  // JPA Get By Example Query - Needs an Index to be efficient
+  // It still finds ALL the results each time and returns a subset
+
   @GetMapping("/inspections/model/{model}")
   public ResponseEntity<PageDTO<VehicleInspection>> getInspectionsByModel(
       @PathVariable String model,
@@ -82,25 +80,25 @@ public class VehicleInspectionController {
       @RequestParam(name = "size", required = false, defaultValue = "10") int size) {
     VehicleInspection probe = new VehicleInspection();
 
-    // This is where we are hard coding a query for this endpoint.
+    // This is where we are ahard coding a query for this endpoint.
     probe.setModel(model);
 
     Slice<VehicleInspection> returnPage =
         inspectionQueryService.getModelByExample(probe, page, size);
-    PageDTO<VehicleInspection> response = new PageDTO<>(returnPage);
+    PageDTO<VehicleInspection> response = new PageDTO<VehicleInspection>(returnPage);
     return ResponseEntity.ok(response);
   }
 
-  /**
-   * This is a very "Raw" API interface that lets the caller design their own query and projection
-   * etc.
-   */
+  // This is a very "Raw" API interface that lets the caller design their own query and projection
+  // etc.
+
   @PostMapping("/inspections/query")
   public ResponseEntity<String> mongoQuery(@RequestBody String requestBody) {
-    LOG.info(requestBody);
+    logger.info(requestBody);
     List<VehicleInspection> result =
         inspectionQueryService.getModelByMongoQuery(requestBody, VehicleInspection.class);
     try {
+      ObjectMapper objectMapper = new ObjectMapper();
       objectMapper.setSerializationInclusion(JsonInclude.Include.NON_NULL);
       // Convert list to JSON string
       String jsonResult = objectMapper.writeValueAsString(result);

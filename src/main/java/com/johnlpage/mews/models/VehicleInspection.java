@@ -14,31 +14,12 @@ import org.springframework.data.mongodb.core.mapping.Document;
 
 @JsonIgnoreProperties(ignoreUnknown = true)
 @Document(collection = "inspections")
-public class VehicleInspection implements MewsModel<Long> {
+public class VehicleInspection implements MewsModel {
 
-  @Id private Long testid;
+  @Id Long testid;
 
-  private Long vehicleid;
-  private Date testdate;
-  private String testclass;
-  private String testtype;
-  private String testresult;
-  private Long testmileage;
-  private String postcode;
-  private String make;
-  private String model;
-  private String colour;
-  private String files;
-  private Long capacity;
-  private Date firstusedate;
-  @Transient private Boolean toDelete = false;
-
-  /** Use this to capture any fields not captured explicitly */
-  @JsonAnyGetter @JsonAnySetter private Map<String, Object> payload = new LinkedHashMap<>();
-
-  @Transient private Random rng;
-
-  public VehicleInspection() {}
+  Long vehicleid;
+  Date testdate;
 
   public Date getTestdate() {
     return testdate;
@@ -48,13 +29,38 @@ public class VehicleInspection implements MewsModel<Long> {
     this.testdate = testdate;
   }
 
-  @JsonIgnore
-  public Boolean getToDelete() {
-    return toDelete;
+  String testclass;
+  String testtype;
+  String testresult;
+
+  Long testmileage;
+  String postcode;
+  String make;
+  String model;
+  String colour;
+  String files;
+  Long capacity;
+  Date firstusedate;
+  @Transient 
+  Boolean _toDelete = false;
+
+  // Use this to capture any fields not captured explicitly
+  @JsonAnyGetter @JsonAnySetter private Map<String, Object> payload = new LinkedHashMap<>();
+
+  @Transient private Random rng;
+
+  public VehicleInspection() {
   }
 
-  public void setToDelete(Boolean deleted) {
-    this.toDelete = deleted;
+
+  @JsonIgnore
+  public Boolean get_toDelete() {
+      return _toDelete;
+  }
+
+
+  public void set_toDelete(Boolean _deleted) {
+    this._toDelete = _deleted;
   }
 
   public String getTestresult() {
@@ -155,7 +161,7 @@ public class VehicleInspection implements MewsModel<Long> {
 
   @Override
   public boolean toDelete() {
-    return toDelete;
+    return _toDelete;
   }
 
   // This code will be very specific to your data and how you want to test
@@ -163,7 +169,7 @@ public class VehicleInspection implements MewsModel<Long> {
 
   @Override
   @JsonIgnore
-  public Long getDocumentId() {
+  public Object getDocumentId() {
     return testid;
   }
 
@@ -179,7 +185,7 @@ public class VehicleInspection implements MewsModel<Long> {
       return;
     }
 
-    // Make specific, realistic changes
+    // Make specific, realisetic changes
     // Change Mileage in 10%
     if (rng.nextDouble() < 0.1) {
       Integer mileage = (Integer) document.get("testmileage");

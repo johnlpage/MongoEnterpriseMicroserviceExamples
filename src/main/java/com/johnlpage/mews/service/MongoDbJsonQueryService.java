@@ -1,7 +1,8 @@
 package com.johnlpage.mews.service;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.johnlpage.mews.models.MewsModel;
-import com.johnlpage.mews.repository.GenericOptimizedMongoLoadRepository;
+import com.johnlpage.mews.repository.OptimizedMongoLoadRepository;
 import java.util.List;
 import java.util.Optional;
 import org.bson.Document;
@@ -14,57 +15,60 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Slice;
 import org.springframework.data.mongodb.core.MongoTemplate;
 import org.springframework.data.mongodb.core.query.BasicQuery;
+
+import org.springframework.data.mongodb.repository.MongoRepository;
 import org.springframework.stereotype.Service;
 
 @Service
-public class MongoDbJsonQueryService<T extends MewsModel<ID>, ID> {
+public class MongoDbJsonQueryService<
+    R extends OptimizedMongoLoadRepository<M> & MongoRepository<M, I>,
+    M extends MewsModel,
+    I extends Object> {
 
-  private static final Logger LOG = LoggerFactory.getLogger(MongoDbJsonQueryService.class);
-  private final GenericOptimizedMongoLoadRepository<T, ID> repository;
-  private final MongoTemplate mongoTemplate;
+  private static final Logger logger = LoggerFactory.getLogger(MongoDbJsonQueryService.class);
 
-  @Autowired
-  public MongoDbJsonQueryService(
-      GenericOptimizedMongoLoadRepository<T, ID> repository, MongoTemplate mongoTemplate) {
-    this.repository = repository;
-    this.mongoTemplate = mongoTemplate;
-  }
+  @Autowired private R repository;
+  @Autowired private MongoTemplate mongoTemplate;
 
-  /** Find One by ID */
-  public Optional<T> getModelById(ID id) {
+  @Autowired private ObjectMapper objectMapper;
+
+  // Find One by ID
+  public Optional<M> getModelById(I id) {
     return repository.findById(id);
   }
 
-  /** Find By Example with Paging */
-  public Slice<T> getModelByExample(T probe, int page, int size) {
+  // Find By Example with Paging
+
+  public Slice<M> getModelByExample(M probe, int page, int size) {
+
     ExampleMatcher matcher = ExampleMatcher.matching().withIgnoreNullValues();
-    Example<T> example = Example.of(probe, matcher);
-    return repository.findAll(example, PageRequest.of(page, size));
+    Example<M> example = Example.of(probe, matcher);
+    Slice<M> allItems = repository.findAll(example, PageRequest.of(page, size));
+    return allItems;
   }
 
-  /**
-   * This is wrapping the ability to do a native MongoDB call Passing in Query, Sort,Skip,Limit and
-   * Projection
-   */
-  public List<T> getModelByMongoQuery(String jsonString, Class<T> type) {
+  // This is wrapping the ability to do a native MognoDB call
+  // Passing in Query, Skort,Skip,Limit and Projection
+  public List<M> getModelByMongoQuery(String jsonString,  Class<M> type ) {
+
     try {
+    
       Document queryRequest = Document.parse(jsonString);
       Document filter = queryRequest.get("filter", new Document());
-      Document projection = queryRequest.get("projection", new Document());
-      int skip = queryRequest.getInteger("skip") != null ? queryRequest.getInteger("skip") : 0;
-      int limit =
-          queryRequest.getInteger("limit") != null ? queryRequest.getInteger("limit") : 1000;
-      Document sort = queryRequest.get("sort", new Document());
+      Document projection = queryRequest.get("projection",new Document());
+      Integer skip = queryRequest.getInteger("skip")  != null ? queryRequest.getInteger("skip") : 0;
+      Integer limit = queryRequest.getInteger("limit")  != null ? queryRequest.getInteger("limit") : 1000;
+      Document sort = queryRequest.get("sort",new Document());
 
-      LOG.info("{}{}", filter.toJson(), projection.toJson());
-      BasicQuery query = new BasicQuery(filter, projection);
+      logger.info(filter.toJson() + projection.toJson());
+      BasicQuery query  = new BasicQuery(filter,projection);
       query.skip(skip);
       query.limit(limit);
 
       return mongoTemplate.find(query, type);
 
     } catch (Exception e) {
-      LOG.warn(e.getMessage());
+      logger.warn(e.getMessage());
       return null;
     }
   }
