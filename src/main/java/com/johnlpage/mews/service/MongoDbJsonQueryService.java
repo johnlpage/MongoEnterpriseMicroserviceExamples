@@ -4,19 +4,18 @@ import com.johnlpage.mews.models.MewsModel;
 import com.johnlpage.mews.repository.GenericOptimizedMongoLoadRepository;
 import java.util.List;
 import java.util.Optional;
-import lombok.RequiredArgsConstructor;
 import org.bson.Document;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Example;
 import org.springframework.data.domain.ExampleMatcher;
-import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Slice;
 import org.springframework.data.mongodb.core.MongoTemplate;
 import org.springframework.data.mongodb.core.query.BasicQuery;
 import org.springframework.stereotype.Service;
 
-@RequiredArgsConstructor
 @Service
 public class MongoDbJsonQueryService<T extends MewsModel<ID>, ID> {
 
@@ -24,13 +23,20 @@ public class MongoDbJsonQueryService<T extends MewsModel<ID>, ID> {
   private final GenericOptimizedMongoLoadRepository<T, ID> repository;
   private final MongoTemplate mongoTemplate;
 
+  @Autowired
+  public MongoDbJsonQueryService(
+      GenericOptimizedMongoLoadRepository<T, ID> repository, MongoTemplate mongoTemplate) {
+    this.repository = repository;
+    this.mongoTemplate = mongoTemplate;
+  }
+
   /** Find One by ID */
   public Optional<T> getModelById(ID id) {
     return repository.findById(id);
   }
 
   /** Find By Example with Paging */
-  public Page<T> getModelByExample(T probe, int page, int size) {
+  public Slice<T> getModelByExample(T probe, int page, int size) {
     ExampleMatcher matcher = ExampleMatcher.matching().withIgnoreNullValues();
     Example<T> example = Example.of(probe, matcher);
     return repository.findAll(example, PageRequest.of(page, size));
