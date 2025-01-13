@@ -3,10 +3,10 @@ package com.johnlpage.mews.repository;
 import static org.springframework.data.mongodb.core.query.Criteria.where;
 
 import com.johnlpage.mews.models.MewsModel;
+import com.johnlpage.mews.models.UpdateStrategy;
 import com.mongodb.bulk.BulkWriteResult;
 import java.util.List;
-import java.util.Map;
-import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.CompletableFuture;
 import org.bson.Document;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -25,9 +25,6 @@ public class OptimizedMongoLoadRepositoryImpl<T extends MewsModel<ID>, ID>
     implements OptimizedMongoLoadRepository<T> {
 
   private static final Logger LOG = LoggerFactory.getLogger(OptimizedMongoLoadRepositoryImpl.class);
-  private final AtomicInteger updates = new AtomicInteger(0);
-  private final AtomicInteger deletes = new AtomicInteger(0);
-  private final AtomicInteger inserts = new AtomicInteger(0);
   private final MongoTemplate mongoTemplate;
   private final MappingMongoConverter mappingMongoConverter;
 
@@ -40,11 +37,11 @@ public class OptimizedMongoLoadRepositoryImpl<T extends MewsModel<ID>, ID>
 
   @Override
   public BulkWriteResult writeMany(List<T> items, Class<T> clazz) {
-    return writeMany(items, clazz, false);
+    return writeMany(items, clazz, UpdateStrategy.REPLACE);
   }
 
   @Override
-  public BulkWriteResult writeMany(List<T> items, Class<T> clazz, boolean useUpdateNotReplace) {
+  public BulkWriteResult writeMany(List<T> items, Class<T> clazz, UpdateStrategy updateStrategy) {
     BulkOperations ops = mongoTemplate.bulkOps(BulkOperations.BulkMode.UNORDERED, clazz);
 
     for (T item : items) {
@@ -55,13 +52,12 @@ public class OptimizedMongoLoadRepositoryImpl<T extends MewsModel<ID>, ID>
         ops.remove(query);
       } else {
         // Get the BSON Document from the item
-        if (useUpdateNotReplace) {
+        if (updateStrategy == UpdateStrategy.UPSERT) {
           Document bsonDocument = new Document();
           mappingMongoConverter.write(item, bsonDocument);
 
           // Create an Update object and add fields to it
-          Update update = new Update();
-          BuildUpdateFromDocument(bsonDocument, update);
+          Update update = Update.fromDocument(bsonDocument);
 
           ops.upsert(query, update);
         } else {
@@ -74,64 +70,22 @@ public class OptimizedMongoLoadRepositoryImpl<T extends MewsModel<ID>, ID>
     return ops.execute();
   }
 
-  private void BuildUpdateFromDocument(Document bsonDocument, Update update) {
-    BuildUpdateFromDocument(bsonDocument, update, "");
-  }
-
-  /**
-   * Recurse through A document turning each individual singleton field (not arrays) into a value in
-   * $set - i.e. { $set : { a:1, o.b: 2, o.c: 3 }}
-   */
-  private void BuildUpdateFromDocument(Document bsonDocument, Update update, String basekey) {
-    for (Map.Entry<String, Object> entry : bsonDocument.entrySet()) {
-      // If it's a document then recurse
-      // Don't recurse into Arrays (It's possible but there are caveats to think
-      // about like deletions)
-      if (entry.getValue() instanceof Document) {
-        BuildUpdateFromDocument(
-            (Document) entry.getValue(), update, basekey + entry.getKey() + ".");
-      } else {
-        update.set(basekey + entry.getKey(), entry.getValue());
-      }
-    }
+  @Async("loadExecutor")
+  public CompletableFuture<BulkWriteResult> asyncWriteMany(List<T> toSave, Class<T> clazz) {
+    return asyncWriteMany(toSave, clazz, UpdateStrategy.REPLACE);
   }
 
   @Async("loadExecutor")
-  public void asyncWriteMany(List<T> toSave, Class<T> clazz) {
-    asyncWriteMany(toSave, clazz, false);
-  }
-
-  @Async("loadExecutor")
-  public void asyncWriteMany(List<T> toSave, Class<T> clazz, boolean useUpdateNotReplace) {
+  public CompletableFuture<BulkWriteResult> asyncWriteMany(
+      List<T> toSave, Class<T> clazz, UpdateStrategy updateStrategy) {
     try {
       // Update some thread safe counts for upserts, deletes and modifications.
-      BulkWriteResult r = writeMany(toSave, clazz, useUpdateNotReplace);
-      updates.addAndGet(r.getModifiedCount());
-      deletes.addAndGet(r.getDeletedCount());
-      inserts.addAndGet(r.getUpserts().size());
-
+      return CompletableFuture.completedFuture(writeMany(toSave, clazz, updateStrategy));
     } catch (Exception e) {
       LOG.error(e.getMessage());
       // TODO Handle Failed writes going to a dead letter queue or similar.
 
+      return CompletableFuture.failedFuture(e);
     }
-  }
-
-  public void resetStats() {
-    inserts.set(0);
-    updates.set(0);
-    deletes.set(0);
-  }
-
-  public AtomicInteger getUpdates() {
-    return updates;
-  }
-
-  public AtomicInteger getDeletes() {
-    return deletes;
-  }
-
-  public AtomicInteger getInserts() {
-    return inserts;
   }
 }
