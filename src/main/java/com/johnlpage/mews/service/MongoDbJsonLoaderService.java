@@ -3,69 +3,75 @@ package com.johnlpage.mews.service;
 import com.fasterxml.jackson.core.JsonFactory;
 import com.fasterxml.jackson.core.JsonParser;
 import com.fasterxml.jackson.core.JsonToken;
+import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.johnlpage.mews.models.MewsModel;
+import com.johnlpage.mews.models.UpdateStrategy;
 import com.johnlpage.mews.repository.OptimizedMongoLoadRepository;
+import java.io.BufferedInputStream;
 import java.io.EOFException;
 import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
+import java.util.concurrent.atomic.AtomicInteger;
+import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.data.mongodb.repository.MongoRepository;
-import org.springframework.stereotype.Service;
 
-@Service
-public class MongoDbJsonLoaderService<
-    R extends OptimizedMongoLoadRepository<M> & MongoRepository<M, ?>, M extends MewsModel> {
-        
-  private static final Logger logger = LoggerFactory.getLogger(MongoDbJsonLoaderService.class);
-  ArrayList<M> toSave = null;
-  private boolean useUpdateNotReplace;
-  @Autowired private R repository;
+@RequiredArgsConstructor
+public abstract class MongoDbJsonLoaderService<T extends MewsModel<ID>, ID> {
 
-  // Parses a JSON stream object by object, assumes it's not an Array
+  private static final Logger LOG = LoggerFactory.getLogger(MongoDbJsonLoaderService.class);
+  private final OptimizedMongoLoadRepository<T> repository;
+  private final ObjectMapper objectMapper;
+  private final JsonFactory jsonFactory;
 
-  public void loadFromJSONStream(InputStream inputStream, Class<M> type, Boolean modifyForTesting) {
+  /** Parses a JSON stream object by object, assumes it's not an Array. */
+  public void loadFromJsonStream(
+      InputStream inputStream,
+      Class<T> type,
+      Boolean modifyForTesting,
+      UpdateStrategy updateStrategy) {
     // Create a JsonFactory and ObjectMapper
-    JsonFactory factory = new JsonFactory();
-    ObjectMapper mapper = new ObjectMapper(factory);
-    M fuzzer = null;
+    MewsModel<ID> fuzzer = null;
+    AtomicInteger updates = new AtomicInteger(0);
+    AtomicInteger deletes = new AtomicInteger(0);
+    AtomicInteger inserts = new AtomicInteger(0);
+    List<T> toSave = new ArrayList<>();
 
     if (modifyForTesting) {
       try {
         fuzzer = type.getDeclaredConstructor().newInstance();
       } catch (Exception e) {
-        logger.error(e.getMessage());
+        LOG.error(e.getMessage());
         return;
       }
     }
 
     int count = 0;
-    repository.resetStats();
-
-    long startTime = System.nanoTime();
-    try (JsonParser parser = factory.createParser(inputStream)) {
+    long startTime = System.currentTimeMillis();
+    try (BufferedInputStream bufferedInputStream = new BufferedInputStream(inputStream);
+        JsonParser parser = jsonFactory.createParser(bufferedInputStream)) {
       // Iterate over tokens in the stream
       while (!parser.isClosed()) {
         // Check if the current token is the start of a new JSON object
         JsonToken token = parser.nextToken();
         if (token == JsonToken.START_OBJECT) {
           // Move the parser to the end of the current object
-          JsonNode node = mapper.readTree(parser);
+          JsonNode node = objectMapper.readTree(parser);
 
           // Map The JSON to a HashMap
-          @SuppressWarnings("unchecked")
-          Map<String, Object> resultMap = mapper.convertValue(node, HashMap.class);
+          Map<String, Object> resultMap =
+              objectMapper.convertValue(node, new TypeReference<HashMap<String, Object>>() {});
 
           // If modifyForTesting is true then change some values in it.
           if (fuzzer != null && modifyForTesting) {
-            fuzzer.modifyDataForTest(resultMap);
+            resultMap = fuzzer.modifyDataForTest(resultMap);
           }
-          M document = mapper.convertValue(resultMap, type);
+          T document = objectMapper.convertValue(resultMap, type);
 
           /* Optionally store the JSON as a String or the Whole Hashmap as an
           alternative to using @JsonAnySetter
@@ -73,58 +79,47 @@ public class MongoDbJsonLoaderService<
           */
 
           count++;
-          loadItem(document, type);
+          toSave.add(document);
+          if (toSave.size() >= 100) {
+            // Alternative Options
+            // repository.writeMany(toSave);
+            // repository.saveAll(toSave);
+            List<T> copyOfToSave = List.copyOf(toSave);
+            toSave.clear();
+            repository
+                .asyncWriteMany(copyOfToSave, type, updateStrategy)
+                .thenApply(
+                    bulkWriteResult -> {
+                      updates.addAndGet(bulkWriteResult.getModifiedCount());
+                      deletes.addAndGet(bulkWriteResult.getDeletedCount());
+                      inserts.addAndGet(bulkWriteResult.getUpserts().size());
+                      return bulkWriteResult;
+                    });
+          }
         }
       }
-      if (toSave != null && toSave.size() > 0) {
+      if (!toSave.isEmpty()) {
         // Alternative Options
         // repository.writeMany(toSave);
         // repository.saveAll(toSave);
-
-        repository.asyncWriteMany(toSave, type, useUpdateNotReplace);
+        repository
+            .asyncWriteMany(toSave, type, updateStrategy)
+            .thenApply(
+                bulkWriteResult -> {
+                  updates.addAndGet(bulkWriteResult.getModifiedCount());
+                  deletes.addAndGet(bulkWriteResult.getDeletedCount());
+                  inserts.addAndGet(bulkWriteResult.getUpserts().size());
+                  return bulkWriteResult;
+                })
+            .thenRun(toSave::clear);
       }
-      long endTime = System.nanoTime();
-      logger.info(
-          "Processed "
-              + count
-              + " docs. Time taken: "
-              + ((endTime - startTime) / 1000000L)
-              + "ms.");
-      logger.info(
-          "Modified: "
-              + repository.getUpdates()
-              + " Added:"
-              + repository.getInserts()
-              + " Removed: "
-              + repository.getDeletes());
-
+      final long endTime = System.currentTimeMillis();
+      LOG.info("Processed {} docs. Time taken: {}ms.", count, endTime - startTime);
+      LOG.info("Modified: {} Added: {} Removed: {}", updates, inserts, deletes);
     } catch (EOFException e) {
-      logger.error(e.getMessage());
-      logger.error("Load Terminated as sender stopped sending JSON");
+      LOG.error("Load Terminated as sender stopped sending JSON: {}", e.getMessage(), e);
     } catch (Exception e) {
-      logger.error(e.getMessage());
+      LOG.error(e.getMessage(), e);
     }
-  }
-
-  // Load these into MongoDB as efficiently as we can, build up batches
-  // Then load the bactch asyncronously.
-
-  private void loadItem(M item, Class<M> type) {
-    if (toSave == null) {
-      toSave = new ArrayList<M>();
-    }
-    toSave.add(item);
-    if (toSave.size() >= 100) {
-      // Alternative Options
-      // repository.writeMany(toSave);
-      // repository.saveAll(toSave);
-
-      repository.asyncWriteMany(toSave, type, useUpdateNotReplace);
-      toSave = null; // Dont clear existing
-    }
-  }
-
-  public void useUpdateNotReplace(boolean b) {
-    useUpdateNotReplace = b;
   }
 }
