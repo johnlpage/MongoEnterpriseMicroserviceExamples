@@ -12,12 +12,11 @@ import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
-import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
-@RequiredArgsConstructor
 @Service
 public class MongoDbJsonLoaderService<T extends MewsModel<ID>, ID> {
 
@@ -29,10 +28,20 @@ public class MongoDbJsonLoaderService<T extends MewsModel<ID>, ID> {
   ArrayList<T> toSave = null;
   private boolean useUpdateNotReplace;
 
+  @Autowired
+  public MongoDbJsonLoaderService(
+      GenericOptimizedMongoLoadRepository<T, ID> repository,
+      ObjectMapper objectMapper,
+      JsonFactory jsonFactory) {
+    this.repository = repository;
+    this.objectMapper = objectMapper;
+    this.jsonFactory = jsonFactory;
+  }
+
   /** Parses a JSON stream object by object, assumes it's not an Array. */
   public void loadFromJSONStream(InputStream inputStream, Class<T> type, Boolean modifyForTesting) {
     // Create a JsonFactory and ObjectMapper
-    MewsModel<ID> fuzzer = null;
+    T fuzzer = null;
 
     if (modifyForTesting) {
       try {
@@ -62,7 +71,7 @@ public class MongoDbJsonLoaderService<T extends MewsModel<ID>, ID> {
 
           // If modifyForTesting is true then change some values in it.
           if (fuzzer != null && modifyForTesting) {
-            resultMap = fuzzer.modifyDataForTest(resultMap);
+            fuzzer.modifyDataForTest(resultMap);
           }
           T document = objectMapper.convertValue(resultMap, type);
 

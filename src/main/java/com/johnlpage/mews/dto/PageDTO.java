@@ -1,22 +1,14 @@
 package com.johnlpage.mews.dto;
 
 import java.util.List;
-import lombok.Builder;
-import lombok.EqualsAndHashCode;
-import lombok.Getter;
-import lombok.ToString;
 import org.springframework.data.domain.Slice;
 
-@Getter
-@ToString
-@EqualsAndHashCode
-@Builder(toBuilder = true)
 public class PageDTO<T> {
   private final List<T> content;
   private final int pageNumber;
   private final int pageSize;
-  private int totalPages;
-  private long totalElements;
+    private int totalPages;
+    private long totalElements;
 
   public PageDTO(Slice<T> returnPage) {
     this.content = returnPage.getContent();
@@ -30,4 +22,24 @@ public class PageDTO<T> {
     // this.totalElements = returnPage.getTotalElements();
 
   }
+
+    public List<T> getContent() {
+        return content;
+    }
+
+    public int getTotalPages() {
+        return totalPages;
+    }
+
+    public long getTotalElements() {
+        return totalElements;
+    }
+
+    public int getPageNumber() {
+        return pageNumber;
+    }
+
+    public int getPageSize() {
+        return pageSize;
+    }
 }
