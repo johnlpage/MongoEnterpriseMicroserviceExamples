@@ -94,7 +94,7 @@ public class VehicleInspectionController {
 
   @PostMapping("/inspections/query")
   public ResponseEntity<String> mongoQuery(@RequestBody String requestBody) {
-    logger.info(requestBody);
+    // logger.info(requestBody);
     List<VehicleInspection> result =
         inspectionQueryService.getModelByMongoQuery(requestBody, VehicleInspection.class);
     try {

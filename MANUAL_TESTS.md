@@ -28,7 +28,7 @@ curl -s http://localhost:8080/vehicles/inspections/model/POLO| jq
 ```
 
 ```
-curl -X POST http://localhost:8080/vehicles/inspections/query -H "Content-Type: application/json" \
+curl -s -X POST http://localhost:8080/vehicles/inspections/query -H "Content-Type: application/json" \
 -d \
 '
 {
@@ -39,7 +39,26 @@ curl -X POST http://localhost:8080/vehicles/inspections/query -H "Content-Type: 
     "projection": {
       "make":1,
       "model":1
-    }
+    },
+    "sort" : { "make" : 1}
+}' | jq
+```
+
+
+```
+curl -s -X POST http://localhost:8080/vehicles/inspections/query -H "Content-Type: application/json" \
+-d \
+'
+{
+    "filter": {
+        "model": "POLO"
+    },
+    "limit" : 2,
+    "projection": {
+      "make":1,
+      "model":1
+    },
+    "sort" : { "model" : 1}
 }' | jq
 ```
 
