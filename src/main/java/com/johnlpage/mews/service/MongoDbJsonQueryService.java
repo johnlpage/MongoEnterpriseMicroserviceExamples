@@ -1,8 +1,6 @@
 package com.johnlpage.mews.service;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.johnlpage.mews.models.MewsModel;
-import com.johnlpage.mews.repository.OptimizedMongoLoadRepository;
 import com.mongodb.client.MongoCollection;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
@@ -13,11 +11,11 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import lombok.RequiredArgsConstructor;
 import org.bson.Document;
 import org.bson.json.JsonWriterSettings;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Example;
 import org.springframework.data.domain.ExampleMatcher;
 import org.springframework.data.domain.PageRequest;
@@ -25,63 +23,43 @@ import org.springframework.data.domain.Slice;
 import org.springframework.data.mongodb.core.MongoTemplate;
 import org.springframework.data.mongodb.core.query.BasicQuery;
 import org.springframework.data.mongodb.repository.MongoRepository;
-import org.springframework.stereotype.Service;
 
-@Service
-public class MongoDbJsonQueryService<
-    R extends OptimizedMongoLoadRepository<M> & MongoRepository<M, I>,
-    M extends MewsModel,
-    I extends Object> {
+@RequiredArgsConstructor
+public abstract class MongoDbJsonQueryService<T extends MewsModel<ID>, ID> {
 
-  private static final Logger logger = LoggerFactory.getLogger(MongoDbJsonQueryService.class);
+  private static final Logger LOG = LoggerFactory.getLogger(MongoDbJsonQueryService.class);
+  private final MongoRepository<T, ID> repository;
+  private final MongoTemplate mongoTemplate;
 
-  @Autowired private R repository;
-  @Autowired private MongoTemplate mongoTemplate;
-
-  @Autowired private ObjectMapper objectMapper;
-
-  class QueryScore {
-    int count;
-    int score;
-  }
-
-  private final int queriesBeforeRecheck = 1000;
-  HashMap<String, QueryScore> queryScores = new HashMap<String, QueryScore>();
-
-  // Find One by ID
-  public Optional<M> getModelById(I id) {
+  /** Find One by ID */
+  public Optional<T> getModelById(ID id) {
     return repository.findById(id);
   }
 
-  // Find By Example with Paging
-
-  public Slice<M> getModelByExample(M probe, int page, int size) {
-
+  /** Find By Example with Paging */
+  public Slice<T> getModelByExample(T probe, int page, int size) {
     ExampleMatcher matcher = ExampleMatcher.matching().withIgnoreNullValues();
-    Example<M> example = Example.of(probe, matcher);
-    Slice<M> allItems = repository.findAll(example, PageRequest.of(page, size));
-    return allItems;
+    Example<T> example = Example.of(probe, matcher);
+    return repository.findAll(example, PageRequest.of(page, size));
   }
 
-  // This is wrapping the ability to do a native MognoDB call
-  // Passing in Query, Skort,Skip,Limit and Projection
-  public List<M> getModelByMongoQuery(String jsonString, Class<M> type) {
-
+  /**
+   * This is wrapping the ability to do a native MongoDB call Passing in Query, Sort,Skip,Limit and
+   * Projection
+   */
+  public List<T> getModelByMongoQuery(String jsonString, Class<T> type) {
     try {
-
       Document queryRequest = Document.parse(jsonString);
       Document filter = queryRequest.get("filter", new Document());
       Document projection = queryRequest.get("projection", new Document());
-      Integer skip = queryRequest.getInteger("skip") != null ? queryRequest.getInteger("skip") : 0;
-      Integer limit =
+      int skip = queryRequest.getInteger("skip") != null ? queryRequest.getInteger("skip") : 0;
+      int limit =
           queryRequest.getInteger("limit") != null ? queryRequest.getInteger("limit") : 1000;
       Document sort = queryRequest.get("sort", new Document());
 
       // Check the cost to see if we allow it
+      Integer cost = costManager(type, filter, projection, sort);
 
-      Integer cost;
-      cost = costManager(type, filter, projection, sort);
-   
       // Decide what to do based on cost
 
       BasicQuery query = new BasicQuery(filter, projection);
@@ -92,27 +70,27 @@ public class MongoDbJsonQueryService<
       return mongoTemplate.find(query, type);
 
     } catch (Exception e) {
-      logger.warn(e.getMessage());
+      LOG.warn(e.getMessage());
       return null;
     }
   }
 
-  // Because the getModelByMongoQuery allows any query - we want to be able to asess each query and
-  // then
-  // decide what we are doing based on the cost - for example disallow unindexed queries or send
-  // them to
-  // secondaries, flag and log them etc. To do this we need to know the cost of a query by calling
-  // explain - but also possibly caching that so we don't do it for every call
-
-  private Integer costManager(Class<M> type, Document filter, Document projection, Document sort) {
-
+  /**
+   * Because the getModelByMongoQuery allows any query - we want to be able to assess each query and
+   * then decide what we are doing based on the cost - for example disallow unindexed queries or
+   * send them to secondaries, flag and log them etc. To do this we need to know the cost of a query
+   * by calling explain - but also possibly caching that so we don't do it for every call
+   */
+  private Integer costManager(Class<T> type, Document filter, Document projection, Document sort) {
+    int queriesBeforeRecheck = 1000;
+    Map<String, QueryScore> queryScores = new HashMap<>();
     QueryScore qs;
 
     String collectionName = mongoTemplate.getCollectionName(type);
     MongoCollection<Document> collection = mongoTemplate.getCollection(collectionName);
 
     String queryHash = computeQueryShapeHash(filter, projection, sort);
-    //logger.info(queryHash);
+    // LOG.info(queryHash);
     qs = queryScores.get(queryHash);
     if (qs != null) {
       if (qs.count < queriesBeforeRecheck) {
@@ -127,10 +105,10 @@ public class MongoDbJsonQueryService<
     // Spring like
 
     // Retrieve the explain plan for the query
-    logger.info("Query Shape not cached  - estimating efficiency.");
+    LOG.info("Query Shape not cached  - estimating efficiency.");
     Document explain = collection.find(filter).sort(sort).projection(projection).explain();
     JsonWriterSettings jsonWriterSettings = JsonWriterSettings.builder().indent(true).build();
-    // logger.info(explain.toJson(jsonWriterSettings));
+    // LOG.info(explain.toJson(jsonWriterSettings));
 
     int score = 0;
 
@@ -141,7 +119,7 @@ public class MongoDbJsonQueryService<
             .get("stage", "Unknown");
 
     if (queryPlan.equals("COLLSCAN")) {
-      logger.warn("COLLECTION SCAN QUERY - THIS IS NOT A GOOD IDEA");
+      LOG.warn("COLLECTION SCAN QUERY - THIS IS NOT A GOOD IDEA");
       score = 500; // Unindexed query is very expensive
     } else {
       Document exStats = explain.get("executionStats", new Document());
@@ -177,17 +155,17 @@ public class MongoDbJsonQueryService<
       }
     }
 
-    //Hash the latest score
+    // Hash the latest score
     qs = new QueryScore();
     qs.count = 0;
     qs.score = score;
     queryScores.put(queryHash, qs);
-    logger.info("EFFICIENCY SCORE OF QUERY = " + score);
+    LOG.info("EFFICIENCY SCORE OF QUERY = {}", score);
     return score;
   }
 
   private String computeQueryShapeHash(Document filter, Document projection, Document sort) {
-    ArrayList<String> fields = new ArrayList<String>();
+    ArrayList<String> fields = new ArrayList<>();
     // idea here is to flatten out into list of field names
 
     for (Map.Entry<String, Object> entry : filter.entrySet()) {
@@ -230,5 +208,10 @@ public class MongoDbJsonQueryService<
     } catch (NoSuchAlgorithmException e) {
       throw new RuntimeException("Hashing algorithm not found", e);
     }
+  }
+
+  private static final class QueryScore {
+    int count;
+    int score;
   }
 }
