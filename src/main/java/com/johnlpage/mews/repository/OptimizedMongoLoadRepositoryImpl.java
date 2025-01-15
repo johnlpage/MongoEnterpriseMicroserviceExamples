@@ -2,8 +2,8 @@ package com.johnlpage.mews.repository;
 
 import static org.springframework.data.mongodb.core.query.Criteria.where;
 
-import com.johnlpage.mews.models.MewsModel;
-import com.johnlpage.mews.models.UpdateStrategy;
+import com.johnlpage.mews.model.Deleteable;
+import com.johnlpage.mews.model.UpdateStrategy;
 import com.mongodb.bulk.BulkWriteResult;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
@@ -20,7 +20,7 @@ import org.springframework.data.mongodb.core.query.Update;
 import org.springframework.scheduling.annotation.Async;
 
 @RequiredArgsConstructor
-public class OptimizedMongoLoadRepositoryImpl<T extends MewsModel<ID>, ID>
+public class OptimizedMongoLoadRepositoryImpl<T extends Deleteable<ID>, ID>
     implements OptimizedMongoLoadRepository<T> {
 
   private static final Logger LOG = LoggerFactory.getLogger(OptimizedMongoLoadRepositoryImpl.class);

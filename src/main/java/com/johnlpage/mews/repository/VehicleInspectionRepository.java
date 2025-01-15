@@ -1,6 +1,6 @@
 package com.johnlpage.mews.repository;
 
-import com.johnlpage.mews.models.VehicleInspection;
+import com.johnlpage.mews.model.VehicleInspection;
 import org.springframework.data.mongodb.repository.MongoRepository;
 import org.springframework.stereotype.Repository;
 

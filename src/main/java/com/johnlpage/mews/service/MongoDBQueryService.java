@@ -1,11 +1,10 @@
 package com.johnlpage.mews.service;
 
-import com.johnlpage.mews.models.MewsModel;
+import com.johnlpage.mews.model.Deleteable;
 import com.mongodb.client.MongoCollection;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
@@ -20,16 +19,23 @@ import org.springframework.data.domain.Example;
 import org.springframework.data.domain.ExampleMatcher;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Slice;
+import org.springframework.data.mapping.PersistentEntity;
+import org.springframework.data.mapping.PersistentProperty;
+import org.springframework.data.mapping.context.MappingContext;
 import org.springframework.data.mongodb.core.MongoTemplate;
+import org.springframework.data.mongodb.core.convert.MappingMongoConverter;
+import org.springframework.data.mongodb.core.convert.QueryMapper;
+import org.springframework.data.mongodb.core.mapping.MongoPersistentEntity;
 import org.springframework.data.mongodb.core.query.BasicQuery;
 import org.springframework.data.mongodb.repository.MongoRepository;
 
 @RequiredArgsConstructor
-public abstract class MongoDbJsonQueryService<T extends MewsModel<ID>, ID> {
+public abstract class MongoDBQueryService<T extends Deleteable<ID>, ID> {
 
-  private static final Logger LOG = LoggerFactory.getLogger(MongoDbJsonQueryService.class);
+  private static final Logger LOG = LoggerFactory.getLogger(MongoDBQueryService.class);
   private final MongoRepository<T, ID> repository;
   private final MongoTemplate mongoTemplate;
+  private final Map<String, QueryScore> queryScores = new HashMap<>();
 
   /** Find One by ID */
   public Optional<T> getModelById(ID id) {
@@ -53,6 +59,7 @@ public abstract class MongoDbJsonQueryService<T extends MewsModel<ID>, ID> {
       Document filter = queryRequest.get("filter", new Document());
       Document projection = queryRequest.get("projection", new Document());
       int skip = queryRequest.getInteger("skip") != null ? queryRequest.getInteger("skip") : 0;
+      //Default ot a limit of 1000 unless otherwise advised
       int limit =
           queryRequest.getInteger("limit") != null ? queryRequest.getInteger("limit") : 1000;
       Document sort = queryRequest.get("sort", new Document());
@@ -61,6 +68,8 @@ public abstract class MongoDbJsonQueryService<T extends MewsModel<ID>, ID> {
       Integer cost = costManager(type, filter, projection, sort);
 
       // Decide what to do based on cost
+      // Deny Query, Log Query as Bad, Send to Secondary
+      LOG.info("Query Cost was  {} - running anyway.", cost);
 
       BasicQuery query = new BasicQuery(filter, projection);
       query.skip(skip);
@@ -83,43 +92,64 @@ public abstract class MongoDbJsonQueryService<T extends MewsModel<ID>, ID> {
    */
   private Integer costManager(Class<T> type, Document filter, Document projection, Document sort) {
     int queriesBeforeRecheck = 1000;
-    Map<String, QueryScore> queryScores = new HashMap<>();
-    QueryScore qs;
 
     String collectionName = mongoTemplate.getCollectionName(type);
     MongoCollection<Document> collection = mongoTemplate.getCollection(collectionName);
 
+    // To get any field mappings we need to take the incoming query and perform any
+    // field mapping hidden away in the model - like the @ID annotations even our RAW interface
+    // will want to use the Spring field names.
+
+    MappingMongoConverter mongoConverter = (MappingMongoConverter) mongoTemplate.getConverter();
+
+    MappingContext<? extends PersistentEntity<?, ?>, ? extends PersistentProperty<?>>
+        mappingContext = mongoConverter.getMappingContext();
+
+    QueryMapper queryMapper = new QueryMapper(mongoConverter);
+
+    filter =
+        queryMapper.getMappedObject(
+            filter, (MongoPersistentEntity<?>) mappingContext.getPersistentEntity(type));
+    projection =
+        queryMapper.getMappedObject(
+            projection, (MongoPersistentEntity<?>) mappingContext.getPersistentEntity(type));
+    sort =
+        queryMapper.getMappedObject(
+            sort, (MongoPersistentEntity<?>) mappingContext.getPersistentEntity(type));
+
+
+    QueryScore qs;
+
     String queryHash = computeQueryShapeHash(filter, projection, sort);
-    // LOG.info(queryHash);
+
     qs = queryScores.get(queryHash);
     if (qs != null) {
+
       if (qs.count < queriesBeforeRecheck) {
         qs.count++;
         return qs.score;
       }
     }
 
-    // TODO: If we are doing some type mapping or renaming how do we apply that automatically
-    // Most obviously @ID - Spring can do this for us with getQueryObject() if we are passing in
-    // something
-    // Spring like
-
     // Retrieve the explain plan for the query
-    LOG.info("Query Shape not cached  - estimating efficiency.");
-    Document explain = collection.find(filter).sort(sort).projection(projection).explain();
+    LOG.info("Query Shape {} not cached  - estimating efficiency.",filter.toJson());
+    //Added a limit in here as otherwise a COLLSCAN can take forever.
+    Document explain = collection.find(filter).sort(sort).projection(projection).limit(1000).explain();
     JsonWriterSettings jsonWriterSettings = JsonWriterSettings.builder().indent(true).build();
-    // LOG.info(explain.toJson(jsonWriterSettings));
+    // Uncomment this to see the query explain in the logs.
+    LOG.info(explain.toJson(jsonWriterSettings));
 
     int score = 0;
 
     String queryPlan =
         explain
             .get("queryPlanner", new Document())
-            .get("winningPlan", new Document())
-            .get("stage", "Unknown");
+            .get("winningPlan", new Document()).toJson();
 
-    if (queryPlan.equals("COLLSCAN")) {
-      LOG.warn("COLLECTION SCAN QUERY - THIS IS NOT A GOOD IDEA");
+
+    if (queryPlan.contains("COLLSCAN")) {
+      // Limits and other things may come first - is COLLSCAN is in there it's bad
+      LOG.warn("COLLECTION SCAN QUERY !- This is not healthy in production.");
       score = 500; // Unindexed query is very expensive
     } else {
       Document exStats = explain.get("executionStats", new Document());
@@ -143,7 +173,7 @@ public abstract class MongoDbJsonQueryService<T extends MewsModel<ID>, ID> {
       }
 
       // Cost of a sort depends how much we are sorting but quite a lot!
-      if (queryPlan.equals("SORT")) {
+      if (queryPlan.contains("SORT")) {
         // Small set isn't a HUGE issue
         if (nReturned < 100) {
           score += 10;
@@ -197,7 +227,6 @@ public abstract class MongoDbJsonQueryService<T extends MewsModel<ID>, ID> {
 
       // Compute the hash
       byte[] hashBytes = digest.digest(combinedString.toString().getBytes());
-      byte[] shortHashBytes = Arrays.copyOf(hashBytes, Math.min(24, hashBytes.length));
 
       // Convert hash bytes to a hex string
       StringBuilder hashString = new StringBuilder();

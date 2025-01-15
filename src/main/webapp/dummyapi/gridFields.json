@@ -1,6 +1,10 @@
 {
   "Test Number": "testid",
-  "Vehicle": "vehicleid",
+  "VehicleID": "vehicleid",
   "Make": "make",
-  "Model": "model"
+  "Model": "model",
+  "Colour" : "colour",
+  "Mileage" : "testmileage",
+  "Result" : "testresult",
+  "Registered" : "firstusedate"
 }

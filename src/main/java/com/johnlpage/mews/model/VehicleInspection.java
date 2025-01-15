@@ -1,4 +1,4 @@
-package com.johnlpage.mews.models;
+package com.johnlpage.mews.model;
 
 import com.fasterxml.jackson.annotation.JsonAnyGetter;
 import com.fasterxml.jackson.annotation.JsonAnySetter;
@@ -8,21 +8,18 @@ import com.fasterxml.jackson.annotation.JsonInclude;
 import java.util.Date;
 import java.util.Map;
 import java.util.Random;
-import lombok.Builder;
+
+import lombok.Data;
 import lombok.Singular;
-import lombok.Value;
-import lombok.extern.jackson.Jacksonized;
 import org.springframework.data.annotation.Id;
 import org.springframework.data.annotation.Transient;
 import org.springframework.data.mongodb.core.mapping.Document;
 
-@Value
-@Jacksonized
-@Builder(toBuilder = true)
+@Data
 @JsonIgnoreProperties(ignoreUnknown = true)
 @JsonInclude(JsonInclude.Include.NON_NULL)
 @Document(collection = "inspections")
-public class VehicleInspection implements MewsModel<Long> {
+public class VehicleInspection implements Deleteable<Long> {
 
   @Id Long testid;
   Long vehicleid;
@@ -38,7 +35,7 @@ public class VehicleInspection implements MewsModel<Long> {
   String files;
   Long capacity;
   Date firstusedate;
-  @JsonIgnore @Transient boolean toDelete;
+  @Transient boolean toDelete;
 
   /** Use this to capture any fields not captured explicitly */
   @JsonAnyGetter

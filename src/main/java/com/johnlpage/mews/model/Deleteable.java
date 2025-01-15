@@ -1,4 +1,4 @@
-package com.johnlpage.mews.models;
+package com.johnlpage.mews.model;
 
 import java.util.Map;
 
@@ -6,12 +6,11 @@ import java.util.Map;
  * Interface to reflect that:
  *
  * <ul>
- *   <li>(a) We want to be able to tell form a document if it should be deleted
- *   <li>(b) We want to be able to get the @id and it's value without reflection being needed
- *   <li>(c) Our Loader class want's the idea
+ *   <li>(a) We add a method to say if this should be an update or a delete
+ *   <li>(b) Returns the @ID field name to help us do so.
  * </ul>
  */
-public interface MewsModel<ID> {
+public interface Deleteable<ID> {
   boolean toDelete();
 
   ID getDocumentId();

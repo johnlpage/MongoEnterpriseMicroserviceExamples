@@ -1,6 +1,8 @@
 {
+   "vehicleid" : 1,
    "make" : [ "FORD","VW"],
-   "model" : [ "ESCORT", "PROBE" ],
-   "mileage" : 1,
-   "notes" : ""
+   "model" : [ "ESCORT", "GOLF" ],
+   "colour" : [ "BLACK", "WHITE", "SILVER", "RED", "BLUE", "GREEN", "YELLOW"],
+   "testmileage" : 1
+
 }

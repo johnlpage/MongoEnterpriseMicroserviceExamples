@@ -1,12 +1,13 @@
-package com.johnlpage.mews.controllers;
+package com.johnlpage.mews.controller;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.johnlpage.mews.dto.PageDto;
-import com.johnlpage.mews.models.UpdateStrategy;
-import com.johnlpage.mews.models.VehicleInspection;
+import com.johnlpage.mews.model.UpdateStrategy;
+import com.johnlpage.mews.model.VehicleInspection;
 import com.johnlpage.mews.service.VehicleInspectionMongoDbJsonLoaderServiceImpl;
 import com.johnlpage.mews.service.VehicleInspectionMongoDbJsonQueryServiceImpl;
+
 import jakarta.servlet.http.HttpServletRequest;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
@@ -72,7 +73,9 @@ public class VehicleInspectionController {
       @RequestParam(name = "page", required = false, defaultValue = "0") int page,
       @RequestParam(name = "size", required = false, defaultValue = "10") int size) {
     // This is where we are hard coding a query for this endpoint.
-    VehicleInspection probe = VehicleInspection.builder().model(model).build();
+    // VehicleInspection probe = VehicleInspection.builder().model(model).build();
+    VehicleInspection probe = new VehicleInspection();
+    probe.setModel(model);
     Slice<VehicleInspection> returnPage =
         inspectionQueryService.getModelByExample(probe, page, size);
     PageDto<VehicleInspection> entity = new PageDto<>(returnPage);

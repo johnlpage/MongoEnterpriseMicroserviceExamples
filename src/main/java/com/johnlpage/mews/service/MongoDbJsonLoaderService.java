@@ -6,8 +6,8 @@ import com.fasterxml.jackson.core.JsonToken;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.johnlpage.mews.models.MewsModel;
-import com.johnlpage.mews.models.UpdateStrategy;
+import com.johnlpage.mews.model.Deleteable;
+import com.johnlpage.mews.model.UpdateStrategy;
 import com.johnlpage.mews.repository.OptimizedMongoLoadRepository;
 import java.io.BufferedInputStream;
 import java.io.EOFException;
@@ -22,7 +22,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 @RequiredArgsConstructor
-public abstract class MongoDbJsonLoaderService<T extends MewsModel<ID>, ID> {
+public abstract class MongoDbJsonLoaderService<T extends Deleteable<ID>, ID> {
 
   private static final Logger LOG = LoggerFactory.getLogger(MongoDbJsonLoaderService.class);
   private final OptimizedMongoLoadRepository<T> repository;
@@ -36,7 +36,7 @@ public abstract class MongoDbJsonLoaderService<T extends MewsModel<ID>, ID> {
       Boolean modifyForTesting,
       UpdateStrategy updateStrategy) {
     // Create a JsonFactory and ObjectMapper
-    MewsModel<ID> fuzzer = null;
+    Deleteable<ID> fuzzer = null;
     AtomicInteger updates = new AtomicInteger(0);
     AtomicInteger deletes = new AtomicInteger(0);
     AtomicInteger inserts = new AtomicInteger(0);

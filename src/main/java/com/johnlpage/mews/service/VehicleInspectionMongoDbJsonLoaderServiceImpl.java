@@ -2,7 +2,7 @@ package com.johnlpage.mews.service;
 
 import com.fasterxml.jackson.core.JsonFactory;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.johnlpage.mews.models.VehicleInspection;
+import com.johnlpage.mews.model.VehicleInspection;
 import com.johnlpage.mews.repository.VehicleInspectionRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;

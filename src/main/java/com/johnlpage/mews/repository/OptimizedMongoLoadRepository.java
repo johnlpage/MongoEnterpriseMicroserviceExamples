@@ -1,6 +1,6 @@
 package com.johnlpage.mews.repository;
 
-import com.johnlpage.mews.models.UpdateStrategy;
+import com.johnlpage.mews.model.UpdateStrategy;
 import com.mongodb.bulk.BulkWriteResult;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
