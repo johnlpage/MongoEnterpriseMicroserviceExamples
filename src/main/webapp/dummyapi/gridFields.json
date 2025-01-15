@@ -3,8 +3,8 @@
   "VehicleID": "vehicleid",
   "Make": "make",
   "Model": "model",
-  "Colour" : "colour",
-  "Mileage" : "testmileage",
-  "Result" : "testresult",
-  "Registered" : "firstusedate"
+  "Colour": "colour",
+  "Mileage": "testmileage",
+  "Result": "testresult",
+  "Registered": "firstusedate"
 }
