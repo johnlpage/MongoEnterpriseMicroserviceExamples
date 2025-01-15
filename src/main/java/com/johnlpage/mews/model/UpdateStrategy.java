@@ -9,6 +9,5 @@ package com.johnlpage.mews.model;
  */
 public enum UpdateStrategy {
   UPSERT,
-  REPLACE,
-  ;
+  REPLACE
 }
