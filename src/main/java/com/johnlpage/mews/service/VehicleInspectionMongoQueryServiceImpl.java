@@ -6,10 +6,10 @@ import org.springframework.data.mongodb.core.MongoTemplate;
 import org.springframework.stereotype.Service;
 
 @Service
-public class VehicleInspectionMongoDbJsonQueryServiceImpl
-    extends MongoDBQueryService<VehicleInspection, Long> {
+public class VehicleInspectionMongoQueryServiceImpl
+    extends MongoDbQueryService<VehicleInspection, Long> {
 
-  public VehicleInspectionMongoDbJsonQueryServiceImpl(
+  public VehicleInspectionMongoQueryServiceImpl(
       VehicleInspectionRepository repository, MongoTemplate mongoTemplate) {
     super(repository, mongoTemplate);
   }

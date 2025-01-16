@@ -1,11 +1,13 @@
 package com.johnlpage.mews.repository;
 
+import static com.johnlpage.mews.util.AnnotationExtractor.getIdFromModel;
+import static com.johnlpage.mews.util.AnnotationExtractor.hasDeleteFlag;
 import static org.springframework.data.mongodb.core.query.Criteria.where;
 
-import com.johnlpage.mews.model.Deleteable;
 import com.johnlpage.mews.model.UpdateStrategy;
 import com.mongodb.bulk.BulkWriteResult;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import lombok.RequiredArgsConstructor;
 import org.bson.Document;
@@ -20,7 +22,7 @@ import org.springframework.data.mongodb.core.query.Update;
 import org.springframework.scheduling.annotation.Async;
 
 @RequiredArgsConstructor
-public class OptimizedMongoLoadRepositoryImpl<T extends Deleteable<ID>, ID>
+public class OptimizedMongoLoadRepositoryImpl<T , ID>
     implements OptimizedMongoLoadRepository<T> {
 
   private static final Logger LOG = LoggerFactory.getLogger(OptimizedMongoLoadRepositoryImpl.class);
@@ -28,28 +30,55 @@ public class OptimizedMongoLoadRepositoryImpl<T extends Deleteable<ID>, ID>
   private final MappingMongoConverter mappingMongoConverter;
 
   @Override
-  public BulkWriteResult writeMany(List<T> items, Class<T> clazz) {
+  public BulkWriteResult writeMany(List<T> items, Class<T> clazz) throws IllegalAccessException {
     return writeMany(items, clazz, UpdateStrategy.REPLACE);
   }
 
+  private void BuildUpdateFromDocument(Document bsonDocument, Update update) {
+    BuildUpdateFromDocument(bsonDocument, update, "");
+  }
+
+  /**
+   *   Recurse through A document turning each individual singleton field (not
+   *   arrays) into a
+   *   value in $set - i.e. { $set : { a:1, o.b: 2, o.c: 3 }}
+   */
+
+  private void BuildUpdateFromDocument(Document bsonDocument, Update update, String basekey) {
+    for (Map.Entry<String, Object> entry : bsonDocument.entrySet()) {
+      // If it's a document then recurse
+      // Don't recurse into Arrays (It's possible but there are catveates to think
+      // about like deletions)
+      if (entry.getValue() instanceof Document) {
+        BuildUpdateFromDocument(
+                (Document) entry.getValue(), update, basekey + entry.getKey() + ".");
+      } else {
+        update.set(basekey + entry.getKey(), entry.getValue());
+      }
+    }
+  }
+
   @Override
-  public BulkWriteResult writeMany(List<T> items, Class<T> clazz, UpdateStrategy updateStrategy) {
+  public BulkWriteResult writeMany(List<T> items, Class<T> clazz, UpdateStrategy updateStrategy) throws IllegalAccessException {
     BulkOperations ops = mongoTemplate.bulkOps(BulkOperations.BulkMode.UNORDERED, clazz);
 
     for (T item : items) {
 
-      Query query = new Query(where("_id").is(item.getDocumentId()));
+      Object idValue = getIdFromModel(item);
+      Query query = new Query(where("_id").is(idValue));
 
-      if (item.toDelete()) {
+      if (hasDeleteFlag(item)) {
         ops.remove(query);
       } else {
         // Get the BSON Document from the item
-        if (updateStrategy == UpdateStrategy.UPSERT) {
+        if (updateStrategy == UpdateStrategy.UPDATE) {
           Document bsonDocument = new Document();
           mappingMongoConverter.write(item, bsonDocument);
 
           // Create an Update object and add fields to it
-          Update update = Update.fromDocument(bsonDocument);
+          Update update = new Update();
+          BuildUpdateFromDocument(bsonDocument, update);
+
 
           ops.upsert(query, update);
         } else {

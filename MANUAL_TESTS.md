@@ -15,7 +15,7 @@ Send data with cURL - You caould also have it just read a file
 the motupdates endpoint modifies the data as it's read to simulate getting a new version.
 
 ```
-  curl -X POST "http://localhost:8080/vehicles/inspections?futz=true&useUpdate=true" -H "Content-Type: application/json" -T ~/mot1M.json  
+  curl -X POST "http://localhost:8080/vehicles/inspections?futz=true&updateStrategy=UPDATE" -H "Content-Type: application/json" -T ~/mot1M.json  
   ```
 
   ```

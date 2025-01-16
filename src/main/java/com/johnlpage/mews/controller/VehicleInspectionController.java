@@ -5,8 +5,9 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.johnlpage.mews.dto.PageDto;
 import com.johnlpage.mews.model.UpdateStrategy;
 import com.johnlpage.mews.model.VehicleInspection;
+import com.johnlpage.mews.service.VehicleInspectionFuzzerServiceImpl;
 import com.johnlpage.mews.service.VehicleInspectionMongoDbJsonLoaderServiceImpl;
-import com.johnlpage.mews.service.VehicleInspectionMongoDbJsonQueryServiceImpl;
+import com.johnlpage.mews.service.VehicleInspectionMongoQueryServiceImpl;
 
 import jakarta.servlet.http.HttpServletRequest;
 import java.util.List;
@@ -30,7 +31,8 @@ public class VehicleInspectionController {
 
   private static final Logger LOG = LoggerFactory.getLogger(VehicleInspectionController.class);
   private final VehicleInspectionMongoDbJsonLoaderServiceImpl inspectionLoaderService;
-  private final VehicleInspectionMongoDbJsonQueryServiceImpl inspectionQueryService;
+  private final VehicleInspectionMongoQueryServiceImpl inspectionQueryService;
+  private final VehicleInspectionFuzzerServiceImpl inspectionFuzzer;
   private final ObjectMapper objectMapper;
 
   /**
@@ -41,14 +43,12 @@ public class VehicleInspectionController {
   public void loadFromStream(
       HttpServletRequest request,
       @RequestParam(name = "futz", required = false, defaultValue = "false") Boolean futz,
-      @RequestParam(name = "useUpdate", required = false, defaultValue = "false")
-          Boolean useUpdate) {
-    // todo: make this parameter instead of boolean
-    UpdateStrategy updateStrategy = useUpdate ? UpdateStrategy.UPSERT : UpdateStrategy.REPLACE;
-    LOG.info("Load Starts futz={}, useUpdate = {}", futz, useUpdate);
+      @RequestParam(name = "updateStrategy", required = false, defaultValue = "REPLACE") UpdateStrategy updateStrategy) {
+
+    LOG.info("Load Starts futz={}, updateStrategy = {}", futz, updateStrategy);
     try {
       inspectionLoaderService.loadFromJsonStream(
-          request.getInputStream(), VehicleInspection.class, futz, updateStrategy);
+          request.getInputStream(), VehicleInspection.class, updateStrategy, futz ? inspectionFuzzer : null);
     } catch (Exception e) {
       LOG.error(e.getMessage());
     }
@@ -57,6 +57,7 @@ public class VehicleInspectionController {
   /** Get By ID */
   @GetMapping("/inspections/{id}")
   public ResponseEntity<VehicleInspection> getInspectionById(@PathVariable Long id) {
+
     return inspectionQueryService
         .getModelById(id)
         .map(ResponseEntity::ok)

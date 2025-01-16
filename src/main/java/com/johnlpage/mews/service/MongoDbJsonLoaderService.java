@@ -3,26 +3,22 @@ package com.johnlpage.mews.service;
 import com.fasterxml.jackson.core.JsonFactory;
 import com.fasterxml.jackson.core.JsonParser;
 import com.fasterxml.jackson.core.JsonToken;
-import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.johnlpage.mews.model.Deleteable;
 import com.johnlpage.mews.model.UpdateStrategy;
 import com.johnlpage.mews.repository.OptimizedMongoLoadRepository;
 import java.io.BufferedInputStream;
 import java.io.EOFException;
 import java.io.InputStream;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 @RequiredArgsConstructor
-public abstract class MongoDbJsonLoaderService<T extends Deleteable<ID>, ID> {
+public abstract class MongoDbJsonLoaderService<T, ID> {
 
   private static final Logger LOG = LoggerFactory.getLogger(MongoDbJsonLoaderService.class);
   private final OptimizedMongoLoadRepository<T> repository;
@@ -33,23 +29,14 @@ public abstract class MongoDbJsonLoaderService<T extends Deleteable<ID>, ID> {
   public void loadFromJsonStream(
       InputStream inputStream,
       Class<T> type,
-      Boolean modifyForTesting,
-      UpdateStrategy updateStrategy) {
-    // Create a JsonFactory and ObjectMapper
-    Deleteable<ID> fuzzer = null;
+      UpdateStrategy updateStrategy,
+      FuzzerService<T> fuzzer) {
+
+
     AtomicInteger updates = new AtomicInteger(0);
     AtomicInteger deletes = new AtomicInteger(0);
     AtomicInteger inserts = new AtomicInteger(0);
     List<T> toSave = new ArrayList<>();
-
-    if (modifyForTesting) {
-      try {
-        fuzzer = type.getDeclaredConstructor().newInstance();
-      } catch (Exception e) {
-        LOG.error(e.getMessage());
-        return;
-      }
-    }
 
     int count = 0;
     long startTime = System.currentTimeMillis();
@@ -63,20 +50,29 @@ public abstract class MongoDbJsonLoaderService<T extends Deleteable<ID>, ID> {
           // Move the parser to the end of the current object
           JsonNode node = objectMapper.readTree(parser);
 
-          // Map The JSON to a HashMap
-          Map<String, Object> resultMap =
+          T document = objectMapper.treeToValue(node,type);
+          if (fuzzer != null) {
+            fuzzer.modifyDataForTest(document);
+          }
+
+                  // Map The JSON to a HashMap
+       /*   Map<String, Object> resultMap =
               objectMapper.convertValue(node, new TypeReference<HashMap<String, Object>>() {});
 
           // If modifyForTesting is true then change some values in it.
-          if (fuzzer != null && modifyForTesting) {
-            resultMap = fuzzer.modifyDataForTest(resultMap);
-          }
+
+
           T document = objectMapper.convertValue(resultMap, type);
 
-          /* Optionally store the JSON as a String or the Whole Hashmap as an
-          alternative to using @JsonAnySetter
-          document.setPayload(resultMap);
-          */
+
+          if(resultMap.get("_deleted") != null && resultMap.get("_deleted").equals(true)) {
+            LOG.info("Delete");
+
+            LOG.info(""+document.toDelete());
+          }
+
+        */
+
 
           count++;
           toSave.add(document);

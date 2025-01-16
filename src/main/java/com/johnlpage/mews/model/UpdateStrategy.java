@@ -1,5 +1,8 @@
 package com.johnlpage.mews.model;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
+import org.springframework.lang.Nullable;
+
 /**
  *  This IS used to set whether we are using a simple replace ro a recursive
  *  field update to overwrite existing documents. RFU detects what has changed
@@ -8,6 +11,7 @@ package com.johnlpage.mews.model;
  *  within a single transactions.
  */
 public enum UpdateStrategy {
-  UPSERT,
-  REPLACE
+  UPDATE,
+  REPLACE;
+
 }

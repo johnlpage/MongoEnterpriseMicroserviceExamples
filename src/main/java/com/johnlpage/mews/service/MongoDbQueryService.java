@@ -1,6 +1,5 @@
 package com.johnlpage.mews.service;
 
-import com.johnlpage.mews.model.Deleteable;
 import com.mongodb.client.MongoCollection;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
@@ -30,9 +29,9 @@ import org.springframework.data.mongodb.core.query.BasicQuery;
 import org.springframework.data.mongodb.repository.MongoRepository;
 
 @RequiredArgsConstructor
-public abstract class MongoDBQueryService<T extends Deleteable<ID>, ID> {
+public abstract class MongoDbQueryService<T, ID> {
 
-  private static final Logger LOG = LoggerFactory.getLogger(MongoDBQueryService.class);
+  private static final Logger LOG = LoggerFactory.getLogger(MongoDbQueryService.class);
   private final MongoRepository<T, ID> repository;
   private final MongoTemplate mongoTemplate;
   private final Map<String, QueryScore> queryScores = new HashMap<>();
