@@ -4,11 +4,28 @@ import com.fasterxml.jackson.annotation.*;
 
 import java.util.Date;
 import java.util.Map;
+
+import lombok.Builder;
 import lombok.Data;
 import lombok.Singular;
+import lombok.Value;
+import lombok.extern.jackson.Jacksonized;
 import org.springframework.data.annotation.Id;
 import org.springframework.data.annotation.Transient;
+import org.springframework.data.annotation.Version;
 import org.springframework.data.mongodb.core.mapping.Document;
+
+
+/* Replace @Data with this to make an Immutable model
+ * which is a little more efficient but no setters just a builder
+ * This also impact the controller and fuzzer and JsonLoaderService -
+ * changes there are commented
+ *
+ *  @Builder(toBuilder = true)
+ *  @Jacksonized
+ *  @Value
+ */
+
 
 @Data
 @JsonIgnoreProperties(ignoreUnknown = true)
@@ -17,6 +34,7 @@ import org.springframework.data.mongodb.core.mapping.Document;
 public class VehicleInspection  {
 
   @Id Long testid;
+  @Version Long version;
   Long vehicleid;
   Date testdate;
   String testclass;

@@ -5,7 +5,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.johnlpage.mews.dto.PageDto;
 import com.johnlpage.mews.model.UpdateStrategy;
 import com.johnlpage.mews.model.VehicleInspection;
-import com.johnlpage.mews.service.VehicleInspectionFuzzerServiceImpl;
+import com.johnlpage.mews.service.VehicleInspectionPreWriteTriggerServiceImpl;
 import com.johnlpage.mews.service.VehicleInspectionMongoDbJsonLoaderServiceImpl;
 import com.johnlpage.mews.service.VehicleInspectionMongoQueryServiceImpl;
 
@@ -32,7 +32,7 @@ public class VehicleInspectionController {
   private static final Logger LOG = LoggerFactory.getLogger(VehicleInspectionController.class);
   private final VehicleInspectionMongoDbJsonLoaderServiceImpl inspectionLoaderService;
   private final VehicleInspectionMongoQueryServiceImpl inspectionQueryService;
-  private final VehicleInspectionFuzzerServiceImpl inspectionFuzzer;
+  private final VehicleInspectionPreWriteTriggerServiceImpl inspectionPreWriteTriggerService;
   private final ObjectMapper objectMapper;
 
   /**
@@ -48,7 +48,7 @@ public class VehicleInspectionController {
     LOG.info("Load Starts futz={}, updateStrategy = {}", futz, updateStrategy);
     try {
       inspectionLoaderService.loadFromJsonStream(
-          request.getInputStream(), VehicleInspection.class, updateStrategy, futz ? inspectionFuzzer : null);
+          request.getInputStream(), VehicleInspection.class, updateStrategy, futz ? inspectionPreWriteTriggerService : null);
     } catch (Exception e) {
       LOG.error(e.getMessage());
     }
@@ -73,10 +73,16 @@ public class VehicleInspectionController {
       @PathVariable String model,
       @RequestParam(name = "page", required = false, defaultValue = "0") int page,
       @RequestParam(name = "size", required = false, defaultValue = "10") int size) {
+
     // This is where we are hard coding a query for this endpoint.
-    // VehicleInspection probe = VehicleInspection.builder().model(model).build();
+    // use setModel in a mutable model
+
     VehicleInspection probe = new VehicleInspection();
     probe.setModel(model);
+
+    // Use the line below for immutable model
+    // VehicleInspection probe = VehicleInspection.builder().model(model).build();
+
     Slice<VehicleInspection> returnPage =
         inspectionQueryService.getModelByExample(probe, page, size);
     PageDto<VehicleInspection> entity = new PageDto<>(returnPage);

@@ -30,7 +30,7 @@ public abstract class MongoDbJsonLoaderService<T, ID> {
       InputStream inputStream,
       Class<T> type,
       UpdateStrategy updateStrategy,
-      FuzzerService<T> fuzzer) {
+      PreWriteTriggerService<T> preWriteTrigger) {
 
 
     AtomicInteger updates = new AtomicInteger(0);
@@ -51,29 +51,12 @@ public abstract class MongoDbJsonLoaderService<T, ID> {
           JsonNode node = objectMapper.readTree(parser);
 
           T document = objectMapper.treeToValue(node,type);
-          if (fuzzer != null) {
-            fuzzer.modifyDataForTest(document);
+          if (preWriteTrigger != null) {
+            // For a mutable model
+            preWriteTrigger.modifyMutableDataPreWrite(document);
+            //for an immutable model
+            //document = preWriteTrigger.newImmutableDataPreWritedocument);
           }
-
-                  // Map The JSON to a HashMap
-       /*   Map<String, Object> resultMap =
-              objectMapper.convertValue(node, new TypeReference<HashMap<String, Object>>() {});
-
-          // If modifyForTesting is true then change some values in it.
-
-
-          T document = objectMapper.convertValue(resultMap, type);
-
-
-          if(resultMap.get("_deleted") != null && resultMap.get("_deleted").equals(true)) {
-            LOG.info("Delete");
-
-            LOG.info(""+document.toDelete());
-          }
-
-        */
-
-
           count++;
           toSave.add(document);
           if (toSave.size() >= 100) {
