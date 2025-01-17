@@ -38,6 +38,19 @@ public class OptimizedMongoLoadRepositoryImpl<T , ID>
     BuildUpdateFromDocument(bsonDocument, update, "");
   }
 
+  /*
+   * This builds the update so it records any fields what have changed since the last update
+   * And their previous values, it also sets a flag if and only if the record woudl otherwise have
+   * changed allowing us to retrieve all the modifued records and their histories
+   * this can be thought of as a transactional alternative to a change stream.
+   * And unlike findOneAndUpdate works in batches.
+   */
+
+  private void BuildUpdateWithHistoryFronDocument(Document bsonDocument, Update update, String basekey)
+  {
+
+  }
+
   /**
    *   Recurse through A document turning each individual singleton field (not
    *   arrays) into a

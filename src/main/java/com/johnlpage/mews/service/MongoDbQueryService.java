@@ -28,6 +28,8 @@ import org.springframework.data.mongodb.core.mapping.MongoPersistentEntity;
 import org.springframework.data.mongodb.core.query.BasicQuery;
 import org.springframework.data.mongodb.repository.MongoRepository;
 
+import static com.johnlpage.mews.util.AnnotationExtractor.renameKeysRecursively;
+
 @RequiredArgsConstructor
 public abstract class MongoDbQueryService<T, ID> {
 
@@ -52,33 +54,44 @@ public abstract class MongoDbQueryService<T, ID> {
    * This is wrapping the ability to do a native MongoDB call Passing in Query, Sort,Skip,Limit and
    * Projection
    */
-  public List<T> getModelByMongoQuery(String jsonString, Class<T> type) {
+  public List<T> getModelByMongoQuery(String jsonString, Class<T> clazz) {
     try {
       Document queryRequest = Document.parse(jsonString);
       Document filter = queryRequest.get("filter", new Document());
       Document projection = queryRequest.get("projection", new Document());
+      Document sort = queryRequest.get("sort", new Document());
+
+      //This maps from the JSON fields we see to the underlying firld names if they aren't the same
+      filter = new Document(renameKeysRecursively(clazz, filter));
+      projection = new Document(renameKeysRecursively(clazz, projection));
+      sort = new Document(renameKeysRecursively(clazz, projection));
+      LOG.info(projection.toJson());
+      LOG.info(filter.toJson());
+
+
       int skip = queryRequest.getInteger("skip") != null ? queryRequest.getInteger("skip") : 0;
       //Default ot a limit of 1000 unless otherwise advised
       int limit =
           queryRequest.getInteger("limit") != null ? queryRequest.getInteger("limit") : 1000;
-      Document sort = queryRequest.get("sort", new Document());
 
       // Check the cost to see if we allow it
-      Integer cost = costManager(type, filter, projection, sort);
+      Integer cost = costManager(clazz, filter, projection, sort);
 
-      // Decide what to do based on cost
+      // TODO Decide what to do based on cost
       // Deny Query, Log Query as Bad, Send to Secondary
       LOG.info("Query Cost was  {} - running anyway.", cost);
+
 
       BasicQuery query = new BasicQuery(filter, projection);
       query.skip(skip);
       query.limit(limit);
       query.setSortObject(sort);
 
-      return mongoTemplate.find(query, type);
+      return mongoTemplate.find(query, clazz);
 
     } catch (Exception e) {
       LOG.warn(e.getMessage());
+      //TODO
       return null;
     }
   }
@@ -136,7 +149,7 @@ public abstract class MongoDbQueryService<T, ID> {
     Document explain = collection.find(filter).sort(sort).projection(projection).limit(1000).explain();
     JsonWriterSettings jsonWriterSettings = JsonWriterSettings.builder().indent(true).build();
     // Uncomment this to see the query explain in the logs.
-    LOG.info(explain.toJson(jsonWriterSettings));
+    //LOG.info(explain.toJson(jsonWriterSettings));
 
     int score = 0;
 

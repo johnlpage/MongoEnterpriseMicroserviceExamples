@@ -30,7 +30,7 @@ public abstract class MongoDbJsonLoaderService<T, ID> {
       InputStream inputStream,
       Class<T> type,
       UpdateStrategy updateStrategy,
-      PreWriteTriggerService<T> preWriteTrigger) {
+      PreWriteTriggerService<T> fuzzer) {
 
 
     AtomicInteger updates = new AtomicInteger(0);
@@ -51,11 +51,11 @@ public abstract class MongoDbJsonLoaderService<T, ID> {
           JsonNode node = objectMapper.readTree(parser);
 
           T document = objectMapper.treeToValue(node,type);
-          if (preWriteTrigger != null) {
+          if (fuzzer != null) {
             // For a mutable model
-            preWriteTrigger.modifyMutableDataPreWrite(document);
+            fuzzer.modifyMutableDataPreWrite(document);
             //for an immutable model
-            //document = preWriteTrigger.newImmutableDataPreWritedocument);
+            //document = fuzzer.newImmutableDataPreWritedocument);
           }
           count++;
           toSave.add(document);

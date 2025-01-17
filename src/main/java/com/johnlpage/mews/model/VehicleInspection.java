@@ -14,6 +14,7 @@ import org.springframework.data.annotation.Id;
 import org.springframework.data.annotation.Transient;
 import org.springframework.data.annotation.Version;
 import org.springframework.data.mongodb.core.mapping.Document;
+import org.springframework.data.mongodb.core.mapping.Field;
 
 
 /* Replace @Data with this to make an Immutable model
@@ -43,7 +44,9 @@ public class VehicleInspection  {
   Long testmileage;
   String postcode;
   String make;
-  String model;
+  @JsonProperty("model")
+  @Field("vehicle_model")
+  String vehicleModel;
   String colour;
   String files;
   Long capacity;

@@ -78,7 +78,7 @@ public class VehicleInspectionController {
     // use setModel in a mutable model
 
     VehicleInspection probe = new VehicleInspection();
-    probe.setModel(model);
+    probe.setVehicleModel(model);
 
     // Use the line below for immutable model
     // VehicleInspection probe = VehicleInspection.builder().model(model).build();
