@@ -4,6 +4,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.johnlpage.mews.dto.PageDto;
 import com.johnlpage.mews.model.UpdateStrategy;
+import com.johnlpage.mews.model.Vehicle;
 import com.johnlpage.mews.model.VehicleInspection;
 import com.johnlpage.mews.service.VehicleInspectionPreWriteTriggerServiceImpl;
 import com.johnlpage.mews.service.VehicleInspectionMongoDbJsonLoaderServiceImpl;
@@ -78,7 +79,9 @@ public class VehicleInspectionController {
     // use setModel in a mutable model
 
     VehicleInspection probe = new VehicleInspection();
-    probe.setVehicleModel(model);
+    Vehicle v = new Vehicle();
+    v.setVehicleModel(model);
+    probe.setVehicle(v);
 
     // Use the line below for immutable model
     // VehicleInspection probe = VehicleInspection.builder().model(model).build();

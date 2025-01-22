@@ -12,6 +12,7 @@ import org.springframework.lang.Nullable;
  */
 public enum UpdateStrategy {
   UPDATE,
-  REPLACE;
+  REPLACE,
+  UPDATEWITHHISTORY;
 
 }

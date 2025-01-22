@@ -12,7 +12,10 @@ import java.io.EOFException;
 import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicInteger;
+
+import com.mongodb.bulk.BulkWriteResult;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -32,11 +35,12 @@ public abstract class MongoDbJsonLoaderService<T, ID> {
       UpdateStrategy updateStrategy,
       PreWriteTriggerService<T> fuzzer) {
 
-
     AtomicInteger updates = new AtomicInteger(0);
     AtomicInteger deletes = new AtomicInteger(0);
     AtomicInteger inserts = new AtomicInteger(0);
     List<T> toSave = new ArrayList<>();
+    List<CompletableFuture<BulkWriteResult>> futures =
+        new ArrayList<CompletableFuture<BulkWriteResult>>();
 
     int count = 0;
     long startTime = System.currentTimeMillis();
@@ -50,12 +54,12 @@ public abstract class MongoDbJsonLoaderService<T, ID> {
           // Move the parser to the end of the current object
           JsonNode node = objectMapper.readTree(parser);
 
-          T document = objectMapper.treeToValue(node,type);
+          T document = objectMapper.treeToValue(node, type);
           if (fuzzer != null) {
             // For a mutable model
             fuzzer.modifyMutableDataPreWrite(document);
-            //for an immutable model
-            //document = fuzzer.newImmutableDataPreWritedocument);
+            // for an immutable model
+            // document = fuzzer.newImmutableDataPreWritedocument);
           }
           count++;
           toSave.add(document);
@@ -65,15 +69,16 @@ public abstract class MongoDbJsonLoaderService<T, ID> {
             // repository.saveAll(toSave);
             List<T> copyOfToSave = List.copyOf(toSave);
             toSave.clear();
-            repository
-                .asyncWriteMany(copyOfToSave, type, updateStrategy)
-                .thenApply(
-                    bulkWriteResult -> {
-                      updates.addAndGet(bulkWriteResult.getModifiedCount());
-                      deletes.addAndGet(bulkWriteResult.getDeletedCount());
-                      inserts.addAndGet(bulkWriteResult.getUpserts().size());
-                      return bulkWriteResult;
-                    });
+            futures.add(
+                repository
+                    .asyncWriteMany(copyOfToSave, type, updateStrategy)
+                    .thenApply(
+                        bulkWriteResult -> {
+                          updates.addAndGet(bulkWriteResult.getModifiedCount());
+                          deletes.addAndGet(bulkWriteResult.getDeletedCount());
+                          inserts.addAndGet(bulkWriteResult.getUpserts().size());
+                          return bulkWriteResult;
+                        }));
           }
         }
       }
@@ -81,18 +86,25 @@ public abstract class MongoDbJsonLoaderService<T, ID> {
         // Alternative Options
         // repository.writeMany(toSave);
         // repository.saveAll(toSave);
-        repository
-            .asyncWriteMany(toSave, type, updateStrategy)
-            .thenApply(
-                bulkWriteResult -> {
-                  updates.addAndGet(bulkWriteResult.getModifiedCount());
-                  deletes.addAndGet(bulkWriteResult.getDeletedCount());
-                  inserts.addAndGet(bulkWriteResult.getUpserts().size());
-                  return bulkWriteResult;
-                })
-            .thenRun(toSave::clear);
+        futures.add(
+            repository
+                .asyncWriteMany(toSave, type, updateStrategy)
+                .thenApply(
+                    bulkWriteResult -> {
+                      updates.addAndGet(bulkWriteResult.getModifiedCount());
+                      deletes.addAndGet(bulkWriteResult.getDeletedCount());
+                      inserts.addAndGet(bulkWriteResult.getUpserts().size());
+                      return bulkWriteResult;
+                    }));
       }
+
       final long endTime = System.currentTimeMillis();
+
+      CompletableFuture<Void> allFutures =
+          CompletableFuture.allOf(futures.toArray(new CompletableFuture[futures.size()]));
+      // Wait for all futures to complete
+      allFutures.join();
+
       LOG.info("Processed {} docs. Time taken: {}ms.", count, endTime - startTime);
       LOG.info("Modified: {} Added: {} Removed: {}", updates, inserts, deletes);
     } catch (EOFException e) {

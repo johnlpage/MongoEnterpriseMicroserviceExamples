@@ -12,6 +12,14 @@ Send data with cURL - You caould also have it just read a file
   ```
 
 
+
+Send a Single Doc recording history and update batch id
+
+```
+  curl -X POST "http://localhost:8080/vehicles/inspections?futz=true&updateStrategy=UPDATEWITHHISTORY" -H "Content-Type: application/json" -T ~/mot1.json     
+  ```
+
+
 the motupdates endpoint modifies the data as it's read to simulate getting a new version.
 
 ```

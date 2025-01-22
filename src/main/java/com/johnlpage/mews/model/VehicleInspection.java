@@ -36,18 +36,14 @@ public class VehicleInspection  {
 
   @Id Long testid;
   @Version Long version;
-  Long vehicleid;
+
   Date testdate;
   String testclass;
   String testtype;
   String testresult;
   Long testmileage;
   String postcode;
-  String make;
-  @JsonProperty("model")
-  @Field("vehicle_model")
-  String vehicleModel;
-  String colour;
+  Vehicle vehicle;
   String files;
   Long capacity;
   Date firstusedate;
