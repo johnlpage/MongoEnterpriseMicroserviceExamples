@@ -2,7 +2,7 @@ package com.johnlpage.mews.repository;
 
 import static com.johnlpage.mews.util.AnnotationExtractor.getIdFromModel;
 import static com.johnlpage.mews.util.AnnotationExtractor.hasDeleteFlag;
-import static org.springframework.data.mongodb.core.aggregation.ConditionalOperators.*;
+import static org.springframework.data.mongodb.core.aggregation.Aggregation.stage;
 import static org.springframework.data.mongodb.core.query.Criteria.where;
 
 import com.johnlpage.mews.model.UpdateStrategy;
@@ -10,11 +10,9 @@ import com.johnlpage.mews.service.PostWriteTriggerService;
 import com.mongodb.bulk.BulkWriteResult;
 import com.mongodb.client.ClientSession;
 import com.mongodb.client.MongoClient;
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.concurrent.CompletableFuture;
+import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import org.bson.Document;
 import org.bson.types.ObjectId;
@@ -29,7 +27,6 @@ import org.springframework.data.mongodb.core.query.Query;
 import org.springframework.data.mongodb.core.query.Update;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Repository;
-import org.springframework.transaction.TransactionException;
 
 @RequiredArgsConstructor
 @Repository
@@ -97,33 +94,15 @@ public class OptimizedMongoLoadRepositoryImpl<T, ID> implements OptimizedMongoLo
         }
         if (session != null) session.commitTransaction();
       }
-    }
-     catch (Exception e) {
-      //todo - handle retries for transient errors
+    } catch (Exception e) {
+      // todo - handle retries for transient errors
       LOG.error(e.getMessage(), e);
       if (usingTransactions && session != null && session.hasActiveTransaction()) {
-          session.abortTransaction();
+        session.abortTransaction();
       }
       throw e; // Rethrow to handle upstream
     }
     return result;
-  }
-
-  private void useSimpleUpdate(T item, BulkOperations ops, Query query) {
-    Document bsonDocument = new Document();
-    mappingMongoConverter.write(item, bsonDocument);
-
-    // Compute all the individual scalar values that have changed.
-    // Arrays are just treated as scalars for now (todo)
-
-    Document unwoundFields = new Document();
-    unwindNestedDocumentsInUpdate(bsonDocument, unwoundFields);
-
-    Update update = new Update();
-    // Create an Update object
-    // Apply all entries from the Map to the Update object
-    unwoundFields.forEach(update::set);
-    ops.upsert(query, update);
   }
 
   /**
@@ -138,10 +117,15 @@ public class OptimizedMongoLoadRepositoryImpl<T, ID> implements OptimizedMongoLo
    * various post-update transactional trigger activities.
    */
 
-  // TODO - Get Spring Builders to work for this, see below
+  // Was using various Spring builders for this, but it was a lot slower and more CPU to build them
+  // programmatically with teh fluent builders as they weren't designed for that .
 
   private void useSmartUpdate(T item, BulkOperations ops, Query query, ObjectId updateBatchId) {
     // Generate a Mongo Document with all the required fields in and all the mappings applied
+    final String PREVIOUSVALS = "__previousValues";
+    final String BACKUPVALS = "__backupValues";
+    final String UPDATEID = "__updateId";
+    final String CHANGED = "__changed";
 
     Document bsonDocument = new Document();
     mappingMongoConverter.write(item, bsonDocument);
@@ -151,91 +135,63 @@ public class OptimizedMongoLoadRepositoryImpl<T, ID> implements OptimizedMongoLo
     Map<String, Object> unwoundFields = new HashMap<String, Object>();
     unwindNestedDocumentsInUpdate(bsonDocument, unwoundFields);
 
-    // Because these expressive pipeline updates are using pipelines they are sometimes
-    // Referred to as Aggregation Updates, that's the name of the Spring Data MongoDB class
+    List<Document> updateSteps = new ArrayList<Document>();
 
-    AggregationUpdate update = Aggregation.newUpdate();
+    Document backupDelta =
+        new Document(
+            "$set",
+            new Document(PREVIOUSVALS, new Document()).append(BACKUPVALS, "$" + PREVIOUSVALS));
 
-    // Step 1  If we have __previousvalues, copy it to _originalDelta and empty __previousvalues
-    // we use __previousvalues to record what fields are changing and their prior values
-    // JS: { $set: { __previousvalues : { _changed: false } , _originalDelta : "$__previousvalues"}}
+    updateSteps.add(backupDelta);
 
-    SetOperation backupDelta =
-        SetOperation.set("__previousvalues")
-            .toValue(new Document("_changed", false))
-            .set("_originalDelta", "$__previousvalues");
-
-    update.set(backupDelta); // Add a stage to the update
-
-    // Step 2 - for each field in the unwound object we need to make three changes.
-    // Set __previousvalues.<FNAME> to the old value if it has changed wit an explicit NULL if empty
-    // OR __previousvalues._changed with true if it has changed
-    // Set the field to the required value
-
-    /*
-     valueChanged = { $ne: [val, `$${field}`] }
-      ${field} = val
-     __previousvalues.${field} = { $cond: [valueChanged, { $ifNull: [`$${field}`, null] }, "$$REMOVE"]}
-     __previousvalues._changed = { $or: ["$__previousvalues._changed", valueChanged] }
-    */
-
+    Document previousValues = new Document(PREVIOUSVALS + "." + UPDATEID, updateBatchId);
+    List<Document> anyChange = new ArrayList<Document>();
     for (Map.Entry<String, Object> entry : unwoundFields.entrySet()) {
-      String fName = entry.getKey();
-      Object newValue = entry.getValue();
-      String deltaPath = "__previousvalues." + fName;
-
-      SetOperation changes = new SetOperation(fName, newValue);
-      // Criteria doesn't work all the time for hasChanged due to object comparison decomposition
-      Document hasChanged = new Document("$ne", Arrays.asList("$" + fName, newValue));
-      // If the field doesn't exist I want it in the history as null not non-existent so
-      // When applying history I know when to null it our in MDB null == non-existent
-
-      Document explicitNull = new Document("$ifNull", Arrays.asList("$" + fName, null));
-
-      Cond changedValue =
-          ConditionalOperators.Cond.when(hasChanged).then(explicitNull).otherwise("$$REMOVE");
-
-      Document logicalOrWithChanged =
-          new Document("$or", Arrays.asList("$__previousvalues._changed" + fName, hasChanged));
-      changes =
-          changes
-              .set(deltaPath, changedValue)
-              .set("__previousvalues._changed", logicalOrWithChanged);
-      update.set(changes);
+      Document valueChanged =
+          new Document("$ne", Arrays.asList("$" + entry.getKey(), entry.getValue()));
+      Document conditionalOnChange =
+          new Document("$cond", Arrays.asList(valueChanged, "$" + entry.getKey(), "$$REMOVE"));
+      previousValues.append(PREVIOUSVALS + "." + entry.getKey(), conditionalOnChange);
+      // List of all the conditionals
+      anyChange.add(valueChanged);
     }
 
-    // Step 3 - if __previousvalues._changed is false, then no fields are being changed anyway -
-    // so put __previousvalues back the way it was using _original__previousvalues
-    // if delta HAS values in it then add a unique identifier we can use to find this update
+    // If any changed set flag to true
+    previousValues.append(CHANGED, new Document("$or", anyChange));
+    updateSteps.add(new Document("$set", previousValues));
 
-    // Document somethingHasChanged = new Document("$ne", Arrays.asList("$__previousvalues", new
-    // Document()));
+    // Set to new values
+    updateSteps.add(new Document("$set", unwoundFields));
 
-    // Add in __previousvalues._updateBatchId
-    // At this point based on "__previousvalues._changed" you might set a last update date or push
-    // the delta into an array
-    // If you wanted to push everything into a single server call
+    // If there was no change then revert to BACKUPVALS
 
-    Document lastUpdateId = new Document("_updateBatchId", updateBatchId);
-    ObjectOperators.MergeObjects deltaWithUpdateID =
-        ObjectOperators.MergeObjects.merge()
-            .mergeWithValuesOf("__previousvalues")
-            .mergeWith(lastUpdateId);
+    Document finalUpdate =
+        new Document("$cond", Arrays.asList("$" + CHANGED, "$" + PREVIOUSVALS, "$" + BACKUPVALS));
 
-    SetOperation cancelAllIfNothingChanged = new SetOperation("_originalDelta", "$$REMOVE");
-    Cond finalDeltaValue =
-        ConditionalOperators.Cond.when("__previousvalues._changed")
-            .then(deltaWithUpdateID)
-            .otherwiseValueOf("_originalDelta");
+    // Don't need our backup copy anymore
+    updateSteps.add(
+        new Document(
+            "$set",
+            new Document(BACKUPVALS, "$$REMOVE")
+                .append(CHANGED, "$$REMOVE")
+                .append(PREVIOUSVALS, finalUpdate)));
 
-    cancelAllIfNothingChanged = cancelAllIfNothingChanged.set("__previousvalues", finalDeltaValue);
+    // Because these expressive pipeline updates are using pipelines they are sometimes
+    // Referred to as Aggregation Updates, that's the name of the Spring Data MongoDB class
+    AggregationUpdate aggUpdate =
+        AggregationUpdate.from(
+            updateSteps.stream()
+                .map(
+                    stage ->
+                        new AggregationOperation() {
+                          @Override
+                          public Document toDocument(AggregationOperationContext context) {
+                            return stage;
+                          }
+                        })
+                .collect(Collectors.toList()));
 
-    update.set(cancelAllIfNothingChanged);
-
-    // Final cleanup of _changed field
-    update.set("__previousvalues._changed").toValue("$$REMOVE");
-
-    ops.upsert(query, update);
+    ops.upsert(query, aggUpdate);
   }
 
   // Without a postTrigger this is non transactional
@@ -267,6 +223,23 @@ public class OptimizedMongoLoadRepositoryImpl<T, ID> implements OptimizedMongoLo
       // TODO Handle Failed writes going to a dead letter queue or similar.
       return CompletableFuture.failedFuture(e);
     }
+  }
+
+  private void useSimpleUpdate(T item, BulkOperations ops, Query query) {
+    Document bsonDocument = new Document();
+    mappingMongoConverter.write(item, bsonDocument);
+
+    // Compute all the individual scalar values that have changed.
+    // Arrays are just treated as scalars for now (todo)
+
+    Document unwoundFields = new Document();
+    unwindNestedDocumentsInUpdate(bsonDocument, unwoundFields);
+
+    Update update = new Update();
+    // Create an Update object
+    // Apply all entries from the Map to the Update object
+    unwoundFields.forEach(update::set);
+    ops.upsert(query, update);
   }
 
   /**

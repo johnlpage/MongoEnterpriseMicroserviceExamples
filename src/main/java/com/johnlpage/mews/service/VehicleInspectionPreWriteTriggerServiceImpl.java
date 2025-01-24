@@ -29,10 +29,11 @@ public class VehicleInspectionPreWriteTriggerServiceImpl extends PreWriteTrigger
         // todo: inject this to be singleton
         final Random newRng = this.rng == null ? new Random() : this.rng;
 
-   /*     double skipThis = newRng.nextDouble() * 100.0;
+        double skipThis = newRng.nextDouble() * 100.0;
+
         if (skipThis > percentChanged) {
             return;
-        }*/
+        }
 
         // Make specific, realistic changes
         // Change Mileage in 10%
@@ -57,7 +58,7 @@ public class VehicleInspectionPreWriteTriggerServiceImpl extends PreWriteTrigger
         }
 
         // Delete 10%
-        /*
+
         if (newRng.nextDouble() < 0.1) {
             document.setDeleted(true);
         } else {
@@ -67,8 +68,7 @@ public class VehicleInspectionPreWriteTriggerServiceImpl extends PreWriteTrigger
                 testid = testid * 100 + newRng.nextInt(100); // String concat
                 document.setTestid(testid);
             }
-        }*/
-        return;
+        }
     }
 
 
