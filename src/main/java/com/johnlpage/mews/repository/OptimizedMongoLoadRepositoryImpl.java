@@ -37,6 +37,14 @@ public class OptimizedMongoLoadRepositoryImpl<T, ID> implements OptimizedMongoLo
   private final MappingMongoConverter mappingMongoConverter;
   private final MongoClient mongoClient;
 
+  //Used in trigger definitions
+  final  public static String PREVIOUSVALS = "__previousValues";
+  final public static String UPDATEID = PREVIOUSVALS+".__updateId";
+
+  //Internal only
+  final  String BACKUPVALS = "__backupValues";
+  final String CHANGED = "__changed";
+
   public BulkWriteResult writeMany(
       List<T> items,
       Class<T> clazz,
@@ -122,10 +130,6 @@ public class OptimizedMongoLoadRepositoryImpl<T, ID> implements OptimizedMongoLo
 
   private void useSmartUpdate(T item, BulkOperations ops, Query query, ObjectId updateBatchId) {
     // Generate a Mongo Document with all the required fields in and all the mappings applied
-    final String PREVIOUSVALS = "__previousValues";
-    final String BACKUPVALS = "__backupValues";
-    final String UPDATEID = "__updateId";
-    final String CHANGED = "__changed";
 
     Document bsonDocument = new Document();
     mappingMongoConverter.write(item, bsonDocument);
@@ -144,7 +148,7 @@ public class OptimizedMongoLoadRepositoryImpl<T, ID> implements OptimizedMongoLo
 
     updateSteps.add(backupDelta);
 
-    Document previousValues = new Document(PREVIOUSVALS + "." + UPDATEID, updateBatchId);
+    Document previousValues = new Document(UPDATEID, updateBatchId);
     List<Document> anyChange = new ArrayList<Document>();
     for (Map.Entry<String, Object> entry : unwoundFields.entrySet()) {
       Document valueChanged =
