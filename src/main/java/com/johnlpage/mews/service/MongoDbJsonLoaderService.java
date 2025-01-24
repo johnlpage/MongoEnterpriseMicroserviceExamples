@@ -7,6 +7,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.johnlpage.mews.model.UpdateStrategy;
 import com.johnlpage.mews.repository.OptimizedMongoLoadRepository;
+import com.mongodb.bulk.BulkWriteResult;
 import java.io.BufferedInputStream;
 import java.io.EOFException;
 import java.io.InputStream;
@@ -14,8 +15,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicInteger;
-
-import com.mongodb.bulk.BulkWriteResult;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -33,7 +32,8 @@ public abstract class MongoDbJsonLoaderService<T, ID> {
       InputStream inputStream,
       Class<T> type,
       UpdateStrategy updateStrategy,
-      PreWriteTriggerService<T> fuzzer) {
+      PreWriteTriggerService<T> pretrigger,
+      PostWriteTriggerService<T> posttrigger) {
 
     AtomicInteger updates = new AtomicInteger(0);
     AtomicInteger deletes = new AtomicInteger(0);
@@ -55,13 +55,14 @@ public abstract class MongoDbJsonLoaderService<T, ID> {
           JsonNode node = objectMapper.readTree(parser);
 
           T document = objectMapper.treeToValue(node, type);
-          if (fuzzer != null) {
+          if (pretrigger != null) {
             // For a mutable model
-            fuzzer.modifyMutableDataPreWrite(document);
+            pretrigger.modifyMutableDataPreWrite(document);
             // for an immutable model
-            // document = fuzzer.newImmutableDataPreWritedocument);
+            // document = pretrigger.newImmutableDataPreWritedocument);
           }
           count++;
+
           toSave.add(document);
           if (toSave.size() >= 100) {
             // Alternative Options
@@ -69,9 +70,10 @@ public abstract class MongoDbJsonLoaderService<T, ID> {
             // repository.saveAll(toSave);
             List<T> copyOfToSave = List.copyOf(toSave);
             toSave.clear();
+
             futures.add(
                 repository
-                    .asyncWriteMany(copyOfToSave, type, updateStrategy)
+                    .asyncWriteMany(copyOfToSave, type, updateStrategy, posttrigger)
                     .thenApply(
                         bulkWriteResult -> {
                           updates.addAndGet(bulkWriteResult.getModifiedCount());
@@ -86,9 +88,10 @@ public abstract class MongoDbJsonLoaderService<T, ID> {
         // Alternative Options
         // repository.writeMany(toSave);
         // repository.saveAll(toSave);
+
         futures.add(
             repository
-                .asyncWriteMany(toSave, type, updateStrategy)
+                .asyncWriteMany(toSave, type, updateStrategy, posttrigger)
                 .thenApply(
                     bulkWriteResult -> {
                       updates.addAndGet(bulkWriteResult.getModifiedCount());
@@ -97,7 +100,6 @@ public abstract class MongoDbJsonLoaderService<T, ID> {
                       return bulkWriteResult;
                     }));
       }
-
       final long endTime = System.currentTimeMillis();
 
       CompletableFuture<Void> allFutures =

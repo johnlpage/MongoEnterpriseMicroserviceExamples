@@ -16,7 +16,7 @@ Send data with cURL - You caould also have it just read a file
 Send a Single Doc recording history and update batch id
 
 ```
-  curl -X POST "http://localhost:8080/vehicles/inspections?futz=true&updateStrategy=UPDATEWITHHISTORY" -H "Content-Type: application/json" -T ~/mot1.json     
+  curl -X POST "http://localhost:8080/vehicles/inspections?futz=true&updateStrategy=UPDATEWITHHISTORY" -H "Content-Type: application/json" -T ~/mot2.json     
   ```
 
 
@@ -84,7 +84,7 @@ curl -s -X POST http://localhost:8080/vehicles/inspections/query -H "Content-Typ
 }' | jq
 ```
 
-
+```
 curl -s -X POST http://localhost:8080/vehicles/inspections/query -H "Content-Type: application/json" \
 -d \
 '
@@ -97,3 +97,5 @@ curl -s -X POST http://localhost:8080/vehicles/inspections/query -H "Content-Typ
 },
 "sort" : { "model" : 1}
 }' | jq
+
+```

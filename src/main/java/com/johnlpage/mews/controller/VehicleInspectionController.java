@@ -6,6 +6,7 @@ import com.johnlpage.mews.dto.PageDto;
 import com.johnlpage.mews.model.UpdateStrategy;
 import com.johnlpage.mews.model.Vehicle;
 import com.johnlpage.mews.model.VehicleInspection;
+import com.johnlpage.mews.service.VehicleInspectionPostWriteTriggerServiceImpl;
 import com.johnlpage.mews.service.VehicleInspectionPreWriteTriggerServiceImpl;
 import com.johnlpage.mews.service.VehicleInspectionMongoDbJsonLoaderServiceImpl;
 import com.johnlpage.mews.service.VehicleInspectionMongoQueryServiceImpl;
@@ -34,6 +35,8 @@ public class VehicleInspectionController {
   private final VehicleInspectionMongoDbJsonLoaderServiceImpl inspectionLoaderService;
   private final VehicleInspectionMongoQueryServiceImpl inspectionQueryService;
   private final VehicleInspectionPreWriteTriggerServiceImpl inspectionPreWriteTriggerService;
+  private final VehicleInspectionPostWriteTriggerServiceImpl inspectionPostWriteTriggerService;
+
   private final ObjectMapper objectMapper;
 
   /**
@@ -49,11 +52,14 @@ public class VehicleInspectionController {
     LOG.info("Load Starts futz={}, updateStrategy = {}", futz, updateStrategy);
     try {
       inspectionLoaderService.loadFromJsonStream(
-          request.getInputStream(), VehicleInspection.class, updateStrategy, futz ? inspectionPreWriteTriggerService : null);
+          request.getInputStream(), VehicleInspection.class, updateStrategy, futz ? inspectionPreWriteTriggerService : null, inspectionPostWriteTriggerService);
     } catch (Exception e) {
       LOG.error(e.getMessage());
     }
   }
+
+
+
 
   /** Get By ID */
   @GetMapping("/inspections/{id}")
