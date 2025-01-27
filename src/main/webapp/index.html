@@ -66,7 +66,7 @@
                             <tbody>
                                 <tr @click="fetchDocument(document)" v-for="document in queryResults">
                                     <td v-for="(value,key) in gridFields" >
-                                       {{  formatForGrid(document[value]) }}
+                                       {{  formatForGrid(document,value) }}
 
                                     </td>
                                 </tr>

@@ -1,9 +1,9 @@
 {
   "Test Number": "testid",
-  "VehicleID": "vehicleid",
-  "Make": "make",
-  "Model": "model",
-  "Colour": "colour",
+  "VehicleID": "vehicle.vehicleid",
+  "Make": "vehicle.make",
+  "Model": "vehicle.model",
+  "Colour": "vehicle.colour",
   "Mileage": "testmileage",
   "Result": "testresult",
   "Registered": "firstusedate"

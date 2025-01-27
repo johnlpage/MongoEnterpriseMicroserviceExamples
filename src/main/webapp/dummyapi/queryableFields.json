@@ -1,7 +1,7 @@
 {
    "vehicleid" : 1,
    "make" : [ "FORD","VW"],
-   "model" : [ "ESCORT", "GOLF" ],
+   "vehicle.model" : [ "ESCORT", "GOLF" ],
    "colour" : [ "BLACK", "WHITE", "SILVER", "RED", "BLUE", "GREEN", "YELLOW"],
    "testmileage" : 1
 

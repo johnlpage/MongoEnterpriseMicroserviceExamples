@@ -15,7 +15,17 @@ async function fetchCollectionInfo() {
 }
 
 //Apply formatting
-function formatForGrid(val) {
+function formatForGrid(doc,key) {
+
+
+  // walk through key getting each part
+  let index = key.indexOf('.');
+  parts = key.split('.');
+  for(let part of parts) {
+    doc = doc[part]
+  }
+  val = doc;
+
   // If it's a date ending in midnight strip the time
   if (typeof val == "string") {
     val = val.replace("T00:00:00.000+00:00", "");
@@ -69,6 +79,14 @@ async function runGridQuery(context) {
     const request = {};
     request.filter = context.mongoQuery;
 
+    // Request only the fields we need, don't rename them though as that will stop
+    // Springs mapping to object from working.
+
+    request.projection = {}
+    for( let column in context.gridFields ) {
+      request.projection[context.gridFields[column]] = true;
+    }
+
     const options = {
       method: "POST", // Specify the method as POST
       headers: {
@@ -77,6 +95,8 @@ async function runGridQuery(context) {
       // Convert the data to a JSON string
       body: JSON.stringify(request),
     };
+    console.log(request);
+
 
     const find = await fetch(queryEndpoint, options);
     if (find.status > 300) {
@@ -85,7 +105,7 @@ async function runGridQuery(context) {
     context.queryResults = await find.json();
 
     context.selectedDoc = {};
-    //console.log(context.queryResults);
+    console.log(context.queryResults);
   } catch (error) {
       context.selectedDoc = { Error: error };
   }

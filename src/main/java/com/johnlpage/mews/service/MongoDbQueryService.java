@@ -64,7 +64,7 @@ public abstract class MongoDbQueryService<T, ID> {
       //This maps from the JSON fields we see to the underlying firld names if they aren't the same
       filter = new Document(renameKeysRecursively(clazz, filter));
       projection = new Document(renameKeysRecursively(clazz, projection));
-      sort = new Document(renameKeysRecursively(clazz, projection));
+      sort = new Document(renameKeysRecursively(clazz, sort));
       LOG.info(projection.toJson());
       LOG.info(filter.toJson());
 
@@ -102,6 +102,9 @@ public abstract class MongoDbQueryService<T, ID> {
    * send them to secondaries, flag and log them etc. To do this we need to know the cost of a query
    * by calling explain - but also possibly caching that so we don't do it for every call
    */
+
+  //TODO - Move to own service?
+
   private Integer costManager(Class<T> type, Document filter, Document projection, Document sort) {
     int queriesBeforeRecheck = 1000;
 

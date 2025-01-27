@@ -18,3 +18,9 @@ for( entry of log.log ) {
 ```
 db.adminCommand({logRotate: "server"})
 ```
+
+
+Using jq to modify the json file
+```angular2html
+jq -c '.vehicle = { vehicleid,make,model,colour } | del(.vehicleid,.make,.model,.colour)' mot1M.json 
+```

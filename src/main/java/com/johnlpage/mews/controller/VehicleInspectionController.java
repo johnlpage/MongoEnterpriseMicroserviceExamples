@@ -86,7 +86,7 @@ public class VehicleInspectionController {
 
     VehicleInspection probe = new VehicleInspection();
     Vehicle v = new Vehicle();
-    v.setVehicleModel(model);
+    v.setModel(model);
     probe.setVehicle(v);
 
     // Use the line below for immutable model

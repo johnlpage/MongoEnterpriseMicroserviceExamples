@@ -12,8 +12,6 @@ import org.springframework.data.mongodb.core.mapping.Field;
 public class Vehicle {
     Long vehicleid;
     String make;
-    @JsonProperty("model")
-    @Field("vehicle_model")
-    String vehicleModel;
+    String model;
     String colour;
 }
