@@ -8,7 +8,6 @@ import com.mongodb.client.ClientSession;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
-import java.util.Map;
 import org.bson.Document;
 import org.bson.types.ObjectId;
 import org.slf4j.Logger;
@@ -21,8 +20,10 @@ import org.springframework.stereotype.Service;
 @Service
 public class VehicleInspectionPostWriteTriggerServiceImpl
     extends PostWriteTriggerService<VehicleInspection> {
+
   private static final Logger LOG =
       LoggerFactory.getLogger(VehicleInspectionPostWriteTriggerServiceImpl.class);
+
   private final MongoTemplate mongoTemplate;
 
   public VehicleInspectionPostWriteTriggerServiceImpl(MongoTemplate mongoTemplate) {
@@ -48,14 +49,13 @@ public class VehicleInspectionPostWriteTriggerServiceImpl
     query.fields().include(OptimizedMongoLoadRepositoryImpl.PREVIOUSVALS);
     List<Document> modifiedOnly =
         mongoTemplate.withSession(session).find(query, Document.class, "inspections");
-    int c = 0;
 
     // We want to take those and write them to another collection
-    List<VehicleInspectionHistory> inspectionHistories = new ArrayList<VehicleInspectionHistory>();
+    List<VehicleInspectionHistory> inspectionHistories = new ArrayList<>();
     for (Document v : modifiedOnly) {
       VehicleInspectionHistory vih = new VehicleInspectionHistory();
       vih.setTestid(v.getLong("_id"));
-      vih.setChanges((Map<String, Object>) v.get(OptimizedMongoLoadRepositoryImpl.PREVIOUSVALS));
+      vih.setChanges(v.get(OptimizedMongoLoadRepositoryImpl.PREVIOUSVALS, Document.class));
       vih.setTimestamp(new Date());
       inspectionHistories.add(vih);
     }

@@ -2,7 +2,6 @@ package com.johnlpage.mews.repository;
 
 import static com.johnlpage.mews.util.AnnotationExtractor.getIdFromModel;
 import static com.johnlpage.mews.util.AnnotationExtractor.hasDeleteFlag;
-import static org.springframework.data.mongodb.core.aggregation.Aggregation.stage;
 import static org.springframework.data.mongodb.core.query.Criteria.where;
 
 import com.johnlpage.mews.model.UpdateStrategy;
@@ -30,32 +29,30 @@ import org.springframework.stereotype.Repository;
 
 @RequiredArgsConstructor
 @Repository
-public class OptimizedMongoLoadRepositoryImpl<T, ID> implements OptimizedMongoLoadRepository<T> {
+public class OptimizedMongoLoadRepositoryImpl<T> implements OptimizedMongoLoadRepository<T> {
 
+  // Used in trigger definitions
+  public static final String PREVIOUSVALS = "__previousValues";
+  public static final String UPDATEID = PREVIOUSVALS + ".__updateId";
   private static final Logger LOG = LoggerFactory.getLogger(OptimizedMongoLoadRepositoryImpl.class);
+  // Internal only
+  final String BACKUPVALS = "__backupValues";
+  final String CHANGED = "__changed";
   private final MongoTemplate mongoTemplate;
   private final MappingMongoConverter mappingMongoConverter;
   private final MongoClient mongoClient;
-
-  //Used in trigger definitions
-  final  public static String PREVIOUSVALS = "__previousValues";
-  final public static String UPDATEID = PREVIOUSVALS+".__updateId";
-
-  //Internal only
-  final  String BACKUPVALS = "__backupValues";
-  final String CHANGED = "__changed";
 
   public BulkWriteResult writeMany(
       List<T> items,
       Class<T> clazz,
       UpdateStrategy updateStrategy,
-      PostWriteTriggerService postwrite)
+      PostWriteTriggerService<T> postwrite)
       throws IllegalAccessException {
 
     ClientSession session = null;
-    BulkOperations ops = null;
+    BulkOperations ops;
     ObjectId updateBatchId = new ObjectId();
-    boolean usingTransactions = false;
+    boolean usingTransactions;
 
     usingTransactions = (postwrite != null);
 
@@ -136,10 +133,10 @@ public class OptimizedMongoLoadRepositoryImpl<T, ID> implements OptimizedMongoLo
 
     // Compute all the individual scalar values that have changed.
     // Arrays are just treated as scalars for now (todo - Unwind arrays too, IMPORTANT)
-    Map<String, Object> unwoundFields = new HashMap<String, Object>();
+    Map<String, Object> unwoundFields = new HashMap<>();
     unwindNestedDocumentsInUpdate(bsonDocument, unwoundFields);
 
-    List<Document> updateSteps = new ArrayList<Document>();
+    List<Document> updateSteps = new ArrayList<>();
 
     Document backupDelta =
         new Document(
@@ -149,7 +146,7 @@ public class OptimizedMongoLoadRepositoryImpl<T, ID> implements OptimizedMongoLo
     updateSteps.add(backupDelta);
 
     Document previousValues = new Document(UPDATEID, updateBatchId);
-    List<Document> anyChange = new ArrayList<Document>();
+    List<Document> anyChange = new ArrayList<>();
     for (Map.Entry<String, Object> entry : unwoundFields.entrySet()) {
       Document valueChanged =
           new Document("$ne", Arrays.asList("$" + entry.getKey(), entry.getValue()));
@@ -185,20 +182,14 @@ public class OptimizedMongoLoadRepositoryImpl<T, ID> implements OptimizedMongoLo
     AggregationUpdate aggUpdate =
         AggregationUpdate.from(
             updateSteps.stream()
-                .map(
-                    stage ->
-                        new AggregationOperation() {
-                          @Override
-                          public Document toDocument(AggregationOperationContext context) {
-                            return stage;
-                          }
-                        })
+                .map(stage -> (AggregationOperation) context -> stage)
                 .collect(Collectors.toList()));
 
     ops.upsert(query, aggUpdate);
   }
 
-  // Without a postTrigger this is non transactional
+  // Without a postTrigger this is non-transactional - not currently in use, but you may not want a
+  // trigger
   @Async("loadExecutor")
   public CompletableFuture<BulkWriteResult> asyncWriteMany(
       List<T> toSave, Class<T> clazz, UpdateStrategy updateStrategy) {
@@ -217,7 +208,7 @@ public class OptimizedMongoLoadRepositoryImpl<T, ID> implements OptimizedMongoLo
       List<T> toSave,
       Class<T> clazz,
       UpdateStrategy updateStrategy,
-      PostWriteTriggerService postTrigger) {
+      PostWriteTriggerService<T> postTrigger) {
     try {
       // Update some thread safe counts for upserts, deletes and modifications.
       return CompletableFuture.completedFuture(

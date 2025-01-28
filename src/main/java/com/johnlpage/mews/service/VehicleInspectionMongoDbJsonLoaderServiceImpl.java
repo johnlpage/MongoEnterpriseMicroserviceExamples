@@ -9,7 +9,7 @@ import org.springframework.stereotype.Service;
 
 @Service
 public class VehicleInspectionMongoDbJsonLoaderServiceImpl
-    extends MongoDbJsonLoaderService<VehicleInspection, Long> {
+    extends MongoDbJsonLoaderService<VehicleInspection> {
 
   @Autowired
   public VehicleInspectionMongoDbJsonLoaderServiceImpl(

@@ -9,7 +9,6 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.data.mongodb.MongoDatabaseFactory;
 import org.springframework.data.mongodb.MongoTransactionManager;
-import org.springframework.data.mongodb.core.MongoTemplate;
 import org.springframework.data.mongodb.core.convert.DefaultMongoTypeMapper;
 import org.springframework.data.mongodb.core.convert.MappingMongoConverter;
 import org.springframework.transaction.annotation.EnableTransactionManagement;
@@ -18,14 +17,14 @@ import org.springframework.transaction.annotation.EnableTransactionManagement;
 @EnableTransactionManagement(proxyTargetClass = true)
 public class MongoConfig implements InitializingBean {
   private static final Logger LOG = LoggerFactory.getLogger(MongoConfig.class);
-  private final MongoTemplate mongoTemplate;
-  @Autowired @Lazy private MappingMongoConverter mappingMongoConverter;
-  @Autowired
-  MongoDatabaseFactory mongoDatabaseFactory;
+  final MongoDatabaseFactory mongoDatabaseFactory;
+  @Lazy private final MappingMongoConverter mappingMongoConverter;
 
   @Autowired
-  public MongoConfig(MongoTemplate mongoTemplate) {
-    this.mongoTemplate = mongoTemplate;
+  public MongoConfig(
+      MongoDatabaseFactory mongoDatabaseFactory, MappingMongoConverter mappingMongoConverter) {
+    this.mongoDatabaseFactory = mongoDatabaseFactory;
+    this.mappingMongoConverter = mappingMongoConverter;
   }
 
   /** This is important to ensure you are using Native database transactions. */

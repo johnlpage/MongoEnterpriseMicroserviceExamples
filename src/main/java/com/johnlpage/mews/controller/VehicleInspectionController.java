@@ -6,11 +6,10 @@ import com.johnlpage.mews.dto.PageDto;
 import com.johnlpage.mews.model.UpdateStrategy;
 import com.johnlpage.mews.model.Vehicle;
 import com.johnlpage.mews.model.VehicleInspection;
-import com.johnlpage.mews.service.VehicleInspectionPostWriteTriggerServiceImpl;
-import com.johnlpage.mews.service.VehicleInspectionPreWriteTriggerServiceImpl;
 import com.johnlpage.mews.service.VehicleInspectionMongoDbJsonLoaderServiceImpl;
 import com.johnlpage.mews.service.VehicleInspectionMongoQueryServiceImpl;
-
+import com.johnlpage.mews.service.VehicleInspectionPostWriteTriggerServiceImpl;
+import com.johnlpage.mews.service.VehicleInspectionPreWriteTriggerServiceImpl;
 import jakarta.servlet.http.HttpServletRequest;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
@@ -48,8 +47,6 @@ public class VehicleInspectionController {
       HttpServletRequest request,
       @RequestParam(name = "futz", required = false, defaultValue = "false") Boolean futz,
       @RequestParam(name = "updateStrategy", required = false, defaultValue = "REPLACE") UpdateStrategy updateStrategy) {
-
-    LOG.info("Load Starts futz={}, updateStrategy = {}", futz, updateStrategy);
     try {
       inspectionLoaderService.loadFromJsonStream(
           request.getInputStream(), VehicleInspection.class, updateStrategy, futz ? inspectionPreWriteTriggerService : null, inspectionPostWriteTriggerService);
@@ -117,7 +114,6 @@ public class VehicleInspectionController {
 
   @PostMapping("/inspections/search")
   public ResponseEntity<String> atlasSearch(@RequestBody String requestBody) {
-    LOG.info(requestBody);
     List<VehicleInspection> result =
             inspectionQueryService.getModelByAtlasSearch(requestBody, VehicleInspection.class);
     try {

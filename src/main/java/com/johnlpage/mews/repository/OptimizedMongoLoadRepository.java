@@ -8,9 +8,16 @@ import java.util.concurrent.CompletableFuture;
 
 public interface OptimizedMongoLoadRepository<T> {
 
-  BulkWriteResult writeMany(List<T> items, Class<T> clazz, UpdateStrategy updateStrategy, PostWriteTriggerService postTrigger) throws IllegalAccessException;
+  BulkWriteResult writeMany(
+      List<T> items,
+      Class<T> clazz,
+      UpdateStrategy updateStrategy,
+      PostWriteTriggerService<T> postTrigger)
+      throws IllegalAccessException;
 
-  CompletableFuture<BulkWriteResult> asyncWriteMany(List<T> items, Class<T> clazz, UpdateStrategy updateStrategy, PostWriteTriggerService postTrigger);
-
-
+  CompletableFuture<BulkWriteResult> asyncWriteMany(
+      List<T> items,
+      Class<T> clazz,
+      UpdateStrategy updateStrategy,
+      PostWriteTriggerService<T> postTrigger);
 }

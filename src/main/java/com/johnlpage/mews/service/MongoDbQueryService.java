@@ -15,7 +15,6 @@ import java.util.Optional;
 import lombok.RequiredArgsConstructor;
 import org.bson.Document;
 import org.bson.conversions.Bson;
-import org.bson.json.JsonWriterSettings;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.data.domain.Example;
@@ -27,7 +26,6 @@ import org.springframework.data.mapping.PersistentProperty;
 import org.springframework.data.mapping.context.MappingContext;
 import org.springframework.data.mongodb.core.MongoTemplate;
 import org.springframework.data.mongodb.core.aggregation.Aggregation;
-import org.springframework.data.mongodb.core.aggregation.AggregationOperation;
 import org.springframework.data.mongodb.core.aggregation.AggregationResults;
 import org.springframework.data.mongodb.core.convert.MappingMongoConverter;
 import org.springframework.data.mongodb.core.convert.QueryMapper;
@@ -91,7 +89,7 @@ public abstract class MongoDbQueryService<T, ID> {
       Document projection = queryRequest.get("projection", new Document());
       Document sort = queryRequest.get("sort", new Document());
 
-      // This maps from the JSON fields we see to the underlying firld names if they aren't the same
+      // This maps from the JSON fields we see to the underlying field names if they aren't the same
       filter = new Document(renameKeysRecursively(clazz, filter));
       projection = new Document(renameKeysRecursively(clazz, projection));
       sort = new Document(renameKeysRecursively(clazz, sort));
@@ -178,7 +176,7 @@ public abstract class MongoDbQueryService<T, ID> {
     // Added a limit in here as otherwise a COLLSCAN can take forever.
     Document explain =
         collection.find(filter).sort(sort).projection(projection).limit(1000).explain();
-    JsonWriterSettings jsonWriterSettings = JsonWriterSettings.builder().indent(true).build();
+    // JsonWriterSettings jsonWriterSettings = JsonWriterSettings.builder().indent(true).build();
     // Uncomment this to see the query explain in the logs.
     // LOG.info(explain.toJson(jsonWriterSettings));
 
@@ -203,16 +201,16 @@ public abstract class MongoDbQueryService<T, ID> {
         // Well indexed non covered
         score = 3;
       }
-      // Imperfect index so more index scanning bu no extra fetch
+      // Imperfect index so more index scanning but no extra fetch
       else if (nReturned == totalDocsExamined && totalKeysExamined > nReturned) {
         score = 5;
       }
-      // Index wasnt enough had to filter again after fetch
+      // Index wasn't enough had to filter again after FETCHed document
       else if (totalKeysExamined == totalDocsExamined && totalDocsExamined > nReturned) {
         score = 10;
       }
 
-      // Cost of a sort depends how much we are sorting but quite a lot!
+      // Cost of a sort depends on how much we are sorting but quite a lot!
       if (queryPlan.contains("SORT")) {
         // Small set isn't a HUGE issue
         if (nReturned < 100) {
@@ -258,17 +256,19 @@ public abstract class MongoDbQueryService<T, ID> {
     try {
       Document queryRequest = Document.parse(jsonString);
       Document searchSpec = queryRequest.get("search", new Document());
-      Document filter = queryRequest.get("filter", new Document());
+
       Document projection = queryRequest.get("projection", new Document());
-      Document sort = queryRequest.get("sort", new Document());
+
+      // Both sorting and filtering are options with Atlas Search but better not as pipeline stages.
+      // Document sort = queryRequest.get("sort", new Document());
+      // Document filter = queryRequest.get("filter", new Document());
 
       int skip = queryRequest.getInteger("skip") != null ? queryRequest.getInteger("skip") : 0;
       // Default ot a limit of 1000 unless otherwise advised
       int limit =
           queryRequest.getInteger("limit") != null ? queryRequest.getInteger("limit") : 1000;
 
-      Bson searchStage = new Document("$search",searchSpec);
-      AggregationOperation a;
+      Bson searchStage = new Document("$search", searchSpec);
 
       Bson projectStage = Aggregates.project(projection);
 

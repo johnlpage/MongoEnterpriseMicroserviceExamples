@@ -20,7 +20,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 @RequiredArgsConstructor
-public abstract class MongoDbJsonLoaderService<T, ID> {
+public abstract class MongoDbJsonLoaderService<T> {
 
   private static final Logger LOG = LoggerFactory.getLogger(MongoDbJsonLoaderService.class);
   private final OptimizedMongoLoadRepository<T> repository;
@@ -39,8 +39,7 @@ public abstract class MongoDbJsonLoaderService<T, ID> {
     AtomicInteger deletes = new AtomicInteger(0);
     AtomicInteger inserts = new AtomicInteger(0);
     List<T> toSave = new ArrayList<>();
-    List<CompletableFuture<BulkWriteResult>> futures =
-        new ArrayList<CompletableFuture<BulkWriteResult>>();
+    List<CompletableFuture<BulkWriteResult>> futures = new ArrayList<>();
 
     int count = 0;
     long startTime = System.currentTimeMillis();
