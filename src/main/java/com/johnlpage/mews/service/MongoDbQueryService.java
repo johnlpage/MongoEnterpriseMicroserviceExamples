@@ -1,6 +1,9 @@
 package com.johnlpage.mews.service;
 
+import static com.johnlpage.mews.util.AnnotationExtractor.renameKeysRecursively;
+
 import com.mongodb.client.MongoCollection;
+import com.mongodb.client.model.Aggregates;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
@@ -11,6 +14,7 @@ import java.util.Map;
 import java.util.Optional;
 import lombok.RequiredArgsConstructor;
 import org.bson.Document;
+import org.bson.conversions.Bson;
 import org.bson.json.JsonWriterSettings;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -22,13 +26,14 @@ import org.springframework.data.mapping.PersistentEntity;
 import org.springframework.data.mapping.PersistentProperty;
 import org.springframework.data.mapping.context.MappingContext;
 import org.springframework.data.mongodb.core.MongoTemplate;
+import org.springframework.data.mongodb.core.aggregation.Aggregation;
+import org.springframework.data.mongodb.core.aggregation.AggregationOperation;
+import org.springframework.data.mongodb.core.aggregation.AggregationResults;
 import org.springframework.data.mongodb.core.convert.MappingMongoConverter;
 import org.springframework.data.mongodb.core.convert.QueryMapper;
 import org.springframework.data.mongodb.core.mapping.MongoPersistentEntity;
 import org.springframework.data.mongodb.core.query.BasicQuery;
 import org.springframework.data.mongodb.repository.MongoRepository;
-
-import static com.johnlpage.mews.util.AnnotationExtractor.renameKeysRecursively;
 
 @RequiredArgsConstructor
 public abstract class MongoDbQueryService<T, ID> {
@@ -37,6 +42,31 @@ public abstract class MongoDbQueryService<T, ID> {
   private final MongoRepository<T, ID> repository;
   private final MongoTemplate mongoTemplate;
   private final Map<String, QueryScore> queryScores = new HashMap<>();
+
+  public static String computeHash(List<String> strings) {
+    try {
+      // Concatenate all strings in the list
+      StringBuilder combinedString = new StringBuilder();
+      for (String s : strings) {
+        combinedString.append(s);
+      }
+
+      // Choose hashing algorithm
+      MessageDigest digest = MessageDigest.getInstance("SHA-256");
+
+      // Compute the hash
+      byte[] hashBytes = digest.digest(combinedString.toString().getBytes());
+
+      // Convert hash bytes to a hex string
+      StringBuilder hashString = new StringBuilder();
+      for (byte b : hashBytes) {
+        hashString.append(String.format("%02x", b)); // %02x formats the byte as a two-digit hex
+      }
+      return hashString.toString();
+    } catch (NoSuchAlgorithmException e) {
+      throw new RuntimeException("Hashing algorithm not found", e);
+    }
+  }
 
   /** Find One by ID */
   public Optional<T> getModelById(ID id) {
@@ -61,16 +91,15 @@ public abstract class MongoDbQueryService<T, ID> {
       Document projection = queryRequest.get("projection", new Document());
       Document sort = queryRequest.get("sort", new Document());
 
-      //This maps from the JSON fields we see to the underlying firld names if they aren't the same
+      // This maps from the JSON fields we see to the underlying firld names if they aren't the same
       filter = new Document(renameKeysRecursively(clazz, filter));
       projection = new Document(renameKeysRecursively(clazz, projection));
       sort = new Document(renameKeysRecursively(clazz, sort));
       LOG.info(projection.toJson());
       LOG.info(filter.toJson());
 
-
       int skip = queryRequest.getInteger("skip") != null ? queryRequest.getInteger("skip") : 0;
-      //Default ot a limit of 1000 unless otherwise advised
+      // Default ot a limit of 1000 unless otherwise advised
       int limit =
           queryRequest.getInteger("limit") != null ? queryRequest.getInteger("limit") : 1000;
 
@@ -81,7 +110,6 @@ public abstract class MongoDbQueryService<T, ID> {
       // Deny Query, Log Query as Bad, Send to Secondary
       LOG.info("Query Cost was  {} - running anyway.", cost);
 
-
       BasicQuery query = new BasicQuery(filter, projection);
       query.skip(skip);
       query.limit(limit);
@@ -91,7 +119,7 @@ public abstract class MongoDbQueryService<T, ID> {
 
     } catch (Exception e) {
       LOG.warn(e.getMessage());
-      //TODO
+      // TODO
       return null;
     }
   }
@@ -103,7 +131,7 @@ public abstract class MongoDbQueryService<T, ID> {
    * by calling explain - but also possibly caching that so we don't do it for every call
    */
 
-  //TODO - Move to own service?
+  // TODO - Move to own service?
 
   private Integer costManager(Class<T> type, Document filter, Document projection, Document sort) {
     int queriesBeforeRecheck = 1000;
@@ -132,7 +160,6 @@ public abstract class MongoDbQueryService<T, ID> {
         queryMapper.getMappedObject(
             sort, (MongoPersistentEntity<?>) mappingContext.getPersistentEntity(type));
 
-
     QueryScore qs;
 
     String queryHash = computeQueryShapeHash(filter, projection, sort);
@@ -147,20 +174,18 @@ public abstract class MongoDbQueryService<T, ID> {
     }
 
     // Retrieve the explain plan for the query
-    LOG.info("Query Shape {} not cached  - estimating efficiency.",filter.toJson());
-    //Added a limit in here as otherwise a COLLSCAN can take forever.
-    Document explain = collection.find(filter).sort(sort).projection(projection).limit(1000).explain();
+    LOG.info("Query Shape {} not cached  - estimating efficiency.", filter.toJson());
+    // Added a limit in here as otherwise a COLLSCAN can take forever.
+    Document explain =
+        collection.find(filter).sort(sort).projection(projection).limit(1000).explain();
     JsonWriterSettings jsonWriterSettings = JsonWriterSettings.builder().indent(true).build();
     // Uncomment this to see the query explain in the logs.
-    //LOG.info(explain.toJson(jsonWriterSettings));
+    // LOG.info(explain.toJson(jsonWriterSettings));
 
     int score = 0;
 
     String queryPlan =
-        explain
-            .get("queryPlanner", new Document())
-            .get("winningPlan", new Document()).toJson();
-
+        explain.get("queryPlanner", new Document()).get("winningPlan", new Document()).toJson();
 
     if (queryPlan.contains("COLLSCAN")) {
       // Limits and other things may come first - is COLLSCAN is in there it's bad
@@ -229,29 +254,39 @@ public abstract class MongoDbQueryService<T, ID> {
     return computeHash(fields);
   }
 
-  public static String computeHash(List<String> strings) {
+  public List<T> getModelByAtlasSearch(String jsonString, Class<T> clazz) {
     try {
-      // Concatenate all strings in the list
-      StringBuilder combinedString = new StringBuilder();
-      for (String s : strings) {
-        combinedString.append(s);
-      }
+      Document queryRequest = Document.parse(jsonString);
+      Document searchSpec = queryRequest.get("search", new Document());
+      Document filter = queryRequest.get("filter", new Document());
+      Document projection = queryRequest.get("projection", new Document());
+      Document sort = queryRequest.get("sort", new Document());
 
-      // Choose hashing algorithm
-      MessageDigest digest = MessageDigest.getInstance("SHA-256");
+      int skip = queryRequest.getInteger("skip") != null ? queryRequest.getInteger("skip") : 0;
+      // Default ot a limit of 1000 unless otherwise advised
+      int limit =
+          queryRequest.getInteger("limit") != null ? queryRequest.getInteger("limit") : 1000;
 
-      // Compute the hash
-      byte[] hashBytes = digest.digest(combinedString.toString().getBytes());
+      Bson searchStage = new Document("$search",searchSpec);
+      AggregationOperation a;
 
-      // Convert hash bytes to a hex string
-      StringBuilder hashString = new StringBuilder();
-      for (byte b : hashBytes) {
-        hashString.append(String.format("%02x", b)); // %02x formats the byte as a two-digit hex
-      }
-      return hashString.toString();
-    } catch (NoSuchAlgorithmException e) {
-      throw new RuntimeException("Hashing algorithm not found", e);
+      Bson projectStage = Aggregates.project(projection);
+
+      Aggregation aggregation =
+          Aggregation.newAggregation(
+              Aggregation.stage(searchStage),
+              Aggregation.skip(skip),
+              Aggregation.limit(limit),
+              Aggregation.stage(projectStage));
+      LOG.info(aggregation.toString());
+
+      AggregationResults<T> results = mongoTemplate.aggregate(aggregation, clazz, clazz);
+      return results.getMappedResults();
+
+    } catch (Exception e) {
+      LOG.error("Error parsing query request", e);
     }
+    return null;
   }
 
   private static final class QueryScore {

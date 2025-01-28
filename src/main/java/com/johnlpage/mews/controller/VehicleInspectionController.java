@@ -104,7 +104,6 @@ public class VehicleInspectionController {
    */
   @PostMapping("/inspections/query")
   public ResponseEntity<String> mongoQuery(@RequestBody String requestBody) {
-    LOG.info(requestBody);
     List<VehicleInspection> result =
         inspectionQueryService.getModelByMongoQuery(requestBody, VehicleInspection.class);
     try {
@@ -115,4 +114,19 @@ public class VehicleInspectionController {
       return ResponseEntity.status(500).body("Error converting vehicles to JSON");
     }
   }
+
+  @PostMapping("/inspections/search")
+  public ResponseEntity<String> atlasSearch(@RequestBody String requestBody) {
+    LOG.info(requestBody);
+    List<VehicleInspection> result =
+            inspectionQueryService.getModelByAtlasSearch(requestBody, VehicleInspection.class);
+    try {
+      // Convert list to JSON string
+      String jsonResult = objectMapper.writeValueAsString(result);
+      return ResponseEntity.ok(jsonResult);
+    } catch (JsonProcessingException e) {
+      return ResponseEntity.status(500).body("Error converting vehicles to JSON");
+    }
+  }
+
 }
