@@ -21,7 +21,7 @@ import org.springframework.data.mongodb.core.mapping.Document;
 @Data
 @JsonIgnoreProperties(ignoreUnknown = true)
 @JsonInclude(JsonInclude.Include.NON_NULL)
-@Document(collection = "inspectionhistory")
+@Document(collection = "vehicleinspection_history")
 public class VehicleInspectionHistory {
   @Id ObjectId historyId;
   Long testid;

@@ -57,8 +57,9 @@ public class VehicleInspectionPostWriteTriggerServiceImpl
       vih.setTestid(v.getLong("_id"));
       vih.setChanges(v.get(OptimizedMongoLoadRepositoryImpl.PREVIOUSVALS, Document.class));
       vih.setTimestamp(new Date());
-      inspectionHistories.add(vih);
+      inspectionHistories.add(vih); // Add this history records to the history list
     }
+    // Write them all in one operation
     mongoTemplate.withSession(session).insertAll(inspectionHistories);
   }
 }

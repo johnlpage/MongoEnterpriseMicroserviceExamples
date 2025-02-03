@@ -23,7 +23,7 @@ import org.springframework.data.mongodb.core.mapping.Document;
 @Data
 @JsonIgnoreProperties(ignoreUnknown = true)
 @JsonInclude(JsonInclude.Include.NON_NULL)
-@Document(collection = "inspections")
+@Document(collection = "vehicleinspection")
 public class VehicleInspection {
 
   @Id Long testid;

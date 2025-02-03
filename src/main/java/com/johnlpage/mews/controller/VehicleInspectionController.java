@@ -6,16 +6,16 @@ import com.johnlpage.mews.dto.PageDto;
 import com.johnlpage.mews.model.UpdateStrategy;
 import com.johnlpage.mews.model.Vehicle;
 import com.johnlpage.mews.model.VehicleInspection;
-import com.johnlpage.mews.service.VehicleInspectionMongoDbJsonLoaderServiceImpl;
-import com.johnlpage.mews.service.VehicleInspectionMongoQueryServiceImpl;
-import com.johnlpage.mews.service.VehicleInspectionPostWriteTriggerServiceImpl;
-import com.johnlpage.mews.service.VehicleInspectionPreWriteTriggerServiceImpl;
+import com.johnlpage.mews.service.*;
 import jakarta.servlet.http.HttpServletRequest;
+import java.io.IOException;
 import java.util.List;
+import java.util.stream.Stream;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.data.domain.Slice;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -24,6 +24,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.servlet.mvc.method.annotation.StreamingResponseBody;
 
 @RequiredArgsConstructor
 @RestController
@@ -35,6 +36,7 @@ public class VehicleInspectionController {
   private final VehicleInspectionMongoQueryServiceImpl inspectionQueryService;
   private final VehicleInspectionPreWriteTriggerServiceImpl inspectionPreWriteTriggerService;
   private final VehicleInspectionPostWriteTriggerServiceImpl inspectionPostWriteTriggerService;
+  private final VehicleInspectionDownstreamServiceImpl downstreamService;
 
   private final ObjectMapper objectMapper;
 
@@ -46,17 +48,21 @@ public class VehicleInspectionController {
   public void loadFromStream(
       HttpServletRequest request,
       @RequestParam(name = "futz", required = false, defaultValue = "false") Boolean futz,
-      @RequestParam(name = "updateStrategy", required = false, defaultValue = "REPLACE") UpdateStrategy updateStrategy) {
+      @RequestParam(name = "updateStrategy", required = false, defaultValue = "REPLACE")
+          UpdateStrategy updateStrategy) {
     try {
       inspectionLoaderService.loadFromJsonStream(
-          request.getInputStream(), VehicleInspection.class, updateStrategy, futz ? inspectionPreWriteTriggerService : null, inspectionPostWriteTriggerService);
+          request.getInputStream(),
+          VehicleInspection.class,
+          updateStrategy,
+          futz ? inspectionPreWriteTriggerService : null,
+          updateStrategy.equals(UpdateStrategy.UPDATEWITHHISTORY)
+              ? inspectionPostWriteTriggerService
+              : null);
     } catch (Exception e) {
       LOG.error(e.getMessage());
     }
   }
-
-
-
 
   /** Get By ID */
   @GetMapping("/inspections/{id}")
@@ -115,7 +121,7 @@ public class VehicleInspectionController {
   @PostMapping("/inspections/search")
   public ResponseEntity<String> atlasSearch(@RequestBody String requestBody) {
     List<VehicleInspection> result =
-            inspectionQueryService.getModelByAtlasSearch(requestBody, VehicleInspection.class);
+        inspectionQueryService.getModelByAtlasSearch(requestBody, VehicleInspection.class);
     try {
       // Convert list to JSON string
       String jsonResult = objectMapper.writeValueAsString(result);
@@ -124,5 +130,34 @@ public class VehicleInspectionController {
       return ResponseEntity.status(500).body("Error converting vehicles to JSON");
     }
   }
+
+  // If we want to stream back data we can do it like this (or Flux and Reactive Mongo)
+  // This does all the mapping in the client from Document->VI->JSON - we can do this faster
+  // By skipping the object creation and doing it all in a projection on the server.
+  // Then using RAWBsonDocument
+
+  @GetMapping(value = "/inspections/stream", produces = MediaType.APPLICATION_JSON_VALUE)
+  public StreamingResponseBody streamInspections() {
+    return outputStream -> {
+      try (
+          Stream<VehicleInspection> inspectionStream = downstreamService.findAllInspections()) {
+        boolean isFirst = true;
+        for (VehicleInspection inspection :
+            (Iterable<VehicleInspection>) inspectionStream::iterator) {
+          if (!isFirst) {
+            outputStream.write("\n".getBytes());
+          }
+          outputStream.write(objectMapper.writeValueAsString(inspection).getBytes());
+          isFirst = false;
+        }
+      } catch (IOException e) {
+        // Handle IO exception appropriately
+        // It's not as if we can return an error message as this is probably a disconnect
+        LOG.error(e.getMessage());
+      }
+    };
+  }
+
+  // TODO - Fast Native version of streamInspections ising RAWBson
 
 }

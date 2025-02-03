@@ -25,18 +25,30 @@ public class MongoPreflightChecksService {
   // todo - create Atlas Search indexes
   // todo - create Atlas Vector Indexes
   // todo - extend this to include schema validation check.
+  /* private static final String SCHEMA_AND_INDEXES =
+    """
+  {
+      "collections" : [
+        { "name" : "vehicleinspection" ,
+          "indexes": [ { "vehicle.model" : 1 }],
+          "searchIndexes" : [ { "name": "default", "definition" : { "mappings" : { "dynamic" : true, fields: {}} }}]
+        },
+        { "name" : "vehicleinspection_history" }
+      ]
+  }
+  """;*/
+
   private static final String SCHEMA_AND_INDEXES =
       """
-    {
-        "collections" : [
-          { "name" : "inspections" ,
-            "indexes": [ { "vehicle.model" : 1 }],
-            "searchIndexes" : [ { "name": "default", "definition" : { "mappings" : { "dynamic" : true, fields: {}} }}]
-          },
-          { "name" : "inspectionhistory" }
-        ]
-    }
-    """;
+        {
+            "collections" : [
+              { "name" : "vehicleinspection" ,
+                "indexes": [ { "vehicle.model" : 1 }]
+              },
+              { "name" : "vehicleinspection_history" }
+            ]
+        }
+        """;
 
   private final ApplicationContext context;
   private final MongoTemplate mongoTemplate;
@@ -68,7 +80,7 @@ public class MongoPreflightChecksService {
       String collectionName = requiredCollection.getString("name");
       if (!existingCollections.contains(collectionName)) {
         if (createCollections) {
-          LOG.error("Collection '{}' does not exist, creating it.", collectionName);
+          LOG.warn("Collection '{}' does not exist, creating it.", collectionName);
           database.createCollection(collectionName);
         } else {
           LOG.error("Collection '{}' does not exist, cancelling startup", collectionName);
@@ -161,7 +173,7 @@ public class MongoPreflightChecksService {
               LOG.warn("--->>> Search index '{}' is still not yet ready", requiredName);
             }
           } else {
-            LOG.error("Collection '{}' does not have searchIndex {}", collectionName, requiredName);
+            LOG.warn("Collection '{}' does not have searchIndex {}", collectionName, requiredName);
             failed = true;
           }
 
@@ -171,6 +183,7 @@ public class MongoPreflightChecksService {
               LOG.info("Creating Search Index");
               createSearchIndex(collectionName, requiredName, requiredDefinition);
             } else {
+              LOG.error("Existing due to missing index {}", requiredName);
               SpringApplication.exit(context, () -> 0);
               return;
             }
