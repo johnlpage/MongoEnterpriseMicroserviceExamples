@@ -8,10 +8,12 @@ import com.johnlpage.mews.model.Vehicle;
 import com.johnlpage.mews.model.VehicleInspection;
 import com.johnlpage.mews.service.*;
 import jakarta.servlet.http.HttpServletRequest;
+import java.io.BufferedOutputStream;
 import java.io.IOException;
 import java.util.List;
 import java.util.stream.Stream;
 import lombok.RequiredArgsConstructor;
+import org.bson.json.JsonObject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.data.domain.Slice;
@@ -139,25 +141,45 @@ public class VehicleInspectionController {
   @GetMapping(value = "/inspections/stream", produces = MediaType.APPLICATION_JSON_VALUE)
   public StreamingResponseBody streamInspections() {
     return outputStream -> {
-      try (
+      try (BufferedOutputStream bufferedOutputStream = new BufferedOutputStream(outputStream);
           Stream<VehicleInspection> inspectionStream = downstreamService.findAllInspections()) {
         boolean isFirst = true;
         for (VehicleInspection inspection :
             (Iterable<VehicleInspection>) inspectionStream::iterator) {
           if (!isFirst) {
-            outputStream.write("\n".getBytes());
+            bufferedOutputStream.write("\n".getBytes());
           }
-          outputStream.write(objectMapper.writeValueAsString(inspection).getBytes());
+          bufferedOutputStream.write(objectMapper.writeValueAsBytes(inspection));
+          bufferedOutputStream.flush(); // Ensure data is sent promptly
           isFirst = false;
         }
       } catch (IOException e) {
-        // Handle IO exception appropriately
-        // It's not as if we can return an error message as this is probably a disconnect
-        LOG.error(e.getMessage());
+        LOG.error("Error during streaming inspections: " + e.getMessage(), e);
       }
     };
   }
 
-  // TODO - Fast Native version of streamInspections ising RAWBson
+  //  Native version of streamInspections using RAWBson to populate JSONObject
+  // Have to tell MongoDB how to do the mapping
+  // TODO - generate the mapping from the Model automatically
 
+  @GetMapping(value = "/inspections/streamfast", produces = MediaType.APPLICATION_JSON_VALUE)
+  public StreamingResponseBody streamInspectionsFast() {
+    return outputStream -> {
+      try (BufferedOutputStream bufferedOutputStream = new BufferedOutputStream(outputStream);
+          Stream<JsonObject> inspectionStream = downstreamService.findAllFast()) {
+        boolean isFirst = true;
+        for (JsonObject inspection : (Iterable<JsonObject>) inspectionStream::iterator) {
+          if (!isFirst) {
+            bufferedOutputStream.write("\n".getBytes());
+          }
+          bufferedOutputStream.write(inspection.getJson().getBytes());
+          bufferedOutputStream.flush(); // Ensure data is sent promptly
+          isFirst = false;
+        }
+      } catch (IOException e) {
+        LOG.error("Error during streaming inspections: " + e.getMessage(), e);
+      }
+    };
+  }
 }
