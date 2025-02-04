@@ -53,6 +53,8 @@ public class VehicleInspectionController {
       @RequestParam(name = "updateStrategy", required = false, defaultValue = "REPLACE")
           UpdateStrategy updateStrategy) {
     try {
+
+      /*
       inspectionLoaderService.loadFromJsonStream(
           request.getInputStream(),
           VehicleInspection.class,
@@ -60,7 +62,15 @@ public class VehicleInspectionController {
           futz ? inspectionPreWriteTriggerService : null,
           updateStrategy.equals(UpdateStrategy.UPDATEWITHHISTORY)
               ? inspectionPostWriteTriggerService
-              : null);
+              : null);*/
+
+      // Temp change for debugging
+      inspectionLoaderService.loadFromJsonStream(
+          request.getInputStream(),
+          VehicleInspection.class,
+          updateStrategy,
+          futz ? inspectionPreWriteTriggerService : null,
+          inspectionPostWriteTriggerService);
     } catch (Exception e) {
       LOG.error(e.getMessage());
     }

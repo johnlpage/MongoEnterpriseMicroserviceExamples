@@ -14,6 +14,7 @@ public class VehicleInspectionMongoDbJsonLoaderServiceImpl
   @Autowired
   public VehicleInspectionMongoDbJsonLoaderServiceImpl(
       VehicleInspectionRepository repository, ObjectMapper objectMapper, JsonFactory jsonFactory) {
+
     super(repository, objectMapper, jsonFactory);
   }
 }
