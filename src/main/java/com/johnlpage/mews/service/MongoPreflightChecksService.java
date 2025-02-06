@@ -25,8 +25,8 @@ public class MongoPreflightChecksService {
   // todo - create Atlas Search indexes
   // todo - create Atlas Vector Indexes
   // todo - extend this to include schema validation check.
-  /* private static final String SCHEMA_AND_INDEXES =
-    """
+  private static final String SCHEMA_AND_INDEXES =
+      """
   {
       "collections" : [
         { "name" : "vehicleinspection" ,
@@ -36,19 +36,7 @@ public class MongoPreflightChecksService {
         { "name" : "vehicleinspection_history" }
       ]
   }
-  """;*/
-
-  private static final String SCHEMA_AND_INDEXES =
-      """
-        {
-            "collections" : [
-              { "name" : "vehicleinspection" ,
-                "indexes": [ { "vehicle.model" : 1 }]
-              },
-              { "name" : "vehicleinspection_history" }
-            ]
-        }
-        """;
+  """;
 
   private final ApplicationContext context;
   private final MongoTemplate mongoTemplate;

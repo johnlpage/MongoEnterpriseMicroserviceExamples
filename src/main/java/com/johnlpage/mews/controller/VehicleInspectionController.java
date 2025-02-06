@@ -54,7 +54,6 @@ public class VehicleInspectionController {
           UpdateStrategy updateStrategy) {
     try {
 
-      /*
       inspectionLoaderService.loadFromJsonStream(
           request.getInputStream(),
           VehicleInspection.class,
@@ -62,15 +61,8 @@ public class VehicleInspectionController {
           futz ? inspectionPreWriteTriggerService : null,
           updateStrategy.equals(UpdateStrategy.UPDATEWITHHISTORY)
               ? inspectionPostWriteTriggerService
-              : null);*/
+              : null);
 
-      // Temp change for debugging
-      inspectionLoaderService.loadFromJsonStream(
-          request.getInputStream(),
-          VehicleInspection.class,
-          updateStrategy,
-          futz ? inspectionPreWriteTriggerService : null,
-          inspectionPostWriteTriggerService);
     } catch (Exception e) {
       LOG.error(e.getMessage());
     }
@@ -164,7 +156,7 @@ public class VehicleInspectionController {
           isFirst = false;
         }
       } catch (IOException e) {
-        LOG.error("Error during streaming inspections: " + e.getMessage(), e);
+        LOG.error("Error during streaming inspections: {}", e.getMessage(), e);
       }
     };
   }
@@ -188,7 +180,7 @@ public class VehicleInspectionController {
           isFirst = false;
         }
       } catch (IOException e) {
-        LOG.error("Error during streaming inspections: " + e.getMessage(), e);
+        LOG.error("Error during streaming inspections: {}", e.getMessage(), e);
       }
     };
   }

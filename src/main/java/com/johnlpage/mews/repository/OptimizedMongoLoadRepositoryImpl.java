@@ -69,7 +69,7 @@ public class OptimizedMongoLoadRepositoryImpl<T> implements OptimizedMongoLoadRe
       Object idValue = getIdFromModel(item);
       Query query = new Query(where("_id").is(idValue));
       if (hasDeleteFlag(item)) {
-        ops.remove(query);
+        ops.remove(query); // TODO - Figure out history on this
       } else {
         if (updateStrategy == UpdateStrategy.UPDATE) {
           useSimpleUpdate(item, ops, query); // Unwinds and uses $set - smaller oplog, less network
@@ -87,7 +87,7 @@ public class OptimizedMongoLoadRepositoryImpl<T> implements OptimizedMongoLoadRe
     }
 
     // If we have a postWriteTrigger then we want this update to be
-    // In a transaction if not we don't
+    // In a transaction if not we dont
 
     BulkWriteResult result;
     try {

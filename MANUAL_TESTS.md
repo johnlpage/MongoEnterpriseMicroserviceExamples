@@ -7,15 +7,24 @@ start with ` mvn spring-boot:run`
 
 Send data with cURL - You caould also have it just read a file
 
-```
-  curl -X POST http://localhost:8080/vehicles/inspections -H "Content-Type: application/json" -T ~/mot2022.json     
-  ```
-
+Initial data load without any history
 Send a Single Doc recording history and update batch id
 
 ```
-  curl -X POST "http://localhost:8080/vehicles/inspections?futz=true&updateStrategy=UPDATEWITHHISTORY" -H "Content-Type: application/json" -T ~/mot2.json     
-  ```
+  curl -X POST "http://localhost:8080/vehicles/inspections?updateStrategy=REPLACE" -H "Content-Type: application/json" -T ~/mot.json     
+```
+
+Slower but oplog optimsed chage, futz option modifies data
+
+```
+  curl -X POST "http://localhost:8080/vehicles/inspections?futz=true&updateStrategy=UPDATE" "-H "Content-Type: application/json" -T ~/mot.json     
+```
+
+Record history of changes
+
+```
+  curl -X POST "http://localhost:8080/vehicles/inspections?futz=true&updateStrategy=UPDATWITHHISTORY" -H "Content-Type: application/json" -T ~/mot.json     
+```
 
 the motupdates endpoint modifies the data as it's read to simulate getting a new version.
 
