@@ -19,7 +19,7 @@ import org.springframework.stereotype.Service;
 
 @Service
 public class VehicleInspectionPostWriteTriggerService
-    extends PostWriteTriggerService<VehicleInspection> {
+    implements PostWriteTriggerService<VehicleInspection> {
 
   private static final Logger LOG =
       LoggerFactory.getLogger(VehicleInspectionPostWriteTriggerService.class);
