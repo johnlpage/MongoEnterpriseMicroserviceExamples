@@ -2,7 +2,7 @@ package com.johnlpage.mews.service;
 
 import com.johnlpage.mews.model.VehicleInspection;
 import com.johnlpage.mews.model.VehicleInspectionHistory;
-import com.johnlpage.mews.repository.OptimizedMongoLoadRepositoryImpl;
+import com.johnlpage.mews.repository.optimized.OptimizedMongoLoadRepositoryImpl;
 import com.mongodb.bulk.BulkWriteResult;
 import com.mongodb.client.ClientSession;
 import java.util.ArrayList;
@@ -18,15 +18,15 @@ import org.springframework.data.mongodb.core.query.Query;
 import org.springframework.stereotype.Service;
 
 @Service
-public class VehicleInspectionPostWriteTriggerServiceImpl
+public class VehicleInspectionPostWriteTriggerService
     extends PostWriteTriggerService<VehicleInspection> {
 
   private static final Logger LOG =
-      LoggerFactory.getLogger(VehicleInspectionPostWriteTriggerServiceImpl.class);
+      LoggerFactory.getLogger(VehicleInspectionPostWriteTriggerService.class);
 
   private final MongoTemplate mongoTemplate;
 
-  public VehicleInspectionPostWriteTriggerServiceImpl(MongoTemplate mongoTemplate) {
+  public VehicleInspectionPostWriteTriggerService(MongoTemplate mongoTemplate) {
     super();
     this.mongoTemplate = mongoTemplate;
   }

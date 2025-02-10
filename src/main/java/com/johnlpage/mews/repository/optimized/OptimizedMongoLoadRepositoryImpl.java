@@ -1,4 +1,4 @@
-package com.johnlpage.mews.repository;
+package com.johnlpage.mews.repository.optimized;
 
 import static com.johnlpage.mews.util.AnnotationExtractor.getIdFromModel;
 import static com.johnlpage.mews.util.AnnotationExtractor.hasDeleteFlag;

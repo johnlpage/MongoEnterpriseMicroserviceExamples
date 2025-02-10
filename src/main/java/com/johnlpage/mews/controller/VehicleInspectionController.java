@@ -34,11 +34,11 @@ import org.springframework.web.servlet.mvc.method.annotation.StreamingResponseBo
 public class VehicleInspectionController {
 
   private static final Logger LOG = LoggerFactory.getLogger(VehicleInspectionController.class);
-  private final VehicleInspectionMongoDbJsonLoaderServiceImpl inspectionLoaderService;
-  private final VehicleInspectionMongoQueryServiceImpl inspectionQueryService;
-  private final VehicleInspectionPreWriteTriggerServiceImpl inspectionPreWriteTriggerService;
-  private final VehicleInspectionPostWriteTriggerServiceImpl inspectionPostWriteTriggerService;
-  private final VehicleInspectionDownstreamServiceImpl downstreamService;
+  private final VehicleInspectionQueryService inspectionQueryService;
+  private final VehicleInspectionJsonLoaderService inspectionLoaderService;
+  private final VehicleInspectionPreWriteTriggerService inspectionPreWriteTriggerService;
+  private final VehicleInspectionPostWriteTriggerService inspectionPostWriteTriggerService;
+  private final VehicleInspectionDownstreamService downstreamService;
 
   private final ObjectMapper objectMapper;
 
@@ -68,12 +68,12 @@ public class VehicleInspectionController {
     }
   }
 
-  /** Get By ID */
-  @GetMapping("/inspections/{id}")
+  /** Get By ID - */
+  @GetMapping("/inspections/id/{id}")
   public ResponseEntity<VehicleInspection> getInspectionById(@PathVariable Long id) {
 
     return inspectionQueryService
-        .getModelById(id)
+        .getInspectionById(id)
         .map(ResponseEntity::ok)
         .orElse(ResponseEntity.notFound().build());
   }
@@ -89,18 +89,18 @@ public class VehicleInspectionController {
       @RequestParam(name = "size", required = false, defaultValue = "10") int size) {
 
     // This is where we are hard coding a query for this endpoint.
-    // use setModel in a mutable model
+    // By creating an example of the class, clumsy but works.
 
-    VehicleInspection probe = new VehicleInspection();
+    VehicleInspection example = new VehicleInspection();
     Vehicle v = new Vehicle();
     v.setModel(model);
-    probe.setVehicle(v);
+    example.setVehicle(v);
 
     // Use the line below for immutable model
     // VehicleInspection probe = VehicleInspection.builder().model(model).build();
 
     Slice<VehicleInspection> returnPage =
-        inspectionQueryService.getModelByExample(probe, page, size);
+        inspectionQueryService.getInspectionByExample(example, page, size);
     PageDto<VehicleInspection> entity = new PageDto<>(returnPage);
     return ResponseEntity.ok(entity);
   }
@@ -111,8 +111,7 @@ public class VehicleInspectionController {
    */
   @PostMapping("/inspections/query")
   public ResponseEntity<String> mongoQuery(@RequestBody String requestBody) {
-    List<VehicleInspection> result =
-        inspectionQueryService.getModelByMongoQuery(requestBody, VehicleInspection.class);
+    List<VehicleInspection> result = inspectionQueryService.mongoDbNativeQuery(requestBody);
     try {
       // Convert list to JSON string
       String jsonResult = objectMapper.writeValueAsString(result);
@@ -123,9 +122,8 @@ public class VehicleInspectionController {
   }
 
   @PostMapping("/inspections/search")
-  public ResponseEntity<String> atlasSearch(@RequestBody String requestBody) {
-    List<VehicleInspection> result =
-        inspectionQueryService.getModelByAtlasSearch(requestBody, VehicleInspection.class);
+  public ResponseEntity<String> atlasSearchQuery(@RequestBody String requestBody) {
+    List<VehicleInspection> result = inspectionQueryService.atlasSearchQuery(requestBody);
     try {
       // Convert list to JSON string
       String jsonResult = objectMapper.writeValueAsString(result);
@@ -140,11 +138,11 @@ public class VehicleInspectionController {
   // By skipping the object creation and doing it all in a projection on the server.
   // Then using RAWBsonDocument
 
-  @GetMapping(value = "/inspections/stream", produces = MediaType.APPLICATION_JSON_VALUE)
+  @GetMapping(value = "/inspections/json", produces = MediaType.APPLICATION_JSON_VALUE)
   public StreamingResponseBody streamInspections() {
     return outputStream -> {
       try (BufferedOutputStream bufferedOutputStream = new BufferedOutputStream(outputStream);
-          Stream<VehicleInspection> inspectionStream = downstreamService.findAllInspections()) {
+          Stream<VehicleInspection> inspectionStream = downstreamService.jsonExtractStream()) {
         boolean isFirst = true;
         for (VehicleInspection inspection :
             (Iterable<VehicleInspection>) inspectionStream::iterator) {
@@ -152,24 +150,44 @@ public class VehicleInspectionController {
             bufferedOutputStream.write("\n".getBytes());
           }
           bufferedOutputStream.write(objectMapper.writeValueAsBytes(inspection));
+
           bufferedOutputStream.flush(); // Ensure data is sent promptly
           isFirst = false;
         }
       } catch (IOException e) {
-        LOG.error("Error during streaming inspections: {}", e.getMessage(), e);
+        LOG.error("Error during streaming inspections: {}", e.getMessage());
       }
     };
   }
 
   //  Native version of streamInspections using RAWBson to populate JSONObject
   // Have to tell MongoDB how to do the mapping
-  // TODO - generate the mapping from the Model automatically
 
-  @GetMapping(value = "/inspections/streamfast", produces = MediaType.APPLICATION_JSON_VALUE)
+  @GetMapping(value = "/inspections/jsonnative", produces = MediaType.APPLICATION_JSON_VALUE)
   public StreamingResponseBody streamInspectionsFast() {
+
+    String formatRequired =
+        """
+        {
+          "testid": "$_id",
+          "testdate": 1,
+          "testclass":1,
+          "testtype": 1,
+          "testresult": 1,
+          "testmileage": 1,
+          "postcode": 1,
+          "fuel": 1,
+          "capacity": 1,
+          "firstusedate": 1,
+          "faileditems":1,
+          "vehicle": 1
+        }
+        """;
+
     return outputStream -> {
       try (BufferedOutputStream bufferedOutputStream = new BufferedOutputStream(outputStream);
-          Stream<JsonObject> inspectionStream = downstreamService.findAllFast()) {
+          Stream<JsonObject> inspectionStream =
+              downstreamService.nativeJsonExtractStream(formatRequired)) {
         boolean isFirst = true;
         for (JsonObject inspection : (Iterable<JsonObject>) inspectionStream::iterator) {
           if (!isFirst) {
@@ -180,7 +198,7 @@ public class VehicleInspectionController {
           isFirst = false;
         }
       } catch (IOException e) {
-        LOG.error("Error during streaming inspections: {}", e.getMessage(), e);
+        LOG.error("Error during streaming inspections: {}", e.getMessage());
       }
     };
   }

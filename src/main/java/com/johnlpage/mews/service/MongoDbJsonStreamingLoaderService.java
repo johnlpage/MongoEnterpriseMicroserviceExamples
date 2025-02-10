@@ -6,7 +6,7 @@ import com.fasterxml.jackson.core.JsonToken;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.johnlpage.mews.model.UpdateStrategy;
-import com.johnlpage.mews.repository.OptimizedMongoLoadRepository;
+import com.johnlpage.mews.repository.optimized.OptimizedMongoLoadRepository;
 import com.mongodb.bulk.BulkWriteResult;
 import java.io.BufferedInputStream;
 import java.io.EOFException;
@@ -22,9 +22,10 @@ import org.springframework.stereotype.Service;
 
 @Service
 @RequiredArgsConstructor
-public abstract class MongoDbJsonLoaderService<T> {
+public abstract class MongoDbJsonStreamingLoaderService<T> {
 
-  private static final Logger LOG = LoggerFactory.getLogger(MongoDbJsonLoaderService.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(MongoDbJsonStreamingLoaderService.class);
   private final OptimizedMongoLoadRepository<T> repository;
   private final ObjectMapper objectMapper;
   private final JsonFactory jsonFactory;
@@ -66,12 +67,8 @@ public abstract class MongoDbJsonLoaderService<T> {
 
           toSave.add(document);
           if (toSave.size() >= 100) {
-            // Alternative Options
-            // repository.writeMany(toSave);
-            // repository.saveAll(toSave);
             List<T> copyOfToSave = List.copyOf(toSave);
             toSave.clear();
-
             futures.add(
                 repository
                     .asyncWriteMany(copyOfToSave, type, updateStrategy, posttrigger)
@@ -86,10 +83,6 @@ public abstract class MongoDbJsonLoaderService<T> {
         }
       }
       if (!toSave.isEmpty()) {
-        // Alternative Options
-        // repository.writeMany(toSave);
-        // repository.saveAll(toSave);
-
         futures.add(
             repository
                 .asyncWriteMany(toSave, type, updateStrategy, posttrigger)
@@ -107,7 +100,6 @@ public abstract class MongoDbJsonLoaderService<T> {
           CompletableFuture.allOf(futures.toArray(new CompletableFuture[futures.size()]));
       // Wait for all futures to complete
       allFutures.join();
-
       LOG.info("Processed {} docs. Time taken: {}ms.", count, endTime - startTime);
       LOG.info("Modified: {} Added: {} Removed: {}", updates, inserts, deletes);
     } catch (EOFException e) {

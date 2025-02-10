@@ -5,18 +5,18 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.johnlpage.mews.model.VehicleInspection;
 import com.johnlpage.mews.repository.VehicleInspectionRepository;
 import java.util.Random;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 @Service
-public class VehicleInspectionPreWriteTriggerServiceImpl
+public class VehicleInspectionPreWriteTriggerService
     extends PreWriteTriggerService<VehicleInspection> {
 
-  private Random rng;
+  private final Random rng;
 
-  @Autowired
-  public VehicleInspectionPreWriteTriggerServiceImpl(
-      VehicleInspectionRepository repository, ObjectMapper objectMapper, JsonFactory jsonFactory) {}
+  public VehicleInspectionPreWriteTriggerService(
+      VehicleInspectionRepository repository, ObjectMapper objectMapper, JsonFactory jsonFactory) {
+    this.rng = new Random();
+  }
 
   /*
    This code will be very specific to your data and how you want to test it may not be required.
@@ -26,21 +26,13 @@ public class VehicleInspectionPreWriteTriggerServiceImpl
   @Override
   public void modifyMutableDataPreWrite(VehicleInspection document) {
     final double percentChanged = 1.0;
-
-    if (this.rng == null) {
-      this.rng = new Random();
-    }
-
     double skipThis = rng.nextDouble() * 100.0;
-
     if (skipThis > percentChanged) {
       return;
     }
 
-    // Make specific, realistic changes
-    // Change Mileage in 10%
+    // Make specific, realistic changes Change Mileage in 10%
     Long mileage = document.getTestmileage();
-
     if (rng.nextDouble() < 0.1) {
       if (mileage != null) {
         mileage = (mileage * 101) / 100;
@@ -72,7 +64,7 @@ public class VehicleInspectionPreWriteTriggerServiceImpl
     }
   }
 
-  /* This Code is for immutable models */
+  /* This Code is used for immutable models */
 
   /*
   @Override

@@ -1,4 +1,4 @@
-package com.johnlpage.mews.repository;
+package com.johnlpage.mews.repository.optimized;
 
 import com.johnlpage.mews.model.UpdateStrategy;
 import com.johnlpage.mews.service.PostWriteTriggerService;

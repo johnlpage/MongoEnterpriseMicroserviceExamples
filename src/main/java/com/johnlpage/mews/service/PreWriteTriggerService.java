@@ -1,5 +1,7 @@
 package com.johnlpage.mews.service;
 
+// TODO - Make this an interface?
+
 public class PreWriteTriggerService<T> {
 
   /**

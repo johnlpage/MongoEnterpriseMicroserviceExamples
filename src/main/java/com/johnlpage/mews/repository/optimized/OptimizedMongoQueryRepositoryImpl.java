@@ -1,4 +1,4 @@
-package com.johnlpage.mews.service;
+package com.johnlpage.mews.repository.optimized;
 
 import static com.johnlpage.mews.util.AnnotationExtractor.renameKeysRecursively;
 
@@ -11,16 +11,11 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 import lombok.RequiredArgsConstructor;
 import org.bson.Document;
 import org.bson.conversions.Bson;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.data.domain.Example;
-import org.springframework.data.domain.ExampleMatcher;
-import org.springframework.data.domain.PageRequest;
-import org.springframework.data.domain.Slice;
 import org.springframework.data.mapping.PersistentEntity;
 import org.springframework.data.mapping.PersistentProperty;
 import org.springframework.data.mapping.context.MappingContext;
@@ -31,13 +26,12 @@ import org.springframework.data.mongodb.core.convert.MappingMongoConverter;
 import org.springframework.data.mongodb.core.convert.QueryMapper;
 import org.springframework.data.mongodb.core.mapping.MongoPersistentEntity;
 import org.springframework.data.mongodb.core.query.BasicQuery;
-import org.springframework.data.mongodb.repository.MongoRepository;
 
 @RequiredArgsConstructor
-public abstract class MongoDbQueryService<T, ID> {
+public class OptimizedMongoQueryRepositoryImpl<T> implements OptimizedMongoQueryRepository<T> {
 
-  private static final Logger LOG = LoggerFactory.getLogger(MongoDbQueryService.class);
-  private final MongoRepository<T, ID> repository;
+  private static final Logger LOG =
+      LoggerFactory.getLogger(OptimizedMongoQueryRepositoryImpl.class);
   private final MongoTemplate mongoTemplate;
   private final Map<String, QueryScore> queryScores = new HashMap<>();
 
@@ -66,23 +60,11 @@ public abstract class MongoDbQueryService<T, ID> {
     }
   }
 
-  /** Find One by ID */
-  public Optional<T> getModelById(ID id) {
-    return repository.findById(id);
-  }
-
-  /** Find By Example with Paging */
-  public Slice<T> getModelByExample(T probe, int page, int size) {
-    ExampleMatcher matcher = ExampleMatcher.matching().withIgnoreNullValues();
-    Example<T> example = Example.of(probe, matcher);
-    return repository.findAll(example, PageRequest.of(page, size));
-  }
-
   /**
    * This is wrapping the ability to do a native MongoDB call Passing in Query, Sort,Skip,Limit and
    * Projection
    */
-  public List<T> getModelByMongoQuery(String jsonString, Class<T> clazz) {
+  public List<T> mongoDbNativeQuery(String jsonString, Class<T> clazz) {
     try {
       Document queryRequest = Document.parse(jsonString);
       Document filter = queryRequest.get("filter", new Document());
@@ -93,20 +75,11 @@ public abstract class MongoDbQueryService<T, ID> {
       filter = new Document(renameKeysRecursively(clazz, filter));
       projection = new Document(renameKeysRecursively(clazz, projection));
       sort = new Document(renameKeysRecursively(clazz, sort));
-      LOG.info(projection.toJson());
-      LOG.info(filter.toJson());
 
       int skip = queryRequest.getInteger("skip") != null ? queryRequest.getInteger("skip") : 0;
       // Default ot a limit of 1000 unless otherwise advised
       int limit =
           queryRequest.getInteger("limit") != null ? queryRequest.getInteger("limit") : 1000;
-
-      // Check the cost to see if we allow it
-      Integer cost = costManager(clazz, filter, projection, sort);
-
-      // TODO Decide what to do based on cost
-      // Deny Query, Log Query as Bad, Send to Secondary
-      LOG.info("Query Cost was  {} - running anyway.", cost);
 
       BasicQuery query = new BasicQuery(filter, projection);
       query.skip(skip);
@@ -120,6 +93,23 @@ public abstract class MongoDbQueryService<T, ID> {
       // TODO
       return null;
     }
+  }
+
+  public int costMongoDbNativeQuery(String jsonString, Class<T> clazz) {
+    Document queryRequest = Document.parse(jsonString);
+    Document filter = queryRequest.get("filter", new Document());
+    Document projection = queryRequest.get("projection", new Document());
+    Document sort = queryRequest.get("sort", new Document());
+
+    // This maps from the JSON fields we see to the underlying field names if they aren't the same
+    filter = new Document(renameKeysRecursively(clazz, filter));
+    projection = new Document(renameKeysRecursively(clazz, projection));
+    sort = new Document(renameKeysRecursively(clazz, sort));
+
+    // Check the cost to see if we allow it
+    Integer cost = costManager(clazz, filter, projection, sort);
+
+    return cost;
   }
 
   /**
@@ -205,7 +195,7 @@ public abstract class MongoDbQueryService<T, ID> {
       else if (nReturned == totalDocsExamined && totalKeysExamined > nReturned) {
         score = 5;
       }
-      // Index wasn't enough had to filter again after FETCHed document
+      // Index wasn't enough had to filter again after FETCH ing document
       else if (totalKeysExamined == totalDocsExamined && totalDocsExamined > nReturned) {
         score = 10;
       }
@@ -252,7 +242,7 @@ public abstract class MongoDbQueryService<T, ID> {
     return computeHash(fields);
   }
 
-  public List<T> getModelByAtlasSearch(String jsonString, Class<T> clazz) {
+  public List<T> atlasSearchQuery(String jsonString, Class<T> clazz) {
     try {
       Document queryRequest = Document.parse(jsonString);
       Document searchSpec = queryRequest.get("search", new Document());

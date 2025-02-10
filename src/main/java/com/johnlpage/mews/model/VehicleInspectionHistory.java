@@ -10,7 +10,7 @@ import org.springframework.data.mongodb.core.mapping.Document;
 
 /* Replace @Data with this to make an Immutable model
  * which is a little more efficient but no setters just a builder
- * This also impacts the controller and PreWroiteTrigger and
+ * This also impacts the controller and PreWriteTrigger and
  *  JsonLoaderService changes there are commented
  *
  *  @Builder(toBuilder = true)

@@ -15,11 +15,15 @@ import org.springframework.data.mongodb.core.MongoTemplate;
 import org.springframework.data.mongodb.core.aggregation.*;
 import org.springframework.stereotype.Service;
 
-// In this case we check we have the collections and indexes we require
+/*
+ This is an example of a class you can use to ensure the system is ready to start correctly.
+ It shows you how to check or indexes etc. And optionally create them - although spring has similar
+ lifecycle methods they aren't comprehensive enough. It uses ApplicationRunner to ensure it's run on startup.
 
+*/
 @Service
-public class MongoPreflightChecksService {
-  private static final Logger LOG = LoggerFactory.getLogger(MongoPreflightChecksService.class);
+public class MongoDbPreflightCheckService {
+  private static final Logger LOG = LoggerFactory.getLogger(MongoDbPreflightCheckService.class);
 
   // Defining this a JSON makes it easy to read but still hard coded.
   // todo - create Atlas Search indexes
@@ -50,13 +54,14 @@ public class MongoPreflightChecksService {
   @Value("${mews.preflight.createRequiredIndexes:true}")
   private boolean createSearchIndexes;
 
-  public MongoPreflightChecksService(ApplicationContext context, MongoTemplate mongoTemplate) {
+  public MongoDbPreflightCheckService(ApplicationContext context, MongoTemplate mongoTemplate) {
     this.context = context;
     this.mongoTemplate = mongoTemplate;
   }
 
   // Ensure all Collections exist, create them or quit depending on flag
-  // todo - ensure that have required properties using getCollectionInfos
+  // todo - ensure that have required properties like timeseries or validation using
+  // getCollectionInfos
 
   List<Document> ensureCollectionsExist(Document schemaAndIndexes) {
     MongoDatabase database = mongoTemplate.getDb();
@@ -158,7 +163,10 @@ public class MongoPreflightChecksService {
             }
 
             if (!searchIndexInfo.getString("status").equals("READY")) {
-              LOG.warn("--->>> Search index '{}' is still not yet ready", requiredName);
+              LOG.warn(
+                  "--->>> Search index '{}' is still not yet ready: status {}",
+                  requiredName,
+                  searchIndexInfo.getString("status"));
             }
           } else {
             LOG.warn("Collection '{}' does not have searchIndex {}", collectionName, requiredName);

@@ -1,9 +1,8 @@
-package com.johnlpage.mews.service;
+package com.johnlpage.mews.repository.optimized;
 
 import static org.bson.codecs.configuration.CodecRegistries.fromCodecs;
 import static org.bson.codecs.configuration.CodecRegistries.fromProviders;
 
-import com.johnlpage.mews.model.VehicleInspection;
 import com.mongodb.client.MongoClient;
 import com.mongodb.client.MongoCollection;
 import com.mongodb.client.MongoCursor;
@@ -19,28 +18,33 @@ import org.bson.codecs.JsonObjectCodec;
 import org.bson.json.JsonMode;
 import org.bson.json.JsonObject;
 import org.bson.json.JsonWriterSettings;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.mongodb.core.MongoOperations;
 import org.springframework.data.mongodb.core.MongoTemplate;
-import org.springframework.data.mongodb.core.query.Query;
-import org.springframework.stereotype.Service;
 
-@Service
-public class VehicleInspectionDownstreamServiceImpl
-    extends MongoDbDownstreamService<VehicleInspection> {
+/*
+ * This class has generic methods to do common reporting and extraction tasks
+ *
+ */
 
-  private final MongoTemplate mongoTemplate;
+public class OptimizedMongoDownstreamRepositoryImpl<T>
+    implements OptimizedMongoDownstreamRepository<T> {
+
+    private final MongoOperations mongoOperations;
+  private final MongoClient mongoClient;
+
   JsonWriterSettings jsonWriterSettings;
-  @Autowired private MongoOperations mongoOperations;
-  @Autowired private MongoClient mongoClient;
 
   @Value("${spring.data.mongodb.database}")
   private String databaseName;
 
-  public VehicleInspectionDownstreamServiceImpl(MongoTemplate mongoTemplate) {
-    super(mongoTemplate);
-    this.mongoTemplate = mongoTemplate;
+  public OptimizedMongoDownstreamRepositoryImpl(
+      MongoTemplate mongoTemplate,
+      MongoOperations mongoOperations,
+      MongoClient mongoClient) {
+      this.mongoOperations = mongoOperations;
+    this.mongoClient = mongoClient;
+
     this.jsonWriterSettings =
         JsonWriterSettings.builder()
             .outputMode(JsonMode.RELAXED)
@@ -58,44 +62,24 @@ public class VehicleInspectionDownstreamServiceImpl
   // to show how streaming from the DB works
   // On my test laptop this gets 12MB/s
 
-  public Stream<VehicleInspection> findAllInspections() {
-    Query filter = new Query(); // Matches everything
-    return mongoTemplate.stream(filter, VehicleInspection.class);
-  }
+  public Stream<JsonObject> nativeJsonExtract(String formatRequired, Class<T> modelClazz) {
 
-  public Stream<JsonObject> findAllFast() {
-    Query filter = new Query(); // Matches everything
-    String collectionName = mongoOperations.getCollectionName(VehicleInspection.class);
-    String formatRequired =
-        """
-{
-  "testid": "$_id",
-  "testdate": 1,
-  "testclass":1,
-  "testtype": 1,
-  "testresult": 1,
-  "testmileage": 1,
-  "postcode": 1,
-  "fuel": 1,
-  "capacity": 1,
-  "firstusedate": 1,
-  "faileditems":1,
-  "vehicle": 1
-}
-""";
+    String collectionName = mongoOperations.getCollectionName(modelClazz);
+    // TODO - generate the projection from the Model automatically so this is generic
 
     MongoDatabase database = mongoClient.getDatabase(databaseName);
-    MongoCollection<JsonObject> inspections =
+    MongoCollection<JsonObject> jsonDocs =
         database
-            .getCollection(collectionName, JsonObject.class)
+            .getCollection(collectionName, org.bson.json.JsonObject.class)
             .withCodecRegistry(
                 fromProviders(
                     fromCodecs(new JsonObjectCodec(jsonWriterSettings)),
                     database.getCodecRegistry()));
 
     MongoCursor<JsonObject> cursor =
-        inspections.find().projection(Document.parse(formatRequired)).iterator();
-    return StreamSupport.stream(((Iterable<JsonObject>) () -> cursor).spliterator(), false)
+        jsonDocs.find().projection(Document.parse(formatRequired)).iterator();
+    return StreamSupport.stream(
+            ((Iterable<org.bson.json.JsonObject>) () -> cursor).spliterator(), false)
         .onClose(cursor::close);
   }
 }
