@@ -69,13 +69,15 @@ public class OptimizedMongoLoadRepositoryImpl<T> implements OptimizedMongoLoadRe
       Object idValue = getIdFromModel(item);
       Query query = new Query(where("_id").is(idValue));
       if (hasDeleteFlag(item)) {
-        ops.remove(query); // TODO - Figure out history on this
+        ops.remove(query); /* TODO - Figure out history on this, when we delete one we need to keep it in history
+         For now assuming when we delete it we can no longer see it or it's history, so need to delete it from
+         history too */
+
       } else {
         if (updateStrategy == UpdateStrategy.UPDATE) {
           useSimpleUpdate(item, ops, query); // Unwinds and uses $set - smaller oplog, less network
 
         } else if (updateStrategy == UpdateStrategy.UPDATEWITHHISTORY) {
-          // TODO - generate these faster!
           useSmartUpdate(item, ops, query, updateBatchId);
         } else {
           // Basic overwrite, can be a little less CPU but more network/disk
@@ -97,7 +99,9 @@ public class OptimizedMongoLoadRepositoryImpl<T> implements OptimizedMongoLoadRe
         session.commitTransaction();
       }
     } catch (Exception e) {
-      // todo - handle retries for transient errors
+      // TODO - Add code to retry if a transient transaction error, that would happen if
+      // two threads had updates to the same document and means retrying the whole set
+
       LOG.error(e.getMessage(), e);
       if (usingTransactions && session.hasActiveTransaction()) {
         session.abortTransaction();
@@ -113,7 +117,8 @@ public class OptimizedMongoLoadRepositoryImpl<T> implements OptimizedMongoLoadRe
    * efficiently capture that
    *
    * <p>(a) Record a flag to say at least one field has changed. (b) Record set of fields that
-   * changed and their prior values (c) Optionally keep a history of all changes (todo)
+   * changed and their prior values (c) Optionally change this to keep a history of all changes in the record
+   * but that's a different strategy.
    *
    * <p>We can combine this with a transaction and a query to fetch just the updated documents for
    * various post-update transactional trigger activities.
@@ -129,7 +134,7 @@ public class OptimizedMongoLoadRepositoryImpl<T> implements OptimizedMongoLoadRe
     mappingMongoConverter.write(item, bsonDocument);
 
     // Compute all the individual scalar values that have changed.
-    // Arrays are just treated as scalars for now (todo - Unwind arrays too, IMPORTANT)
+    // Arrays are just treated as scalars for now (TODO - Unwind arrays too, IMPORTANT)
     Map<String, Object> unwoundFields = new HashMap<>();
     unwindNestedDocumentsInUpdate(bsonDocument, unwoundFields);
 
@@ -196,6 +201,7 @@ public class OptimizedMongoLoadRepositoryImpl<T> implements OptimizedMongoLoadRe
     } catch (Exception e) {
       LOG.error(e.getMessage());
       // TODO Handle Failed writes going to a dead letter queue or similar.
+      // That may be somethig you do from the CompletableFuture
       return CompletableFuture.failedFuture(e);
     }
   }
@@ -213,6 +219,7 @@ public class OptimizedMongoLoadRepositoryImpl<T> implements OptimizedMongoLoadRe
     } catch (Exception e) {
       LOG.error(e.getMessage());
       // TODO Handle Failed writes going to a dead letter queue or similar.
+      // That may be somethig you do from the CompletableFuture
       return CompletableFuture.failedFuture(e);
     }
   }

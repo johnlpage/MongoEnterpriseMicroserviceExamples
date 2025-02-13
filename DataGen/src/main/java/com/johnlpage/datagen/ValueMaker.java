@@ -1,4 +1,4 @@
-package com.example;
+package com.johnlpage.datagen;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
@@ -19,7 +19,6 @@ import java.util.Random;
  * This class is used to generate values rather than use explicit ones
  */
 
-// TODO - Integrate with Faker so you can use @ for anything from Faker
 
 public class ValueMaker {
     Random rng;

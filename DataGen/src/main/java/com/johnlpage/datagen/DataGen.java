@@ -1,4 +1,4 @@
-package com.example;
+package com.johnlpage.datagen;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.ObjectWriter;
@@ -47,6 +47,7 @@ public class DataGen {
 
                    writer.write(
                              objectWriter.writeValueAsString(document));
+                   writer.newLine();
                 }
                 LocalDateTime now = LocalDateTime.now();
                 Duration duration = Duration.between(startTime, now);

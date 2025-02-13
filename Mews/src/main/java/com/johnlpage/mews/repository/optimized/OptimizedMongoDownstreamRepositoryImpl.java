@@ -62,7 +62,7 @@ public class OptimizedMongoDownstreamRepositoryImpl<T>
   public Stream<JsonObject> nativeJsonExtract(String formatRequired, Class<T> modelClazz) {
 
     String collectionName = mongoOperations.getCollectionName(modelClazz);
-    // TODO - generate the projection from the Model automatically so this is generic
+      // TODO - generate the projection from the Model automatically so this is generic
 
     MongoDatabase database = mongoClient.getDatabase(databaseName);
     MongoCollection<JsonObject> jsonDocs =

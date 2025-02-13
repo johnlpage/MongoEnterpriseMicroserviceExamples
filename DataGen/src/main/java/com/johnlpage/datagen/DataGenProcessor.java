@@ -1,4 +1,5 @@
-package com.example;
+package com.johnlpage.datagen;
+
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
@@ -49,7 +50,6 @@ public class DataGenProcessor {
                 CSVRecord record = Objects.requireNonNull(chosen).getCsvRecord();
                 for (String field : fieldNames.get(entry.getKey())) {
                     if (!field.equals("probability")) {
-                        //TODO - Add non literal value handling
                         Object value ;
                         String asString = record.get(field);
                         if(asString.startsWith("@")) {

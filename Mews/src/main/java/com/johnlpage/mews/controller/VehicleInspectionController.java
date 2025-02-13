@@ -17,6 +17,7 @@ import org.bson.json.JsonObject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.data.domain.Slice;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -47,14 +48,14 @@ public class VehicleInspectionController {
    * stream of JSON data - using an HTTP endpoint to demonstrate.
    */
   @PostMapping("/inspections")
-  public void loadFromStream(
+  public ResponseEntity<MongoDbJsonStreamingLoaderService.JsonStreamingLoadResponse> loadFromStream(
       HttpServletRequest request,
       @RequestParam(name = "futz", required = false, defaultValue = "false") Boolean futz,
       @RequestParam(name = "updateStrategy", required = false, defaultValue = "REPLACE")
           UpdateStrategy updateStrategy) {
+    MongoDbJsonStreamingLoaderService.JsonStreamingLoadResponse rval;
     try {
-
-      inspectionLoaderService.loadFromJsonStream(
+       rval = inspectionLoaderService.loadFromJsonStream(
           request.getInputStream(),
           VehicleInspection.class,
           updateStrategy,
@@ -63,8 +64,14 @@ public class VehicleInspectionController {
               ? inspectionPostWriteTriggerService
               : null);
 
+
+      return new ResponseEntity<>(rval, HttpStatus.OK);
     } catch (Exception e) {
-      LOG.error(e.getMessage());
+      rval = new MongoDbJsonStreamingLoaderService.JsonStreamingLoadResponse(
+              0,0,0,false,e.getMessage());
+
+      // Log the exception if necessary and return HTTP 500 Internal Server Error
+      return new ResponseEntity<>(rval, HttpStatus.INTERNAL_SERVER_ERROR);
     }
   }
 

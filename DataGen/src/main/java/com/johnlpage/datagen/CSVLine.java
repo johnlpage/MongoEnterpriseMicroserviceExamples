@@ -1,4 +1,4 @@
-package com.example;
+package com.johnlpage.datagen;
 
 
 import org.apache.commons.csv.CSVRecord;

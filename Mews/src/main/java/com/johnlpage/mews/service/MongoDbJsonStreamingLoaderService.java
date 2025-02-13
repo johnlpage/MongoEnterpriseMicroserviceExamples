@@ -15,7 +15,11 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicInteger;
+
+import lombok.AllArgsConstructor;
+import lombok.Data;
 import lombok.RequiredArgsConstructor;
+import org.apache.catalina.connector.ClientAbortException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
@@ -30,8 +34,17 @@ public abstract class MongoDbJsonStreamingLoaderService<T> {
   private final ObjectMapper objectMapper;
   private final JsonFactory jsonFactory;
 
+  @Data
+  @AllArgsConstructor
+  public static class JsonStreamingLoadResponse {
+    int updates;
+    int deletes;
+    int inserts;
+    boolean success;
+    String message;
+  }
   /** Parses a JSON stream object by object, assumes it's not an Array. */
-  public void loadFromJsonStream(
+  public JsonStreamingLoadResponse loadFromJsonStream(
       InputStream inputStream,
       Class<T> type,
       UpdateStrategy updateStrategy,
@@ -102,10 +115,15 @@ public abstract class MongoDbJsonStreamingLoaderService<T> {
       allFutures.join();
       LOG.info("Processed {} docs. Time taken: {}ms.", count, endTime - startTime);
       LOG.info("Modified: {} Added: {} Removed: {}", updates, inserts, deletes);
-    } catch (EOFException e) {
-      LOG.error("Load Terminated as sender stopped sending JSON: {}", e.getMessage(), e);
-    } catch (Exception e) {
-      LOG.error(e.getMessage(), e);
+      return new JsonStreamingLoadResponse(updates.get(),deletes.get(),inserts.get(),true,"");
+    }
+    catch (EOFException | ClientAbortException eofe) {
+      LOG.error("Load Terminated as sender disconnected: {}", eofe.getMessage());
+        return null;
+    }
+    catch (Exception e) {
+      LOG.error("Error during data load process: {}", e.getMessage());
+      return new JsonStreamingLoadResponse(updates.get(),deletes.get(),inserts.get(),false,e.getMessage());
     }
   }
 }
