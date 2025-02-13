@@ -1,6 +1,5 @@
 package com.example;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
@@ -34,7 +33,7 @@ public class DataGenProcessor {
 
     List<ObjectNode> generateJsonDocuments(
             int numberOfJsonDocuments) throws IOException {
-        List<ObjectNode> rval = new ArrayList<>();
+        List<ObjectNode> documentsGenerated = new ArrayList<>();
 
 
 
@@ -47,7 +46,7 @@ public class DataGenProcessor {
                 TreeSet<CSVLine> csvTree = csvTrees.get(entry.getKey());
                 CSVLine chosen = csvTree.higher(new CSVLine(randomValue, null));
 
-                CSVRecord record = chosen.getCsvRecord();
+                CSVRecord record = Objects.requireNonNull(chosen).getCsvRecord();
                 for (String field : fieldNames.get(entry.getKey())) {
                     if (!field.equals("probability")) {
                         //TODO - Add non literal value handling
@@ -79,11 +78,11 @@ public class DataGenProcessor {
                     }
                 }
             }
-            rval.add(jsonNode);
+            documentsGenerated.add(jsonNode);
           /*  System.out.println(
                     objectMapper.writerWithDefaultPrettyPrinter().writeValueAsString(jsonNode));*/
         }
-        return rval;
+        return documentsGenerated;
     }
 
     private void setNode(ObjectNode where, String key, Object value) {
@@ -93,18 +92,19 @@ public class DataGenProcessor {
                 where.removeAll();
                 where.setAll((ObjectNode) value);
             } else {
-                where.put(key, (ObjectNode) value);
+                where.set(key, (ObjectNode) value);
             }
 
         } else
     if(value instanceof List ) {
         ArrayNode arrayNode = objectMapper.createArrayNode();
         // Add all ObjectNodes from the list to the ArrayNode
+        //noinspection unchecked
         for (ObjectNode objectNode : (List<ObjectNode>) value) {
             arrayNode.add(objectNode);
         }
 
-        where.put(key,arrayNode);
+        where.set(key,arrayNode);
     } else
         if (value instanceof Double) {
             where.put(key,(Double) value);
@@ -135,9 +135,8 @@ public class DataGenProcessor {
                     if (value.equals("true") || value.equals("false")) {
                         where.put(key, Boolean.parseBoolean((String) value));
                     } else {
-                        if(value.equals("") || value.equals("null")) {
-                            //TO NOT include null values
-                        } else {
+                        if(!value.equals("") && !value.equals("null")) {
+                            // No Empty fields.
                             where.put(key, (String) value);
                         }
                     }
@@ -150,28 +149,36 @@ public class DataGenProcessor {
      void readCsvFiles(String directoryPath) throws IOException {
         File directory = new File(directoryPath);
         File[] files = directory.listFiles();
-        for (File file : files) {
-            if(file.isFile() && file.getName().endsWith(".gz")) {
+        for (File file : Objects.requireNonNull(files)) {
+            if(file.isFile() && ( file.getName().endsWith(".gz") || file.getName().endsWith(".csv"))) {
                 String filename = file.getName();
 
-                //System.out.println("Processing " + filename);
-                FileInputStream fileInputStream = new FileInputStream(file);
-                GZIPInputStream gzipInputStream = new GZIPInputStream(fileInputStream);
-                InputStreamReader inputStreamReader = new InputStreamReader(gzipInputStream);
-                BufferedReader bufferedReader = new BufferedReader(inputStreamReader);
-                CSVParser parser =
-                        new CSVParser(
-                                bufferedReader,
-                                CSVFormat.DEFAULT.withFirstRecordAsHeader());
+                CSVParser parser = getCsvRecords(file);
                 List<CSVRecord> records = parser.getRecords();
 
-                if (records.size() > 0) {
+                if (!records.isEmpty()) {
                     csvData.put(filename, records);
                 }
                 fieldNames.put(filename, parser.getHeaderNames());
 
             }
         }
+    }
+
+    private static CSVParser getCsvRecords(File file) throws IOException {
+        FileInputStream fileInputStream = new FileInputStream(file);
+        InputStreamReader inputStreamReader;
+        if (file.getName().endsWith(".gz")) {
+            GZIPInputStream gzipInputStream = new GZIPInputStream(fileInputStream);
+            inputStreamReader = new InputStreamReader(gzipInputStream);
+        } else
+        {
+            inputStreamReader = new InputStreamReader(fileInputStream);
+        }
+        BufferedReader bufferedReader = new BufferedReader(inputStreamReader);
+        return new CSVParser(
+                bufferedReader,
+                CSVFormat.DEFAULT);
     }
 
     // For each CSV Files, compute the total of the probability column and also
@@ -182,7 +189,7 @@ public class DataGenProcessor {
         for (Map.Entry<String, List<CSVRecord>> entry : csvData.entrySet()) {
             String fName = entry.getKey();
             List<CSVRecord> records = entry.getValue();
-            TreeSet<CSVLine> lineSet = new TreeSet<CSVLine>(Comparator.comparingInt(CSVLine::getCumulativeProbability));
+            TreeSet<CSVLine> lineSet = new TreeSet<>(Comparator.comparingInt(CSVLine::getCumulativeProbability));
             int cumulativeProbability = 0;
             for (CSVRecord record : records) {
                 int probability = (int) Double.parseDouble(record.get("probability"));

@@ -11,8 +11,8 @@ do whatever you want with it.
 
 It's been provided with a Web Service / REST Controller to 
 make it easy to access and test and learn from but this can easily be replaces with 
-Kafka or Batch based processing. Sepeveral of the Services
-are designed ot work with streams.
+Kafka or Batch based processing. Several of the services
+are designed to work with streams.
 
 It also includes a simple frontend. Unlike the services code the frontend
 
@@ -28,7 +28,7 @@ The Services included are
    * Basic CRUD Operations
    * Query including Query Costing engine
    * Atlas Search 
-   * Launch Preflight (Check for indexes, constraints etc)
+   * Launch Preflight (Check for indexes, constraints etc.)
    * Bulk streaming output
 
 ## DataGen

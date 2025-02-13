@@ -8,8 +8,8 @@ import org.apache.commons.csv.CSVRecord;
 public class CSVLine {
 
 
-        private int cumulativeProbability;
-        private CSVRecord csvRecord;
+        private final int cumulativeProbability;
+        private final CSVRecord csvRecord;
 
         CSVLine(int cumulativeProbability, CSVRecord csvRecord) {
             this.cumulativeProbability = cumulativeProbability;
