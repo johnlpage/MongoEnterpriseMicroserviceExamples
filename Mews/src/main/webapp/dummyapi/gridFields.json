@@ -1,0 +1,10 @@
+{
+  "Test Number": "testid",
+  "VehicleID": "vehicle.vehicleid",
+  "Make": "vehicle.make",
+  "Model": "vehicle.model",
+  "Colour": "vehicle.colour",
+  "Mileage": "testmileage",
+  "Result": "testresult",
+  "Registered": "firstusedate"
+}
