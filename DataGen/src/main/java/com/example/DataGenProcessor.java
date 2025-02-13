@@ -176,9 +176,13 @@ public class DataGenProcessor {
             inputStreamReader = new InputStreamReader(fileInputStream);
         }
         BufferedReader bufferedReader = new BufferedReader(inputStreamReader);
+        CSVFormat format = CSVFormat.DEFAULT.builder()
+                .setHeader()
+                .setSkipHeaderRecord(true).build();
+
         return new CSVParser(
                 bufferedReader,
-                CSVFormat.DEFAULT);
+                format);
     }
 
     // For each CSV Files, compute the total of the probability column and also
