@@ -32,12 +32,12 @@ import org.springframework.stereotype.Repository;
 public class OptimizedMongoLoadRepositoryImpl<T> implements OptimizedMongoLoadRepository<T> {
 
   // Used in trigger definitions
-  public static final String PREVIOUSVALS = "__previousValues";
-  public static final String UPDATEID = PREVIOUSVALS + ".__updateId";
+  public static final String PREVIOUS_VALS = "__previousValues";
+  public static final String UPDATE_ID = PREVIOUS_VALS + ".__updateId";
   private static final Logger LOG = LoggerFactory.getLogger(OptimizedMongoLoadRepositoryImpl.class);
   // Internal only
-  final String BACKUPVALS = "__backupValues";
-  final String CHANGED = "__changed";
+  private static final String BACKUP_VALS = "__backupValues";
+  private static final String CHANGED = "__changed";
   private final MongoTemplate mongoTemplate;
   private final MappingMongoConverter mappingMongoConverter;
   private final MongoClient mongoClient;
@@ -50,12 +50,10 @@ public class OptimizedMongoLoadRepositoryImpl<T> implements OptimizedMongoLoadRe
       throws IllegalAccessException {
 
     ClientSession session = null;
-    BulkOperations ops;
     ObjectId updateBatchId = new ObjectId();
-    boolean usingTransactions;
+    boolean usingTransactions = postwrite != null;
 
-    usingTransactions = (postwrite != null);
-
+    BulkOperations ops;
     if (usingTransactions) {
       session = mongoClient.startSession();
       session.startTransaction();
@@ -65,14 +63,14 @@ public class OptimizedMongoLoadRepositoryImpl<T> implements OptimizedMongoLoadRe
     }
 
     for (T item : items) {
-
       Object idValue = getIdFromModel(item);
       Query query = new Query(where("_id").is(idValue));
       if (hasDeleteFlag(item)) {
-        ops.remove(
-            query); /* TODO - Figure out history on this, when we delete one we need to keep it in history
-                    For now assuming when we delete it we can no longer see it or it's history, so need to delete it from
-                    history too */
+
+        /* TODO - Figure out history on this, when we delete one we need to keep it in history
+        For now assuming when we delete it we can no longer see it or it's history, so need to delete it from
+        history too */
+        ops.remove(query);
 
       } else {
         if (updateStrategy == UpdateStrategy.UPDATE) {
@@ -83,7 +81,6 @@ public class OptimizedMongoLoadRepositoryImpl<T> implements OptimizedMongoLoadRe
         } else {
           // Basic overwrite, can be a little less CPU but more network/disk
           // Still better than Spring's default
-
           ops.replaceOne(query, item, FindAndReplaceOptions.options().upsert());
         }
       }
@@ -91,14 +88,13 @@ public class OptimizedMongoLoadRepositoryImpl<T> implements OptimizedMongoLoadRe
 
     // If we have a postWriteTrigger then we want this update to be
     // In a transaction if not we don't
-
-    BulkWriteResult result;
     try {
-      result = ops.execute();
+      BulkWriteResult result = ops.execute();
       if (usingTransactions) {
         postwrite.postWriteTrigger(session, result, items, updateBatchId);
         session.commitTransaction();
       }
+      return result;
     } catch (Exception e) {
       // TODO - Add code to retry if a transient transaction error, that would happen if
       // two threads had updates to the same document and means retrying the whole set
@@ -109,7 +105,6 @@ public class OptimizedMongoLoadRepositoryImpl<T> implements OptimizedMongoLoadRe
       }
       throw e; // Rethrow to handle upstream
     }
-    return result;
   }
 
   /**
@@ -124,13 +119,10 @@ public class OptimizedMongoLoadRepositoryImpl<T> implements OptimizedMongoLoadRe
    * <p>We can combine this with a transaction and a query to fetch just the updated documents for
    * various post-update transactional trigger activities.
    */
-
-  // Was using various Spring builders for this, but it was a lot slower and more CPU to build them
-  // programmatically with teh fluent builders as they weren't designed for that .
-
   private void useSmartUpdate(T item, BulkOperations ops, Query query, ObjectId updateBatchId) {
     // Generate a Mongo Document with all the required fields in and all the mappings applied
-
+    // Was using various Spring builders for this, but it was a lot slower and more CPU to build
+    // them  programmatically with the fluent builders as they weren't designed for that .
     Document bsonDocument = new Document();
     mappingMongoConverter.write(item, bsonDocument);
 
@@ -144,18 +136,18 @@ public class OptimizedMongoLoadRepositoryImpl<T> implements OptimizedMongoLoadRe
     Document backupDelta =
         new Document(
             "$set",
-            new Document(PREVIOUSVALS, new Document()).append(BACKUPVALS, "$" + PREVIOUSVALS));
+            new Document(PREVIOUS_VALS, new Document()).append(BACKUP_VALS, "$" + PREVIOUS_VALS));
 
     updateSteps.add(backupDelta);
 
-    Document previousValues = new Document(UPDATEID, updateBatchId);
+    Document previousValues = new Document(UPDATE_ID, updateBatchId);
     List<Document> anyChange = new ArrayList<>();
     for (Map.Entry<String, Object> entry : unwoundFields.entrySet()) {
       Document valueChanged =
           new Document("$ne", Arrays.asList("$" + entry.getKey(), entry.getValue()));
       Document conditionalOnChange =
           new Document("$cond", Arrays.asList(valueChanged, "$" + entry.getKey(), "$$REMOVE"));
-      previousValues.append(PREVIOUSVALS + "." + entry.getKey(), conditionalOnChange);
+      previousValues.append(PREVIOUS_VALS + "." + entry.getKey(), conditionalOnChange);
       // List of all the conditionals
       anyChange.add(valueChanged);
     }
@@ -167,18 +159,17 @@ public class OptimizedMongoLoadRepositoryImpl<T> implements OptimizedMongoLoadRe
     // Set to new values
     updateSteps.add(new Document("$set", unwoundFields));
 
-    // If there was no change then revert to BACKUPVALS
-
+    // If there was no change then revert to BACKUP_VALS
     Document finalUpdate =
-        new Document("$cond", Arrays.asList("$" + CHANGED, "$" + PREVIOUSVALS, "$" + BACKUPVALS));
+        new Document("$cond", Arrays.asList("$" + CHANGED, "$" + PREVIOUS_VALS, "$" + BACKUP_VALS));
 
     // Don't need our backup copy anymore
     updateSteps.add(
         new Document(
             "$set",
-            new Document(BACKUPVALS, "$$REMOVE")
+            new Document(BACKUP_VALS, "$$REMOVE")
                 .append(CHANGED, "$$REMOVE")
-                .append(PREVIOUSVALS, finalUpdate)));
+                .append(PREVIOUS_VALS, finalUpdate)));
 
     // Because these expressive pipeline updates are using pipelines they are sometimes
     // Referred to as Aggregation Updates, that's the name of the Spring Data MongoDB class
@@ -191,8 +182,10 @@ public class OptimizedMongoLoadRepositoryImpl<T> implements OptimizedMongoLoadRe
     ops.upsert(query, aggUpdate);
   }
 
-  // Without a postTrigger this is non-transactional - not currently in use, but you may not want a
-  // trigger
+  /**
+   * Without a postTrigger this is non-transactional - not currently in use, but you may not want a
+   * trigger
+   */
   @Async("loadExecutor")
   public CompletableFuture<BulkWriteResult> asyncWriteMany(
       List<T> toSave, Class<T> clazz, UpdateStrategy updateStrategy) {
@@ -202,7 +195,7 @@ public class OptimizedMongoLoadRepositoryImpl<T> implements OptimizedMongoLoadRe
     } catch (Exception e) {
       LOG.error(e.getMessage());
       // TODO Handle Failed writes going to a dead letter queue or similar.
-      // That may be somethig you do from the CompletableFuture
+      // That may be something you do from the CompletableFuture
       return CompletableFuture.failedFuture(e);
     }
   }
@@ -220,7 +213,7 @@ public class OptimizedMongoLoadRepositoryImpl<T> implements OptimizedMongoLoadRe
     } catch (Exception e) {
       LOG.error(e.getMessage());
       // TODO Handle Failed writes going to a dead letter queue or similar.
-      // That may be somethig you do from the CompletableFuture
+      // That may be something you do from the CompletableFuture
       return CompletableFuture.failedFuture(e);
     }
   }

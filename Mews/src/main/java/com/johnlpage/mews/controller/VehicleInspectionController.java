@@ -10,6 +10,7 @@ import com.johnlpage.mews.service.*;
 import jakarta.servlet.http.HttpServletRequest;
 import java.io.BufferedOutputStream;
 import java.io.IOException;
+import java.util.Iterator;
 import java.util.List;
 import java.util.stream.Stream;
 import lombok.RequiredArgsConstructor;
@@ -98,7 +99,6 @@ public class VehicleInspectionController {
 
     // This is where we are hard coding a query for this endpoint.
     // By creating an example of the class, clumsy but works.
-
     VehicleInspection example = new VehicleInspection();
     Vehicle v = new Vehicle();
     v.setModel(model);
@@ -106,7 +106,6 @@ public class VehicleInspectionController {
 
     // Use the line below for immutable model
     // VehicleInspection probe = VehicleInspection.builder().model(model).build();
-
     Slice<VehicleInspection> returnPage =
         inspectionQueryService.getInspectionByExample(example, page, size);
     PageDto<VehicleInspection> entity = new PageDto<>(returnPage);
@@ -141,25 +140,24 @@ public class VehicleInspectionController {
     }
   }
 
-  // If we want to stream back data we can do it like this (or Flux and Reactive Mongo)
-  // This does all the mapping in the client from Document->VI->JSON - we can do this faster
-  // By skipping the object creation and doing it all in a projection on the server.
-  // Then using RAWBsonDocument
-
+  /**
+   * If we want to stream back data we can do it like this (or Flux and Reactive Mongo) This does
+   * all the mapping in the client from Document->VI->JSON - we can do this faster By skipping the
+   * object creation and doing it all in a projection on the server. Then using RAWBsonDocument
+   */
   @GetMapping(value = "/inspections/json", produces = MediaType.APPLICATION_JSON_VALUE)
   public StreamingResponseBody streamInspections() {
     return outputStream -> {
       try (BufferedOutputStream bufferedOutputStream = new BufferedOutputStream(outputStream);
           Stream<VehicleInspection> inspectionStream = downstreamService.jsonExtractStream()) {
         boolean isFirst = true;
-        for (VehicleInspection inspection :
-            (Iterable<VehicleInspection>) inspectionStream::iterator) {
+        Iterator<VehicleInspection> it = inspectionStream.iterator();
+        while (it.hasNext()) {
+          VehicleInspection inspection = it.next();
           if (!isFirst) {
             bufferedOutputStream.write("\n".getBytes());
           }
           bufferedOutputStream.write(objectMapper.writeValueAsBytes(inspection));
-
-          bufferedOutputStream.flush(); // Ensure data is sent promptly
           isFirst = false;
         }
       } catch (IOException e) {
@@ -168,9 +166,10 @@ public class VehicleInspectionController {
     };
   }
 
-  //  Native version of streamInspections using RAWBson to populate JSONObject
-  // Have to tell MongoDB how to do the mapping
-
+  /**
+   * Native version of streamInspections using RAWBson to populate JSONObject Have to tell MongoDB
+   * how to do the mapping
+   */
   @GetMapping(value = "/inspections/jsonnative", produces = MediaType.APPLICATION_JSON_VALUE)
   public StreamingResponseBody streamInspectionsFast() {
 
@@ -197,12 +196,13 @@ public class VehicleInspectionController {
           Stream<JsonObject> inspectionStream =
               downstreamService.nativeJsonExtractStream(formatRequired)) {
         boolean isFirst = true;
-        for (JsonObject inspection : (Iterable<JsonObject>) inspectionStream::iterator) {
+        Iterator<JsonObject> iterator = inspectionStream.iterator();
+        while (iterator.hasNext()) {
+          JsonObject inspection = iterator.next();
           if (!isFirst) {
             bufferedOutputStream.write("\n".getBytes());
           }
           bufferedOutputStream.write(inspection.getJson().getBytes());
-          bufferedOutputStream.flush(); // Ensure data is sent promptly
           isFirst = false;
         }
       } catch (IOException e) {

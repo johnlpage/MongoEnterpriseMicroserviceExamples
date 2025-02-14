@@ -89,9 +89,9 @@ public class OptimizedMongoQueryRepositoryImpl<T> implements OptimizedMongoQuery
       return mongoTemplate.find(query, clazz);
 
     } catch (Exception e) {
-      LOG.warn(e.getMessage());
+      LOG.warn(e.getMessage(), e);
       // TODO
-      return null;
+      return List.of();
     }
   }
 
@@ -111,15 +111,13 @@ public class OptimizedMongoQueryRepositoryImpl<T> implements OptimizedMongoQuery
     return costManager(clazz, filter, projection, sort);
   }
 
+  // TODO - Move to own service?
   /**
    * Because the getModelByMongoQuery allows any query - we want to be able to assess each query and
    * then decide what we are doing based on the cost - for example disallow unindexed queries or
    * send them to secondaries, flag and log them etc. To do this we need to know the cost of a query
    * by calling explain - but also possibly caching that so we don't do it for every call
    */
-
-  // TODO - Move to own service?
-
   private Integer costManager(Class<T> type, Document filter, Document projection, Document sort) {
     int queriesBeforeRecheck = 1000;
 
@@ -152,12 +150,9 @@ public class OptimizedMongoQueryRepositoryImpl<T> implements OptimizedMongoQuery
     String queryHash = computeQueryShapeHash(filter, projection, sort);
 
     qs = queryScores.get(queryHash);
-    if (qs != null) {
-
-      if (qs.count < queriesBeforeRecheck) {
-        qs.count++;
-        return qs.score;
-      }
+    if (qs != null && qs.count < queriesBeforeRecheck) {
+      qs.count++;
+      return qs.score;
     }
 
     // Retrieve the explain plan for the query
@@ -275,7 +270,7 @@ public class OptimizedMongoQueryRepositoryImpl<T> implements OptimizedMongoQuery
     } catch (Exception e) {
       LOG.error("Error parsing query request", e);
     }
-    return null;
+    return List.of();
   }
 
   private static final class QueryScore {

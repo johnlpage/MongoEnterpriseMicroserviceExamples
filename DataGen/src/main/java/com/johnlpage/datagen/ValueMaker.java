@@ -5,7 +5,6 @@ import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.google.common.hash.HashCode;
 import com.google.common.hash.HashFunction;
 import com.google.common.hash.Hashing;
-
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.time.LocalDate;
