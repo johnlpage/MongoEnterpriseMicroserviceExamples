@@ -8,6 +8,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.johnlpage.mews.model.UpdateStrategy;
 import com.johnlpage.mews.repository.optimized.OptimizedMongoLoadRepository;
 import com.mongodb.bulk.BulkWriteResult;
+import jakarta.annotation.Nullable;
 import java.io.BufferedInputStream;
 import java.io.EOFException;
 import java.io.InputStream;
@@ -15,7 +16,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicInteger;
-
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.RequiredArgsConstructor;
@@ -43,7 +43,9 @@ public abstract class MongoDbJsonStreamingLoaderService<T> {
     boolean success;
     String message;
   }
+
   /** Parses a JSON stream object by object, assumes it's not an Array. */
+  @Nullable
   public JsonStreamingLoadResponse loadFromJsonStream(
       InputStream inputStream,
       Class<T> type,
@@ -115,15 +117,14 @@ public abstract class MongoDbJsonStreamingLoaderService<T> {
       allFutures.join();
       LOG.info("Processed {} docs. Time taken: {}ms.", count, endTime - startTime);
       LOG.info("Modified: {} Added: {} Removed: {}", updates, inserts, deletes);
-      return new JsonStreamingLoadResponse(updates.get(),deletes.get(),inserts.get(),true,"");
-    }
-    catch (EOFException | ClientAbortException eofe) {
+      return new JsonStreamingLoadResponse(updates.get(), deletes.get(), inserts.get(), true, "");
+    } catch (EOFException | ClientAbortException eofe) {
       LOG.error("Load Terminated as sender disconnected: {}", eofe.getMessage());
-        return null;
-    }
-    catch (Exception e) {
+      return null;
+    } catch (Exception e) {
       LOG.error("Error during data load process: {}", e.getMessage());
-      return new JsonStreamingLoadResponse(updates.get(),deletes.get(),inserts.get(),false,e.getMessage());
+      return new JsonStreamingLoadResponse(
+          updates.get(), deletes.get(), inserts.get(), false, e.getMessage());
     }
   }
 }

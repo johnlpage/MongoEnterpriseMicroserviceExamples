@@ -2,13 +2,15 @@ package com.johnlpage.mews.util;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.johnlpage.mews.model.DeleteFlag;
+import jakarta.annotation.Nullable;
 import java.lang.reflect.Field;
 import java.util.HashMap;
 import java.util.Map;
-
 import org.springframework.data.annotation.Id;
 
-public class AnnotationExtractor {
+public final class AnnotationExtractor {
+
+  private AnnotationExtractor() {}
 
   /**
    * Retrieves the value of the field annotated with @Id from the given model object.
@@ -56,8 +58,7 @@ public class AnnotationExtractor {
         field.setAccessible(true);
 
         // Return the value of the field for the given model instance
-        if (field.get(model) != null) return true;
-        return false;
+        return field.get(model) != null;
       }
     }
 
@@ -66,6 +67,7 @@ public class AnnotationExtractor {
         "No field annotated with @Id found in model class " + modelClass.getName());
   }
 
+  @Nullable
   public static String getDatabaseFieldNameByJsonProperty(Class<?> clazz, String jsonPropertyName) {
     for (Field field : clazz.getDeclaredFields()) {
       JsonProperty jsonProperty = field.getAnnotation(JsonProperty.class);

@@ -45,8 +45,8 @@ public class VehicleInspectionPostWriteTriggerService
     }
 
     query.addCriteria(Criteria.where("_id").in(testIdList)); // testid is in the list
-    query.addCriteria(Criteria.where(OptimizedMongoLoadRepositoryImpl.UPDATEID).is(updateId));
-    query.fields().include(OptimizedMongoLoadRepositoryImpl.PREVIOUSVALS);
+    query.addCriteria(Criteria.where(OptimizedMongoLoadRepositoryImpl.UPDATE_ID).is(updateId));
+    query.fields().include(OptimizedMongoLoadRepositoryImpl.PREVIOUS_VALS);
     List<Document> modifiedOnly =
         mongoTemplate.withSession(session).find(query, Document.class, "inspections");
 
@@ -55,7 +55,7 @@ public class VehicleInspectionPostWriteTriggerService
     for (Document v : modifiedOnly) {
       VehicleInspectionHistory vih = new VehicleInspectionHistory();
       vih.setTestid(v.getLong("_id"));
-      vih.setChanges(v.get(OptimizedMongoLoadRepositoryImpl.PREVIOUSVALS, Document.class));
+      vih.setChanges(v.get(OptimizedMongoLoadRepositoryImpl.PREVIOUS_VALS, Document.class));
       vih.setTimestamp(new Date());
       inspectionHistories.add(vih); // Add this history records to the history list
     }

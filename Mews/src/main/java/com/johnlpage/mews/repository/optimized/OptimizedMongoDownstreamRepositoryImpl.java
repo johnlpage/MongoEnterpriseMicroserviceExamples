@@ -11,6 +11,8 @@ import java.time.Instant;
 import java.time.ZoneOffset;
 import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
+import java.util.Spliterator;
+import java.util.Spliterators;
 import java.util.stream.Stream;
 import java.util.stream.StreamSupport;
 import org.bson.Document;
@@ -21,11 +23,7 @@ import org.bson.json.JsonWriterSettings;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.mongodb.core.MongoOperations;
 
-/*
- * This class has generic methods to do common reporting and extraction tasks
- *
- */
-
+/** This class has generic methods to do common reporting and extraction tasks */
 public class OptimizedMongoDownstreamRepositoryImpl<T>
     implements OptimizedMongoDownstreamRepository<T> {
 
@@ -55,14 +53,20 @@ public class OptimizedMongoDownstreamRepositoryImpl<T>
             .build();
   }
 
-  // This returns the entire current data set - it's used here
-  // to show how streaming from the DB works
-  // On my test laptop this gets 12MB/s
+  private static <T> Stream<T> stream(MongoCursor<T> cursor) {
+    int characteristics = Spliterator.IMMUTABLE | Spliterator.NONNULL | Spliterator.ORDERED;
+    Spliterator<T> spliterator = Spliterators.spliteratorUnknownSize(cursor, characteristics);
+    return StreamSupport.stream(spliterator, false).onClose(cursor::close);
+  }
 
+  /**
+   * This returns the entire current data set - it's used here to show how streaming from the DB
+   * works. On my test laptop this gets 12MB/s.
+   */
   public Stream<JsonObject> nativeJsonExtract(String formatRequired, Class<T> modelClazz) {
 
     String collectionName = mongoOperations.getCollectionName(modelClazz);
-      // TODO - generate the projection from the Model automatically so this is generic
+    // TODO - generate the projection from the Model automatically so this is generic
 
     MongoDatabase database = mongoClient.getDatabase(databaseName);
     MongoCollection<JsonObject> jsonDocs =
@@ -75,8 +79,6 @@ public class OptimizedMongoDownstreamRepositoryImpl<T>
 
     MongoCursor<JsonObject> cursor =
         jsonDocs.find().projection(Document.parse(formatRequired)).iterator();
-    return StreamSupport.stream(
-            ((Iterable<org.bson.json.JsonObject>) () -> cursor).spliterator(), false)
-        .onClose(cursor::close);
+    return stream(cursor);
   }
 }

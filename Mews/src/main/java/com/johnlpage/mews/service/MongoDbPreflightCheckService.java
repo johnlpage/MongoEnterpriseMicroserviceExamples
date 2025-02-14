@@ -15,20 +15,21 @@ import org.springframework.data.mongodb.core.MongoTemplate;
 import org.springframework.data.mongodb.core.aggregation.*;
 import org.springframework.stereotype.Service;
 
-/*
- This is an example of a class you can use to ensure the system is ready to start correctly.
- It shows you how to check or indexes etc. And optionally create them - although spring has similar
- lifecycle methods they aren't comprehensive enough. It uses ApplicationRunner to ensure this is run on startup.
-
-*/
+/**
+ * This is an example of a class you can use to ensure the system is ready to start correctly. It
+ * shows you how to check or indexes etc. And optionally create them - although spring has similar
+ * lifecycle methods they aren't comprehensive enough. It uses ApplicationRunner to ensure this is
+ * run on startup.
+ */
 @Service
 public class MongoDbPreflightCheckService {
   private static final Logger LOG = LoggerFactory.getLogger(MongoDbPreflightCheckService.class);
 
-  // Defining this a JSON makes it easy to read but still hard coded.
-  // todo - create Atlas Search indexes
-  // todo - create Atlas Vector Indexes
-  // todo - extend this to include schema validation check.
+  /**
+   * Defining this a JSON makes it easy to read but still hard coded. todo - create Atlas Search
+   * indexes todo - create Atlas Vector Indexes todo - extend this to include schema validation
+   * check.
+   */
   private static final String SCHEMA_AND_INDEXES =
       """
   {
@@ -59,10 +60,12 @@ public class MongoDbPreflightCheckService {
     this.mongoTemplate = mongoTemplate;
   }
 
-  // Ensure all Collections exist, create them or quit depending on flag
-  // todo - ensure that have required properties like timeseries or validation using
-  // getCollectionInfos
-
+  /**
+   * Ensure all Collections exist, create them or quit depending on flag.
+   *
+   * <p>todo - ensure that have required properties like timeseries or validation using
+   * getCollectionInfos
+   */
   List<Document> ensureCollectionsExist(Document schemaAndIndexes) {
     MongoDatabase database = mongoTemplate.getDb();
 
@@ -85,35 +88,38 @@ public class MongoDbPreflightCheckService {
     return requiredCollections;
   }
 
-  // Ensure all required indexes exist
-
+  /** Ensure all required indexes exist */
   void ensureRequiredIndexesExist(List<Document> requiredInfo) {
     for (Document requiredCollection : requiredInfo) {
 
       String collectionName = requiredCollection.getString("name");
       MongoCollection<Document> collection = mongoTemplate.getCollection(collectionName);
 
-      List<Document> requiredIndexes = requiredCollection.getList("indexes", Document.class);
-      List<String> existingIndexes = new ArrayList<>();
-      if (requiredIndexes != null) {
-        for (Document existingIndex : collection.listIndexes()) {
-          existingIndexes.add(existingIndex.get("key", Document.class).toJson());
-        }
+      List<Document> requiredIndexes =
+          requiredCollection.getList("indexes", Document.class, List.of());
+      if (requiredIndexes.isEmpty()) {
+        continue;
+      }
+      List<String> existingIndexes =
+          collection
+              .listIndexes()
+              .map(index -> index.get("key", Document.class).toJson())
+              .into(new ArrayList<>());
 
-        for (Document index : requiredIndexes) {
-          if (!existingIndexes.contains(index.toJson())) {
-            if (createRequiredIndexes) {
-              LOG.warn("Index '{}' does not exist, creating required index", index.toJson());
-              collection.createIndex(index);
-            } else {
-              LOG.error(
-                  "Collection '{}' does not have index {}, cancelling startup",
-                  collectionName,
-                  index.toJson());
-              SpringApplication.exit(context, () -> 0);
-              return;
-            }
-          }
+      for (Document index : requiredIndexes) {
+        if (existingIndexes.contains(index.toJson())) {
+          continue;
+        }
+        if (createRequiredIndexes) {
+          LOG.warn("Index '{}' does not exist, creating required index", index.toJson());
+          collection.createIndex(index);
+        } else {
+          LOG.error(
+              "Collection '{}' does not have index {}, cancelling startup",
+              collectionName,
+              index.toJson());
+          SpringApplication.exit(context, () -> 0);
+          return;
         }
       }
     }
@@ -129,7 +135,6 @@ public class MongoDbPreflightCheckService {
       if (requiredSearchIndexes != null) {
 
         // Get a list of the indexes that are defined and their statuses
-
         AggregationOperation listIndexes = Aggregation.stage("{\"$listSearchIndexes\" : {}}");
         AggregationResults<Document> results =
             mongoTemplate.aggregate(
@@ -141,15 +146,12 @@ public class MongoDbPreflightCheckService {
         }
 
         // Iterate over the indexes we requires
-
         for (Document requiredSearchIndex : requiredSearchIndexes) {
           String requiredName = requiredSearchIndex.getString("name");
           Document requiredDefinition = requiredSearchIndex.get("definition", Document.class);
           Document searchIndexInfo = resultsearchIndexMap.get(requiredName);
 
-          boolean failed = false;
           if (searchIndexInfo != null) {
-
             String latestDefinition =
                 searchIndexInfo.get("latestDefinition", Document.class).toJson();
 
@@ -159,7 +161,6 @@ public class MongoDbPreflightCheckService {
                   requiredName,
                   latestDefinition,
                   requiredDefinition);
-              failed = true;
             }
 
             if (!searchIndexInfo.getString("status").equals("READY")) {
@@ -169,11 +170,8 @@ public class MongoDbPreflightCheckService {
                   searchIndexInfo.getString("status"));
             }
           } else {
+            // failed
             LOG.warn("Collection '{}' does not have searchIndex {}", collectionName, requiredName);
-            failed = true;
-          }
-
-          if (failed) {
             if (createSearchIndexes) {
               // TODO make search index
               LOG.info("Creating Search Index");
@@ -206,8 +204,7 @@ public class MongoDbPreflightCheckService {
     };
   }
 
-  // Create an Atlas Search Index from a String definition
-
+  /** Create an Atlas Search Index from a String definition */
   void createSearchIndex(String collection, String name, Document definition) {
     Document createSearchIndexCommand =
         new Document("createSearchIndexes", collection)
