@@ -14,6 +14,7 @@ import org.apache.commons.csv.CSVParser;
 import org.apache.commons.csv.CSVRecord;
 
 public class DataGenProcessor {
+
   private final Map<String, List<CSVRecord>> csvData = new HashMap<>();
   private final Map<String, List<String>> fieldNames = new HashMap<>();
   private final Map<String, TreeSet<CSVLine>> csvTrees = new HashMap<>();
@@ -189,6 +190,7 @@ public class DataGenProcessor {
       }
       csvTrees.put(fName, lineSet);
       maxProbability.put(fName, cumulativeProbability);
+
     }
   }
 }

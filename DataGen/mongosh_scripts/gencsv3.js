@@ -7,9 +7,13 @@ limit = {$limit: 100}
 
 
 group = {
-    $group: {_id: { testresult : "$testresult",
-                    nFailures : { $size : {$ifNull: [ "$payload.faileditems",[]]}}},
-                    probability: {$count: {}}}
+    $group: {
+        _id: {
+            testresult: "$testresult",
+            nFailures: {$size: {$ifNull: ["$payload.faileditems", []]}}
+        },
+        probability: {$count: {}}
+    }
 }
 var filename = `testresult.csv`
 

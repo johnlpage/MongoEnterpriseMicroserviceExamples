@@ -15,7 +15,9 @@ public class GlobalExceptionHandler {
   @ExceptionHandler(ClientAbortException.class)
   public ResponseEntity<String> handleClientAbortException(ClientAbortException ex) {
     // Log the error or notify an error reporting service if necessary
+
     LOG.warn("ClientAbortException: {}", ex.getMessage(), ex);
+
 
     // Return a response entity, possibly with an error message and HTTP status
     // In many cases, it's sufficient to return an empty body with an internal server error

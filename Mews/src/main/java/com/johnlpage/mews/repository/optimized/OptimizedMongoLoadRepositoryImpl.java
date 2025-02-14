@@ -66,10 +66,12 @@ public class OptimizedMongoLoadRepositoryImpl<T> implements OptimizedMongoLoadRe
       Object idValue = getIdFromModel(item);
       Query query = new Query(where("_id").is(idValue));
       if (hasDeleteFlag(item)) {
+
         /* TODO - Figure out history on this, when we delete one we need to keep it in history
         For now assuming when we delete it we can no longer see it or it's history, so need to delete it from
         history too */
         ops.remove(query);
+
       } else {
         if (updateStrategy == UpdateStrategy.UPDATE) {
           useSimpleUpdate(item, ops, query); // Unwinds and uses $set - smaller oplog, less network

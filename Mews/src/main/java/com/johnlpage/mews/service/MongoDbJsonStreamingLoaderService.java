@@ -34,6 +34,7 @@ public abstract class MongoDbJsonStreamingLoaderService<T> {
   private final ObjectMapper objectMapper;
   private final JsonFactory jsonFactory;
 
+
   @Data
   @AllArgsConstructor
   public static class JsonStreamingLoadResponse {
@@ -126,5 +127,15 @@ public abstract class MongoDbJsonStreamingLoaderService<T> {
       return new JsonStreamingLoadResponse(
           updates.get(), deletes.get(), inserts.get(), false, e.getMessage());
     }
+  }
+
+  @Data
+  @AllArgsConstructor
+  public static class JsonStreamingLoadResponse {
+    int updates;
+    int deletes;
+    int inserts;
+    boolean success;
+    String message;
   }
 }

@@ -1,12 +1,13 @@
-
 Setting up EC2 Host to Test with Atlas
 ------------------
 
 sudo yum install -y git
 
-Create an SSH Key on Your Host Machine: Log in to your cloud host or server and generate an SSH keypair. Use the following commands:
+Create an SSH Key on Your Host Machine: Log in to your cloud host or server and generate an SSH keypair. Use the
+following commands:
 
 # Generate an SSH key (do not set a passphrase)
+
 ssh-keygen -t rsa -b 4096 -C "your_email@example.com"
 
 You'll be prompted to provide a filename for the key (e.g., /home/your_user/.ssh/github-readonly-key).
@@ -43,7 +44,6 @@ Clone or Pull the Repository: Use the SSH URL to clone or update the repository 
 
 git clone git@github.com:your-username/your-repo.git
 
-
 sudo dnf update -y
 
 sudo dnf install -y java-23-amazon-corretto
@@ -58,7 +58,8 @@ sudo nano /etc/profile.d/maven.sh
 
 Set Up Environment Variables:
 
-Create or edit a profile script to set up Maven environment variables globally. For instance, you can create a file named maven.sh in /etc/profile.d/:
+Create or edit a profile script to set up Maven environment variables globally. For instance, you can create a file
+named maven.sh in /etc/profile.d/:
 
 sudo nano /etc/profile.d/maven.sh
 
