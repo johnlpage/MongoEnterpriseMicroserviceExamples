@@ -1,8 +1,21 @@
 {
-   "vehicleid" : 1,
-   "make" : [ "FORD","VW"],
-   "vehicle.model" : [ "ESCORT", "GOLF" ],
-   "colour" : [ "BLACK", "WHITE", "SILVER", "RED", "BLUE", "GREEN", "YELLOW"],
-   "testmileage" : 1
-
+  "vehicleid": 1,
+  "make": [
+    "FORD",
+    "VW"
+  ],
+  "vehicle.model": [
+    "ESCORT",
+    "GOLF"
+  ],
+  "colour": [
+    "BLACK",
+    "WHITE",
+    "SILVER",
+    "RED",
+    "BLUE",
+    "GREEN",
+    "YELLOW"
+  ],
+  "testmileage": 1
 }

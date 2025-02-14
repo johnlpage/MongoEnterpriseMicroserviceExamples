@@ -15,7 +15,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicInteger;
-
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.RequiredArgsConstructor;
@@ -34,15 +33,6 @@ public abstract class MongoDbJsonStreamingLoaderService<T> {
   private final ObjectMapper objectMapper;
   private final JsonFactory jsonFactory;
 
-  @Data
-  @AllArgsConstructor
-  public static class JsonStreamingLoadResponse {
-    int updates;
-    int deletes;
-    int inserts;
-    boolean success;
-    String message;
-  }
   /** Parses a JSON stream object by object, assumes it's not an Array. */
   public JsonStreamingLoadResponse loadFromJsonStream(
       InputStream inputStream,
@@ -125,5 +115,15 @@ public abstract class MongoDbJsonStreamingLoaderService<T> {
       LOG.error("Error during data load process: {}", e.getMessage());
       return new JsonStreamingLoadResponse(updates.get(),deletes.get(),inserts.get(),false,e.getMessage());
     }
+  }
+
+  @Data
+  @AllArgsConstructor
+  public static class JsonStreamingLoadResponse {
+    int updates;
+    int deletes;
+    int inserts;
+    boolean success;
+    String message;
   }
 }

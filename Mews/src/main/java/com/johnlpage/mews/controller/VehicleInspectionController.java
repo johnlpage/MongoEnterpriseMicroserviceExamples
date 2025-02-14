@@ -55,20 +55,21 @@ public class VehicleInspectionController {
           UpdateStrategy updateStrategy) {
     MongoDbJsonStreamingLoaderService.JsonStreamingLoadResponse rval;
     try {
-       rval = inspectionLoaderService.loadFromJsonStream(
-          request.getInputStream(),
-          VehicleInspection.class,
-          updateStrategy,
-          futz ? inspectionPreWriteTriggerService : null,
-          updateStrategy.equals(UpdateStrategy.UPDATEWITHHISTORY)
-              ? inspectionPostWriteTriggerService
-              : null);
-
+      rval =
+          inspectionLoaderService.loadFromJsonStream(
+              request.getInputStream(),
+              VehicleInspection.class,
+              updateStrategy,
+              futz ? inspectionPreWriteTriggerService : null,
+              updateStrategy.equals(UpdateStrategy.UPDATEWITHHISTORY)
+                  ? inspectionPostWriteTriggerService
+                  : null);
 
       return new ResponseEntity<>(rval, HttpStatus.OK);
     } catch (Exception e) {
-      rval = new MongoDbJsonStreamingLoaderService.JsonStreamingLoadResponse(
-              0,0,0,false,e.getMessage());
+      rval =
+          new MongoDbJsonStreamingLoaderService.JsonStreamingLoadResponse(
+              0, 0, 0, false, e.getMessage());
 
       // Log the exception if necessary and return HTTP 500 Internal Server Error
       return new ResponseEntity<>(rval, HttpStatus.INTERNAL_SERVER_ERROR);

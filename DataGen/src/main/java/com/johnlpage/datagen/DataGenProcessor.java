@@ -4,16 +4,15 @@ package com.johnlpage.datagen;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
-import org.apache.commons.csv.CSVFormat;
-import org.apache.commons.csv.CSVParser;
-import org.apache.commons.csv.CSVRecord;
-
 import java.io.*;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
 import java.util.zip.GZIPInputStream;
+import org.apache.commons.csv.CSVFormat;
+import org.apache.commons.csv.CSVParser;
+import org.apache.commons.csv.CSVRecord;
 
 public class DataGenProcessor {
     private final Map<String, List<CSVRecord>> csvData = new HashMap<>();
@@ -30,6 +29,26 @@ public class DataGenProcessor {
         valueMaker= new ValueMaker(random,directoryPath);
         objectMapper = new ObjectMapper();
         buildLookupTree();
+    }
+
+    private static CSVParser getCsvRecords(File file) throws IOException {
+        FileInputStream fileInputStream = new FileInputStream(file);
+        InputStreamReader inputStreamReader;
+        if (file.getName().endsWith(".gz")) {
+            GZIPInputStream gzipInputStream = new GZIPInputStream(fileInputStream);
+            inputStreamReader = new InputStreamReader(gzipInputStream);
+        } else
+        {
+            inputStreamReader = new InputStreamReader(fileInputStream);
+        }
+        BufferedReader bufferedReader = new BufferedReader(inputStreamReader);
+        CSVFormat format = CSVFormat.DEFAULT.builder()
+                .setHeader()
+                .setSkipHeaderRecord(true).build();
+
+        return new CSVParser(
+                bufferedReader,
+                format);
     }
 
     List<ObjectNode> generateJsonDocuments(
@@ -163,26 +182,6 @@ public class DataGenProcessor {
 
             }
         }
-    }
-
-    private static CSVParser getCsvRecords(File file) throws IOException {
-        FileInputStream fileInputStream = new FileInputStream(file);
-        InputStreamReader inputStreamReader;
-        if (file.getName().endsWith(".gz")) {
-            GZIPInputStream gzipInputStream = new GZIPInputStream(fileInputStream);
-            inputStreamReader = new InputStreamReader(gzipInputStream);
-        } else
-        {
-            inputStreamReader = new InputStreamReader(fileInputStream);
-        }
-        BufferedReader bufferedReader = new BufferedReader(inputStreamReader);
-        CSVFormat format = CSVFormat.DEFAULT.builder()
-                .setHeader()
-                .setSkipHeaderRecord(true).build();
-
-        return new CSVParser(
-                bufferedReader,
-                format);
     }
 
     // For each CSV Files, compute the total of the probability column and also

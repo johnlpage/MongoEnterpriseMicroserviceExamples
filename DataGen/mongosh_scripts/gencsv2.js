@@ -4,7 +4,7 @@ const fstream = require('fs');
 
 collection = db.getSiblingDB("vehicles").getCollection("vehicleinspection")
 limit = {$limit: 100}
-unwind = { $unwind: "$payload.faileditems"};
+unwind = {$unwind: "$payload.faileditems"};
 
 group = {
     $group: {_id: `$payload.faileditems`, probability: {$count: {}}}
@@ -15,7 +15,7 @@ const fileWriter = fstream.createWriteStream(filename);
 
 
 fileWriter.write(`"faileditems","probability"\n`)
-var cursor = collection.aggregate([unwind,group]);
+var cursor = collection.aggregate([unwind, group]);
 
 cursor.forEach(doc => {
     var jsonString = JSON.stringify(doc._id).replace(/"/g, '""');

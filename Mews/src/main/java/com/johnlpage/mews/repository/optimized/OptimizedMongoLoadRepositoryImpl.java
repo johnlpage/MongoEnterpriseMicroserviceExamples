@@ -69,9 +69,10 @@ public class OptimizedMongoLoadRepositoryImpl<T> implements OptimizedMongoLoadRe
       Object idValue = getIdFromModel(item);
       Query query = new Query(where("_id").is(idValue));
       if (hasDeleteFlag(item)) {
-        ops.remove(query); /* TODO - Figure out history on this, when we delete one we need to keep it in history
-         For now assuming when we delete it we can no longer see it or it's history, so need to delete it from
-         history too */
+        ops.remove(
+            query); /* TODO - Figure out history on this, when we delete one we need to keep it in history
+                    For now assuming when we delete it we can no longer see it or it's history, so need to delete it from
+                    history too */
 
       } else {
         if (updateStrategy == UpdateStrategy.UPDATE) {
@@ -117,8 +118,8 @@ public class OptimizedMongoLoadRepositoryImpl<T> implements OptimizedMongoLoadRe
    * efficiently capture that
    *
    * <p>(a) Record a flag to say at least one field has changed. (b) Record set of fields that
-   * changed and their prior values (c) Optionally change this to keep a history of all changes in the record
-   * but that's a different strategy.
+   * changed and their prior values (c) Optionally change this to keep a history of all changes in
+   * the record but that's a different strategy.
    *
    * <p>We can combine this with a transaction and a query to fetch just the updated documents for
    * various post-update transactional trigger activities.
