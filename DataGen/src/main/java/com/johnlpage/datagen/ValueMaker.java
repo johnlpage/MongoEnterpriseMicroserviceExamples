@@ -2,17 +2,14 @@ package com.johnlpage.datagen;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
-import com.google.common.hash.HashCode;
-import com.google.common.hash.HashFunction;
-import com.google.common.hash.Hashing;
 import java.io.IOException;
-import java.nio.charset.StandardCharsets;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Random;
+import net.openhft.hashing.LongHashFunction;
 
 /** This class is used to generate values rather than use explicit ones */
 public class ValueMaker {
@@ -20,9 +17,8 @@ public class ValueMaker {
   Long oneup = 0L;
   String directoryPath;
   Map<String, DataGenProcessor> processors;
-  HashFunction murmurHash3 = Hashing.murmur3_128();
 
-  Map<HashCode, ObjectNode> jsonCache;
+  Map<Long, ObjectNode> jsonCache;
 
   ValueMaker(Random rng, String directoryPath) {
     this.rng = rng;
@@ -70,11 +66,13 @@ public class ValueMaker {
     if (input.startsWith("@JSON(")) {
 
       // JSON parsing is expensive so cache the results in a Map against a hash of the input
-      HashCode hc = murmurHash3.hashString(argString, StandardCharsets.UTF_8);
-      ObjectNode json = jsonCache.get(hc);
+
+      // Get the hash as a long value
+      long hash = LongHashFunction.xx().hashChars(argString);
+      ObjectNode json = jsonCache.get(hash);
       if (json == null) {
         json = (ObjectNode) new ObjectMapper().readTree(argString);
-        jsonCache.put(hc, json);
+        jsonCache.put(hash, json);
       }
       return json;
     }

@@ -31,6 +31,21 @@ public class DataGenProcessor {
     buildLookupTree();
   }
 
+  private static CSVParser getCsvRecords(File file) throws IOException {
+    FileInputStream fileInputStream = new FileInputStream(file);
+    InputStreamReader inputStreamReader;
+    if (file.getName().endsWith(".gz")) {
+      GZIPInputStream gzipInputStream = new GZIPInputStream(fileInputStream);
+      inputStreamReader = new InputStreamReader(gzipInputStream);
+    } else {
+      inputStreamReader = new InputStreamReader(fileInputStream);
+    }
+    BufferedReader bufferedReader = new BufferedReader(inputStreamReader);
+    CSVFormat format = CSVFormat.DEFAULT.builder().setHeader().setSkipHeaderRecord(true).build();
+
+    return new CSVParser(bufferedReader, format);
+  }
+
   List<ObjectNode> generateJsonDocuments(int numberOfJsonDocuments) throws IOException {
     List<ObjectNode> documentsGenerated = new ArrayList<>();
 
@@ -108,11 +123,9 @@ public class DataGenProcessor {
       where.put(key, (Integer) value);
     } else if (value instanceof Boolean) {
       where.put(key, (Boolean) value);
-    } else if (value instanceof LocalDate) {
-      LocalDate ld = (LocalDate) value;
+    } else if (value instanceof LocalDate ld) {
       where.put(key, ld.format(DateTimeFormatter.ISO_DATE));
-    } else if (value instanceof LocalDateTime) {
-      LocalDateTime ld = (LocalDateTime) value;
+    } else if (value instanceof LocalDateTime ld) {
       where.put(key, ld.format(DateTimeFormatter.ISO_DATE));
     } else if (value instanceof String) {
       try {
@@ -138,36 +151,31 @@ public class DataGenProcessor {
 
   // Read the CSV Files into a has of Lists
   void readCsvFiles(String directoryPath) throws IOException {
+
     File directory = new File(directoryPath);
+    if (!directory.exists()) {
+      System.out.println("Directory " + directoryPath + " does not exist");
+      System.exit(1);
+    }
     File[] files = directory.listFiles();
-    for (File file : Objects.requireNonNull(files)) {
-      if (file.isFile() && (file.getName().endsWith(".gz") || file.getName().endsWith(".csv"))) {
-        String filename = file.getName();
+    if (files != null) {
+      for (File file : files) {
+        if (file.isFile() && (file.getName().endsWith(".gz") || file.getName().endsWith(".csv"))) {
+          String filename = file.getName();
 
-        CSVParser parser = getCsvRecords(file);
-        List<CSVRecord> records = parser.getRecords();
+          CSVParser parser = getCsvRecords(file);
+          List<CSVRecord> records = parser.getRecords();
 
-        if (!records.isEmpty()) {
-          csvData.put(filename, records);
+          if (!records.isEmpty()) {
+            csvData.put(filename, records);
+          }
+          fieldNames.put(filename, parser.getHeaderNames());
         }
-        fieldNames.put(filename, parser.getHeaderNames());
       }
-    }
-  }
-
-  private static CSVParser getCsvRecords(File file) throws IOException {
-    FileInputStream fileInputStream = new FileInputStream(file);
-    InputStreamReader inputStreamReader;
-    if (file.getName().endsWith(".gz")) {
-      GZIPInputStream gzipInputStream = new GZIPInputStream(fileInputStream);
-      inputStreamReader = new InputStreamReader(gzipInputStream);
     } else {
-      inputStreamReader = new InputStreamReader(fileInputStream);
+      System.out.println("No files found in " + directoryPath);
+      System.exit(0);
     }
-    BufferedReader bufferedReader = new BufferedReader(inputStreamReader);
-    CSVFormat format = CSVFormat.DEFAULT.builder().setHeader().setSkipHeaderRecord(true).build();
-
-    return new CSVParser(bufferedReader, format);
   }
 
   /**
@@ -190,7 +198,6 @@ public class DataGenProcessor {
       }
       csvTrees.put(fName, lineSet);
       maxProbability.put(fName, cumulativeProbability);
-
     }
   }
 }
