@@ -34,17 +34,6 @@ public abstract class MongoDbJsonStreamingLoaderService<T> {
   private final ObjectMapper objectMapper;
   private final JsonFactory jsonFactory;
 
-
-  @Data
-  @AllArgsConstructor
-  public static class JsonStreamingLoadResponse {
-    int updates;
-    int deletes;
-    int inserts;
-    boolean success;
-    String message;
-  }
-
   /** Parses a JSON stream object by object, assumes it's not an Array. */
   @Nullable
   public JsonStreamingLoadResponse loadFromJsonStream(
