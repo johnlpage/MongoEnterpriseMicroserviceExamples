@@ -10,7 +10,7 @@
     </parent>
     <groupId>com.johnlpage</groupId>
     <artifactId>mews</artifactId>
-    <version>0.0.1-SNAPSHOT</version>
+    <version>1.0</version>
     <name>mews</name>
     <description>Spring Boot MongoDB Enterprise Web Services</description>
     <url/>
@@ -53,6 +53,7 @@
         <dependency>
             <groupId>org.projectlombok</groupId>
             <artifactId>lombok</artifactId>
+            <version>1.18.36</version>
             <scope>provided</scope>
         </dependency>
     </dependencies>
@@ -62,6 +63,23 @@
             <plugin>
                 <groupId>org.springframework.boot</groupId>
                 <artifactId>spring-boot-maven-plugin</artifactId>
+            </plugin>
+
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-compiler-plugin</artifactId>
+                <version>3.8.1</version> <!-- Use a compatible, recent version -->
+                <configuration>
+                    <source>17</source> <!-- Align with your project's Java version -->
+                    <target>17</target>
+                    <annotationProcessorPaths>
+                        <path>
+                            <groupId>org.projectlombok</groupId>
+                            <artifactId>lombok</artifactId>
+                            <version>1.18.36</version>
+                        </path>
+                    </annotationProcessorPaths>
+                </configuration>
             </plugin>
 
         </plugins>
