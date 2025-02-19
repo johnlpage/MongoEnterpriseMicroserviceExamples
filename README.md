@@ -14,9 +14,8 @@ make it easy to access and test and learn from but this can easily be replaces w
 Kafka or Batch based processing. Several of the services
 are designed to work with streams.
 
-It also includes a simple frontend. Unlike the services code the frontend
-
-is _not_ intended as any sort of howto example, it's as simplistic as possible and is purely to allow you to experiment
+It also includes a simple frontend. Unlike the services code the frontend this is _not_ intended as any sort of howto
+example, it's as simplistic as possible and is purely to allow you to experiment
 without having
 to use cURL for querying.
 

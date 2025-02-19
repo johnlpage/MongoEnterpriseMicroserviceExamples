@@ -2,12 +2,12 @@
 // Open a file for writing
 const fstream = require('fs');
 
-collection = db.getSiblingDB("vehicles").getCollection("vehicleinspection")
+collection = db.getSiblingDB("vehicles").getCollection("inspections")
 limit = {$limit: 100}
-unwind = {$unwind: "$payload.faileditems"};
+unwind = {$unwind: "$faileditems"};
 
 group = {
-    $group: {_id: `$payload.faileditems`, probability: {$count: {}}}
+    $group: {_id: `$faileditems`, probability: {$count: {}}}
 }
 var filename = `faileditems.csv`
 

@@ -2,7 +2,7 @@
 // Open a file for writing
 const fstream = require('fs');
 
-collection = db.getSiblingDB("vehicles").getCollection("vehicleinspection")
+collection = db.getSiblingDB("vehicles").getCollection("inspections")
 limit = {$limit: 100}
 
 

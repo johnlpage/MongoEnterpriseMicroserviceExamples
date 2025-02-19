@@ -253,17 +253,23 @@ public class OptimizedMongoQueryRepositoryImpl<T> implements OptimizedMongoQuery
           queryRequest.getInteger("limit") != null ? queryRequest.getInteger("limit") : 1000;
 
       Bson searchStage = new Document("$search", searchSpec);
+      Aggregation aggregation;
+      if (!projection.isEmpty()) {
+        Bson projectStage = Aggregates.project(projection);
 
-      Bson projectStage = Aggregates.project(projection);
+        aggregation =
+            Aggregation.newAggregation(
+                Aggregation.stage(searchStage),
+                Aggregation.skip(skip),
+                Aggregation.limit(limit),
+                Aggregation.stage(projectStage));
 
-      Aggregation aggregation =
-          Aggregation.newAggregation(
-              Aggregation.stage(searchStage),
-              Aggregation.skip(skip),
-              Aggregation.limit(limit),
-              Aggregation.stage(projectStage));
+      } else {
+        aggregation =
+            Aggregation.newAggregation(
+                Aggregation.stage(searchStage), Aggregation.skip(skip), Aggregation.limit(limit));
+      }
       LOG.info(aggregation.toString());
-
       AggregationResults<T> results = mongoTemplate.aggregate(aggregation, clazz, clazz);
       return results.getMappedResults();
 

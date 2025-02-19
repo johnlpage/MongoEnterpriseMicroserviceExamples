@@ -104,7 +104,7 @@
   },
   "itemlocationsection": {
     "template": {
-      "lateral": "$LATERAL",
+      "lateral": "$LAT",
       "longitudinal": "$LONGITUDINAL",
       "vertical": "$VERTICAL"
     },
