@@ -34,3 +34,5 @@ replay_pid*
 /DataGen/.idea/
 /Mews/.idea/
 /SAMPLE_DATA/VOSA/
+/Mews/target/
+/DataGen/target/
