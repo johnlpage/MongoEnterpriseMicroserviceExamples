@@ -14,6 +14,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.LoggerFactory;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.kafka.annotation.KafkaListener;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
@@ -24,6 +25,7 @@ a Kafka consumer can be used instead of a web service - it's the same code as th
 
 @RequiredArgsConstructor
 @Service
+@ConditionalOnProperty(name = "mews.kafkaexmple.enabled", havingValue = "true")
 public class VehicleInspectionKafkaConsumerService {
   private static final org.slf4j.Logger LOG =
       LoggerFactory.getLogger(VehicleInspectionKafkaConsumerService.class);
