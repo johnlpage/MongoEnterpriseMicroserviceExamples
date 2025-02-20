@@ -7,6 +7,7 @@ package com.johnlpage.mews.model;
  * history of changes within a single transactions.
  */
 public enum UpdateStrategy {
+  INSERT,
   UPDATE,
   REPLACE,
   UPDATEWITHHISTORY

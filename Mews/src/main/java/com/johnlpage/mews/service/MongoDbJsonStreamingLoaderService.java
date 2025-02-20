@@ -24,6 +24,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
+/* TODO - Refactor this to seperate out the JSON Stream parsing */
+
 @Service
 @RequiredArgsConstructor
 public abstract class MongoDbJsonStreamingLoaderService<T> {
@@ -81,7 +83,9 @@ public abstract class MongoDbJsonStreamingLoaderService<T> {
                         bulkWriteResult -> {
                           updates.addAndGet(bulkWriteResult.getModifiedCount());
                           deletes.addAndGet(bulkWriteResult.getDeletedCount());
-                          inserts.addAndGet(bulkWriteResult.getUpserts().size());
+                          inserts.addAndGet(
+                              bulkWriteResult.getUpserts().size()
+                                  + bulkWriteResult.getInsertedCount());
                           return bulkWriteResult;
                         }));
           }
@@ -95,7 +99,8 @@ public abstract class MongoDbJsonStreamingLoaderService<T> {
                     bulkWriteResult -> {
                       updates.addAndGet(bulkWriteResult.getModifiedCount());
                       deletes.addAndGet(bulkWriteResult.getDeletedCount());
-                      inserts.addAndGet(bulkWriteResult.getUpserts().size());
+                      inserts.addAndGet(
+                          bulkWriteResult.getUpserts().size() + bulkWriteResult.getInsertedCount());
                       return bulkWriteResult;
                     }));
       }

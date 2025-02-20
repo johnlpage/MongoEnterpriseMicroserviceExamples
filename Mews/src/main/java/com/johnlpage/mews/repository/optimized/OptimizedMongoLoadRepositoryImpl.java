@@ -73,7 +73,9 @@ public class OptimizedMongoLoadRepositoryImpl<T> implements OptimizedMongoLoadRe
         ops.remove(query);
 
       } else {
-        if (updateStrategy == UpdateStrategy.UPDATE) {
+        if (updateStrategy == UpdateStrategy.INSERT) {
+          ops.insert(item); // This will throw exceptions on duplicates
+        } else if (updateStrategy == UpdateStrategy.UPDATE) {
           useSimpleUpdate(item, ops, query); // Unwinds and uses $set - smaller oplog, less network
 
         } else if (updateStrategy == UpdateStrategy.UPDATEWITHHISTORY) {
@@ -99,7 +101,7 @@ public class OptimizedMongoLoadRepositoryImpl<T> implements OptimizedMongoLoadRe
       // TODO - Add code to retry if a transient transaction error, that would happen if
       // two threads had updates to the same document and means retrying the whole set
 
-      LOG.error(e.getMessage(), e);
+      LOG.error(e.getMessage());
       if (usingTransactions && session.hasActiveTransaction()) {
         session.abortTransaction();
       }

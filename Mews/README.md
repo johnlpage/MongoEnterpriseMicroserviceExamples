@@ -50,6 +50,9 @@ It supports 3 strategies for loading the data specified as updateStrategy in the
   This can be used in a  _postWriteTrigger_   to retrieve what changed after each batch has loaded , for example to
   maintain a change history. In this example a  _postWriteTrigger_ is configured to save that history of changes in the
   collection `vehicleinspection_history`
+* `INSERT` the document is added without explicitly checking if it already exists based on the annotated @ID field. In
+  the event of a duplicate key then this will throw and log an error and your code should be adapted to deal with it.
+  This is faster than upsert but only really useful in initial bulk loading.
 
 There is an additional option in this example where adding the option to the URL of `futz=true` uses a _preWriteTrigger_
 to modify the incoming data.This is purely for testing and modifies documents before writing to change field values, set
@@ -257,3 +260,11 @@ curl -s -X GET http://localhost:8080/vehicles/inspections/jsonNative
 ### Aggreagtions
 
 TODO
+
+## Kafka
+
+MEWS now includes an example of loading data from a Kafka topic. This is in the class _VehicleInspectionKafkaConsumer_ ,
+you can configure access to your kafka broker(s) in `resources/application.properties`.
+This loads in batches but sends the current batch if nothing has been received in 100 milliseconds.
+
+
