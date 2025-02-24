@@ -36,8 +36,15 @@ public class ValueMaker {
       return oneup;
     }
 
-    String argString = input.substring(input.indexOf("(") + 1, input.lastIndexOf(")"));
-    String[] args = argString.split(",");
+    String[] args;
+    String argString;
+    try {
+      argString = input.substring(input.indexOf("(") + 1, input.lastIndexOf(")"));
+      args = argString.split(",");
+    }
+    catch(Exception e) {
+      return input;
+    }
 
     if (input.startsWith("@INTEGER(")) {
       int from = Integer.parseInt(args[0]);
