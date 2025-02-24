@@ -9,7 +9,7 @@ document. If an existing document exists it is overwritten. This is provided thr
 The data load endpoint is
 
 ```
-POST /vehicles/inspections
+POST /api/inspections
 ```
 
 This takes an application/json payload containing the data to load, this can be JSON objects with no seperators, or an
@@ -20,7 +20,7 @@ Eample usage
 
 ```shell
 curl -s \
--X POST "http://localhost:8080/vehicles/inspections?updateStrategy=REPLACE"\
+-X POST "http://localhost:8080/api/inspections?updateStrategy=REPLACE"\
 -H "Content-Type: application/json" -T mot.json
 
 ```
@@ -81,25 +81,25 @@ as JSON in the VehicleInspectionRepository, these are not hooked up to a service
 The controller includes two predefined query endpoints
 
 ```
-GET /vehicles/inspections/id/{vehicleId}
+GET /api/inspections/id/{vehicleId}
 ```
 
 Example:
 
 ```shell
- curl -s http://localhost:8080/vehicles/inspections/id/1950521387
+ curl -s http://localhost:8080/api/inspections/id/1950521387
 ```
 
 to fetch a single inpection by its testId and also
 
 ```
-GET /vehicles/inspections/model/{model}
+GET /api/inspections/model/{model}
 ```
 
 Example:
 
 ```shell
- curl -s http://localhost:8080/vehicles/inspections/model/POLO 
+ curl -s http://localhost:8080/api/inspections/model/POLO 
 ```
 
 To fetch a set of inspection by the vehicle model (for example 'POLO' ). The model exaple demonstrates using Spring
@@ -115,7 +115,7 @@ into the service. This is useful for internal applications where the application
 for end users. THe endpoint for this is.
 
 ```
-POST /vehicles/inspections/query
+POST /api/inspections/query
 ```
 
 It is a POST rather than GET as we want to pass a JSON based request to it even though it notionally doesn't create a
@@ -124,7 +124,7 @@ pass an object like this
 
 ```shell
 
-curl -s -X POST http://localhost:8080/vehicles/inspections/query -H "Content-Type: application/json" \
+curl -s -X POST http://localhost:8080/api/inspections/query -H "Content-Type: application/json" \
 -d \
 '
 {
@@ -186,7 +186,7 @@ and have it run dynamically rather than hard coding it.
 The endpoint is
 
 ```shell
-POST /vehicles/inspections/search
+POST /api/inspections/search
 ```
 
 This is posted a JSON document with 4 parameters `search`,`skip`,`limit` and `projection`
@@ -199,7 +199,7 @@ search is passed directly to Atlas search and can be learned though the
 Example
 
 ```shell
-curl -X POST  http://localhost:8080/vehicles/inspections/search -H "Content-Type: application/json" \
+curl -X POST  http://localhost:8080/api/inspections/search -H "Content-Type: application/json" \
 -d \
 '
 {
@@ -233,27 +233,27 @@ appserver CPU.
 ### Native data stream
 
 ```shell
-GET /vehicles/inspections/json
+GET /api/inspections/json
 ```
 
 Example
 
 ```
-curl -s -X GET http://localhost:8080/vehicles/inspections/json
+curl -s -X GET http://localhost:8080/api/inspections/json
 
 ```
 
 MongoDB native JSON stream using Driver and JSONObject data type.
 
 ```shell
-GET /vehicles/inspections/jsonNative
+GET /api/inspections/jsonNative
 
 ```
 
 Example
 
 ```shell
-curl -s -X GET http://localhost:8080/vehicles/inspections/jsonNative
+curl -s -X GET http://localhost:8080/api/inspections/jsonNative
 
 ```
 

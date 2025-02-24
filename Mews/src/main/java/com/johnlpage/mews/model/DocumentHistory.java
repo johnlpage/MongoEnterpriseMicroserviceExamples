@@ -21,10 +21,10 @@ import org.springframework.data.mongodb.core.mapping.Document;
 @Data
 @JsonIgnoreProperties(ignoreUnknown = true)
 @JsonInclude(JsonInclude.Include.NON_NULL)
-@Document(collection = "vehicleinspection_history")
-public class VehicleInspectionHistory {
+@Document()
+public class DocumentHistory {
   @Id ObjectId historyId;
-  Long testid;
+  Object recordId;
   Date timestamp;
   Map<String, Object> changes;
 }

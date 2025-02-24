@@ -38,7 +38,9 @@ public class MongoDbPreflightCheckService {
           "indexes": [ { "vehicle.model" : 1 }],
           "searchIndexes" : [ { "name": "default", "definition" : { "mappings" : { "dynamic" : true, fields: {}} }}]
         },
-        { "name" : "vehicleinspection_history" }
+        { "name" : "vehicleinspection_history" ,
+          "indexes" : [ { "recordId" : 1, "timestamp" : 1 }]
+        }
       ]
   }
   """;

@@ -40,7 +40,7 @@ public class VehicleInspection {
   Long capacity;
   Date firstusedate;
   /* Use this to flag from the JSON we want to remove the record */
-  @JsonIgnore @Transient @DeleteFlag Boolean deleted;
+  @Transient @DeleteFlag Boolean deleted;
 
   /**
    * Use this to capture any fields not captured explicitly As MongoDB's flexibility makes this easy

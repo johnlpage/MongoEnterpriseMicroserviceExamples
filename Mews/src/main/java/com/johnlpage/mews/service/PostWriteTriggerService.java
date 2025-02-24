@@ -5,7 +5,13 @@ import com.mongodb.client.ClientSession;
 import java.util.List;
 import org.bson.types.ObjectId;
 
-public interface PostWriteTriggerService<T> {
-  void postWriteTrigger(
-      ClientSession session, BulkWriteResult result, List<T> records, ObjectId updateId);
+public class PostWriteTriggerService<T> {
+  public void postWriteTrigger(
+      ClientSession session,
+      BulkWriteResult result,
+      List<T> records,
+      Class<T> clazz,
+      ObjectId updateId)
+      throws IllegalAccessException {}
+  ;
 }

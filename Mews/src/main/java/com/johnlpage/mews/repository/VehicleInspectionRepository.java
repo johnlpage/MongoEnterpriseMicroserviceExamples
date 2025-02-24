@@ -4,13 +4,8 @@ import com.johnlpage.mews.model.VehicleInspection;
 import com.johnlpage.mews.repository.optimized.OptimizedMongoDownstreamRepository;
 import com.johnlpage.mews.repository.optimized.OptimizedMongoLoadRepository;
 import com.johnlpage.mews.repository.optimized.OptimizedMongoQueryRepository;
-import java.util.List;
 import java.util.stream.Stream;
-import org.bson.Document;
-import org.springframework.data.mongodb.repository.Aggregation;
 import org.springframework.data.mongodb.repository.MongoRepository;
-import org.springframework.data.mongodb.repository.Query;
-import org.springframework.data.mongodb.repository.Update;
 import org.springframework.stereotype.Repository;
 
 /* The repository lets you define simple operations by name of function or by Javascript
@@ -23,6 +18,10 @@ public interface VehicleInspectionRepository
         OptimizedMongoQueryRepository<VehicleInspection>,
         OptimizedMongoDownstreamRepository<VehicleInspection> {
 
+  /*
+   * EXAMPLE REPOSITORY METHODS
+   *
+   *
   // Find inspections by engine capacity - auto generated query
   List<VehicleInspection> findByCapacityGreaterThan(Long engineCapacity);
 
@@ -42,6 +41,7 @@ public interface VehicleInspectionRepository
   @Query("{ 'testid' : ?0 }")
   @Update("{ 'inc' : { 'testmileage' : ?1 } }")
   void adjustTestMileage(Long testid, int increment);
+  */
 
   // You have to explicitly call out a streaming version here if you want it.
   Stream<VehicleInspection> findAllBy();

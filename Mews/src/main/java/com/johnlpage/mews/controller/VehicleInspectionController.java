@@ -32,14 +32,14 @@ import org.springframework.web.servlet.mvc.method.annotation.StreamingResponseBo
 
 @RequiredArgsConstructor
 @RestController
-@RequestMapping("/vehicles")
+@RequestMapping("/api")
 public class VehicleInspectionController {
 
   private static final Logger LOG = LoggerFactory.getLogger(VehicleInspectionController.class);
-  private final VehicleInspectionQueryService inspectionQueryService;
-  private final VehicleInspectionJsonLoaderService inspectionLoaderService;
-  private final VehicleInspectionPreWriteTriggerService inspectionPreWriteTriggerService;
-  private final VehicleInspectionPostWriteTriggerService inspectionPostWriteTriggerService;
+  private final VehicleInspectionQueryService queryService;
+  private final VehicleInspectionJsonLoaderService loaderService;
+  private final VehicleInspectionPreWriteTriggerService preWriteTriggerService;
+  private final VehicleInspectionHistoryService postWriteTriggerService;
   private final VehicleInspectionDownstreamService downstreamService;
 
   private final ObjectMapper objectMapper;
@@ -58,13 +58,13 @@ public class VehicleInspectionController {
     MongoDbJsonStreamingLoaderService.JsonStreamingLoadResponse rval;
     try {
       rval =
-          inspectionLoaderService.loadFromJsonStream(
+          loaderService.loadFromJsonStream(
               request.getInputStream(),
               VehicleInspection.class,
               updateStrategy,
-              futz ? inspectionPreWriteTriggerService : null,
+              futz ? preWriteTriggerService : null,
               updateStrategy.equals(UpdateStrategy.UPDATEWITHHISTORY)
-                  ? inspectionPostWriteTriggerService
+                  ? postWriteTriggerService
                   : null);
 
       return new ResponseEntity<>(rval, HttpStatus.OK);
@@ -81,8 +81,8 @@ public class VehicleInspectionController {
   /** Get By ID - */
   @GetMapping("/inspections/id/{id}")
   public ResponseEntity<VehicleInspection> getInspectionById(@PathVariable Long id) {
-
-    return inspectionQueryService
+    // While you can to straight to the repository it's best practise to use a service.
+    return queryService
         .getInspectionById(id)
         .map(ResponseEntity::ok)
         .orElse(ResponseEntity.notFound().build());
@@ -107,8 +107,7 @@ public class VehicleInspectionController {
 
     // Use the line below for immutable model
     // VehicleInspection probe = VehicleInspection.builder().model(model).build();
-    Slice<VehicleInspection> returnPage =
-        inspectionQueryService.getInspectionByExample(example, page, size);
+    Slice<VehicleInspection> returnPage = queryService.getInspectionByExample(example, page, size);
     PageDto<VehicleInspection> entity = new PageDto<>(returnPage);
     return ResponseEntity.ok(entity);
   }
@@ -119,7 +118,7 @@ public class VehicleInspectionController {
    */
   @PostMapping("/inspections/query")
   public ResponseEntity<String> mongoQuery(@RequestBody String requestBody) {
-    List<VehicleInspection> result = inspectionQueryService.mongoDbNativeQuery(requestBody);
+    List<VehicleInspection> result = queryService.mongoDbNativeQuery(requestBody);
     try {
       // Convert list to JSON string
       String jsonResult = objectMapper.writeValueAsString(result);
@@ -131,7 +130,7 @@ public class VehicleInspectionController {
 
   @PostMapping("/inspections/search")
   public ResponseEntity<String> atlasSearchQuery(@RequestBody String requestBody) {
-    List<VehicleInspection> result = inspectionQueryService.atlasSearchQuery(requestBody);
+    List<VehicleInspection> result = queryService.atlasSearchQuery(requestBody);
     try {
       // Convert list to JSON string
       String jsonResult = objectMapper.writeValueAsString(result);

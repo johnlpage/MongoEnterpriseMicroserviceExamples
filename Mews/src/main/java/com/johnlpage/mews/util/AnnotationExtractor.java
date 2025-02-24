@@ -7,10 +7,20 @@ import java.lang.reflect.Field;
 import java.util.HashMap;
 import java.util.Map;
 import org.springframework.data.annotation.Id;
+import org.springframework.data.mongodb.core.mapping.Document;
 
 public final class AnnotationExtractor {
 
   private AnnotationExtractor() {}
+
+  public static String getCollectionName(Class<?> clazz) {
+    if (clazz.isAnnotationPresent(Document.class)) {
+      Document document = clazz.getAnnotation(Document.class);
+      return document.collection();
+    }
+    // If no collection is specified, default to the class name in lowercase
+    return clazz.getSimpleName().toLowerCase();
+  }
 
   /**
    * Retrieves the value of the field annotated with @Id from the given model object.

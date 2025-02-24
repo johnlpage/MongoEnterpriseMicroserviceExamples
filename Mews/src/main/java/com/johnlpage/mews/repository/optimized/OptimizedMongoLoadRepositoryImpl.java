@@ -93,7 +93,7 @@ public class OptimizedMongoLoadRepositoryImpl<T> implements OptimizedMongoLoadRe
     try {
       BulkWriteResult result = ops.execute();
       if (usingTransactions) {
-        postwrite.postWriteTrigger(session, result, items, updateBatchId);
+        postwrite.postWriteTrigger(session, result, items, clazz, updateBatchId);
         session.commitTransaction();
       }
       return result;
