@@ -46,6 +46,7 @@ public class VehicleInspection {
    * Use this to capture any fields not captured explicitly As MongoDB's flexibility makes this easy
    */
   @JsonAnySetter
+  @JsonAnyGetter
   @Singular("payload")
   Map<String, Object> payload;
 }
