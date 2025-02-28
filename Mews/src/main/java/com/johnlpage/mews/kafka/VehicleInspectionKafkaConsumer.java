@@ -1,10 +1,12 @@
-package com.johnlpage.mews.service;
+package com.johnlpage.mews.kafka;
 
 import com.fasterxml.jackson.core.JsonFactory;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.johnlpage.mews.model.UpdateStrategy;
 import com.johnlpage.mews.model.VehicleInspection;
 import com.johnlpage.mews.repository.optimized.OptimizedMongoLoadRepository;
+import com.johnlpage.mews.service.PostWriteTriggerService;
+import com.johnlpage.mews.service.PreWriteTriggerService;
 import com.mongodb.bulk.BulkWriteResult;
 import jakarta.annotation.PreDestroy;
 import java.util.ArrayList;
@@ -17,18 +19,18 @@ import org.slf4j.LoggerFactory;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.kafka.annotation.KafkaListener;
 import org.springframework.scheduling.annotation.Scheduled;
-import org.springframework.stereotype.Service;
+import org.springframework.stereotype.Component;
 
 /* This is unusual in that we want to read from the Topic but if we run out of
 items on it then we want to send the batch we are working on , this code is simply to show how
 a Kafka consumer can be used instead of a web service - it's the same code as the JSONLoader*/
 
 @RequiredArgsConstructor
-@Service
+@Component
 @ConditionalOnProperty(name = "mews.kafkaexmple.enabled", havingValue = "true")
-public class VehicleInspectionKafkaConsumerService {
+public class VehicleInspectionKafkaConsumer {
   private static final org.slf4j.Logger LOG =
-      LoggerFactory.getLogger(VehicleInspectionKafkaConsumerService.class);
+      LoggerFactory.getLogger(VehicleInspectionKafkaConsumer.class);
   private final OptimizedMongoLoadRepository<VehicleInspection> repository;
   private final ObjectMapper objectMapper;
   private final JsonFactory jsonFactory;
