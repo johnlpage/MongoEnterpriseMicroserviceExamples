@@ -1,10 +1,11 @@
 package com.johnlpage.mews.model;
 
 import com.fasterxml.jackson.annotation.*;
+import com.johnlpage.mews.util.ObjectConverter;
 import java.util.Date;
+import java.util.HashMap;
 import java.util.Map;
 import lombok.Data;
-import lombok.Singular;
 import org.springframework.data.annotation.Id;
 import org.springframework.data.annotation.Transient;
 import org.springframework.data.annotation.Version;
@@ -45,8 +46,15 @@ public class VehicleInspection {
   /**
    * Use this to capture any fields not captured explicitly As MongoDB's flexibility makes this easy
    */
+  private Map<String, Object> payload = new HashMap<>();
+  
   @JsonAnySetter
+  public void set(String key, Object value) {
+    payload.put(key, ObjectConverter.convertObject(value));
+  }
+
   @JsonAnyGetter
-  @Singular("payload")
-  Map<String, Object> payload;
+  public Map<String, Object> getPayload() {
+    return payload;
+  }
 }
