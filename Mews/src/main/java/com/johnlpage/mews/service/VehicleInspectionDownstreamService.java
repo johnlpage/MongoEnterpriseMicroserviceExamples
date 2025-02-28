@@ -13,9 +13,8 @@ import org.springframework.stereotype.Service;
 public class VehicleInspectionDownstreamService {
   private final VehicleInspectionRepository repository;
 
-  public VehicleInspectionDownstreamService(
-      VehicleInspectionRepository vehicleInspectionRepository) {
-    this.repository = vehicleInspectionRepository;
+  public VehicleInspectionDownstreamService(VehicleInspectionRepository repository) {
+    this.repository = repository;
   }
 
   public Stream<JsonObject> nativeJsonExtractStream(String formatRequired) {
