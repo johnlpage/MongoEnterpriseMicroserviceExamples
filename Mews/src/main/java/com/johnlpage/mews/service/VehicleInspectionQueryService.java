@@ -17,38 +17,38 @@ import org.springframework.stereotype.Service;
 
 @Service
 public class VehicleInspectionQueryService {
+  public static final Class<VehicleInspection> MODELCLASS = VehicleInspection.class;
   private static final Logger LOG = LoggerFactory.getLogger(VehicleInspectionQueryService.class);
-  private final VehicleInspectionRepository vehicleInspectionRepository;
+  private final VehicleInspectionRepository repository;
 
-  public VehicleInspectionQueryService(VehicleInspectionRepository vehicleInspectionRepository) {
-    this.vehicleInspectionRepository = vehicleInspectionRepository;
+  public VehicleInspectionQueryService(VehicleInspectionRepository repository) {
+    this.repository = repository;
   }
 
   public List<VehicleInspection> mongoDbNativeQuery(String jsonString) {
 
-    int cost =
-        vehicleInspectionRepository.costMongoDbNativeQuery(jsonString, VehicleInspection.class);
+    int cost = repository.costMongoDbNativeQuery(jsonString, MODELCLASS);
     LOG.info("Query cost is {}, running anyway. ", cost);
 
     // You could take various approaches here, allow some, deny some, send "bad" queries to
     // secondaries Perhaps even enforce additional limits of query clauses - COLLSCANs sorted
     // reverse by a date field and limited for example
 
-    return vehicleInspectionRepository.mongoDbNativeQuery(jsonString, VehicleInspection.class);
+    return repository.mongoDbNativeQuery(jsonString, MODELCLASS);
   }
 
   public List<VehicleInspection> atlasSearchQuery(String jsonString) {
-    return vehicleInspectionRepository.atlasSearchQuery(jsonString, VehicleInspection.class);
+    return repository.atlasSearchQuery(jsonString, MODELCLASS);
   }
 
-  public Optional<VehicleInspection> getInspectionById(Long vehicleId) {
-    return vehicleInspectionRepository.findById(vehicleId);
+  public Optional<VehicleInspection> getInspectionById(Long id) {
+    return repository.findById(id);
   }
 
   public Slice<VehicleInspection> getInspectionByExample(
       VehicleInspection probe, int page, int size) {
     ExampleMatcher matcher = ExampleMatcher.matching().withIgnoreNullValues();
     Example<VehicleInspection> example = Example.of(probe, matcher);
-    return vehicleInspectionRepository.findAll(example, PageRequest.of(page, size));
+    return repository.findAll(example, PageRequest.of(page, size));
   }
 }
