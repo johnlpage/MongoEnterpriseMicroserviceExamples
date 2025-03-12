@@ -37,7 +37,7 @@ function formatForGrid(doc, key) {
 async function fetchDocument(context, document) {
     try {
         // This is a POST to let us post a query for porocessing
-        const queryEndpoint = "/vehicles/inspections/query";
+        const queryEndpoint = "/api/inspections/query";
         const request = {};
         const idField = Object.values(context.gridFields)[0];
         const idValue = document[idField];
@@ -74,7 +74,7 @@ async function runGridQuery(context) {
         context.queryResults = [];
         context.selectedDoc = {Message: "Query is Running"};
         // This is a POST to let us post a query for processing
-        const queryEndpoint = "/vehicles/inspections/query";
+        const queryEndpoint = "/api/inspections/query";
         const request = {};
         request.filter = context.mongoQuery;
 
@@ -113,7 +113,7 @@ async function runGridSearch(context) {
         context.queryResults = [];
         context.selectedDoc = {Message: "Atlas Search is Running"};
         // This is a POST to let us post a query for processing
-        const queryEndpoint = "/vehicles/inspections/search";
+        const queryEndpoint = "/api/inspections/search";
         const request = {};
         // request.filter = context.mongoQuery;
 

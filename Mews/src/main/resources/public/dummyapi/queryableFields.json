@@ -1,6 +1,6 @@
 {
-  "vehicleid": 1,
-  "make": [
+  "vehicle.vehicleid": 1,
+  "vehicle.make": [
     "FORD",
     "VW"
   ],
@@ -8,7 +8,7 @@
     "ESCORT",
     "GOLF"
   ],
-  "colour": [
+  "vehicle.colour": [
     "BLACK",
     "WHITE",
     "SILVER",
