@@ -5,7 +5,21 @@ async function fetchCollectionInfo() {
         const collectionInfo = {};
         // Replace with your actual API endpoint
         let queryableFields = await fetch("/dummyapi/queryableFields.json");
-        collectionInfo.queryableFields = await queryableFields.json();
+        const qFields = await queryableFields.json();
+
+        collectionInfo.queryableFields = {}
+        collectionInfo.labels = {}
+        for (f in qFields) {
+            const [a, b] = f.split("=");
+            if (b) {
+                collectionInfo.queryableFields[b] = qFields[f];
+                collectionInfo.labels[b] = a
+            } else {
+                collectionInfo.queryableFields[a] = qFields[f];
+                collectionInfo.labels[a] = a;
+            }
+        }
+
         let gridFields = await fetch("/dummyapi/gridFields.json");
         collectionInfo.gridFields = await gridFields.json();
         return collectionInfo;
@@ -174,6 +188,7 @@ function onLoad() {
                 choices: {},
                 queryableFields: {}, // Stores the list of items
                 gridFields: {},
+                labels: {},
                 queryResults: [],
                 selectedDoc: {},
                 isQuerying: false,
@@ -220,6 +235,7 @@ function onLoad() {
             fetchCollectionInfo().then((data) => {
                 this.queryableFields = data.queryableFields || {};
                 this.gridFields = data.gridFields || {};
+                this.labels = data.labels || {};
             });
         },
         methods: {
