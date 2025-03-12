@@ -19,18 +19,32 @@ function formatForGrid(doc, key) {
     // walk through key getting each part
     let index = key.indexOf(".");
     parts = key.split(".");
+    parts = parts.filter(part => part != "payload"); //Payload needed in projection
+    //But not returned
     for (let part of parts) {
-        doc = doc[part];
+        if (part == "$") {
+            doc = doc[0]
+        } else if (Array.isArray(doc)) {
+            // We have selected an Array field, probably an array of objects
+            // Easy enough to do and we don't want the matching one we want all of them
+            // Let's assume it's a simple case
+            const field = parts[parts.length - 1];
+            doc = doc.map(item => item[field]).filter(x => x).join(",");
+            break;
+        } else {
+            doc = doc[part];
+        }
     }
+
     val = doc;
 
     // If it's a date ending in midnight strip the time
     if (typeof val == "string") {
         val = val.replace("T00:00:00.000+00:00", "");
     }
+
     return val;
 }
-
 
 //Given the grid fields, fetch the whole document - first grid field is the key.
 
@@ -83,7 +97,10 @@ async function runGridQuery(context) {
 
         request.projection = {};
         for (let column in context.gridFields) {
-            request.projection[context.gridFields[column]] = true;
+            let projectField = context.gridFields[column]
+            //No support for a.$.b in MongoDB after 4.4. for some reason :shrug:
+            projectField = projectField.replace(/\$.*/, '$');
+            request.projection[projectField] = true;
         }
 
         const options = {
