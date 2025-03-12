@@ -24,7 +24,7 @@
                 <div class="container-fluid mt-1">
                     <form>
                         <div class="mb-2 row" v-for="(value,key) in queryableFields">
-                            <label class="col-form-label col-sm-3" for="dropdownSelect">{{ key }}</label>
+                            <label class="col-form-label col-sm-3" for="dropdownSelect">{{ labels[key] }}</label>
                             <div class="col-sm-9">
                                 <div v-if="Array.isArray(value)">
                                     <select class="form-select" id="dropdownSelect" v-model="choices[key]">
