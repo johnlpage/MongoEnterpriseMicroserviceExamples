@@ -210,11 +210,23 @@ function onLoad() {
                                 val = val.slice(1);
                                 if (typeof this.queryableFields[choice] == "number") {
                                     val = Number(val);
+                                } else if (val.length > 9) {
+
+                                    let parsedDate = new Date(val);
+                                    if (!isNaN(parsedDate)) {
+                                        val = {"$date": parsedDate.toISOString()};
+                                    }
                                 }
                                 rval[choice] = {[op]: val};
                             } else {
                                 if (typeof this.queryableFields[choice] == "number") {
                                     val = Number(val);
+                                } else if (val.length > 9) {
+
+                                    let parsedDate = new Date(val);
+                                    if (!isNaN(parsedDate)) {
+                                        val = {"$date": parsedDate.toISOString()};
+                                    }
                                 }
                                 rval[choice] = val;
                             }
