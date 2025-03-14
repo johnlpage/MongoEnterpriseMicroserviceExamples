@@ -1,4 +1,4 @@
-# MongoDB Enterprise Microservice Exampes (Memex)
+# MongoDB Enterprise Microservice Examples (Memex)
 
 ## Mews
 
