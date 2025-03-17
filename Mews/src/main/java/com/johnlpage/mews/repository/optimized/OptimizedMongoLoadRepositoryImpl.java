@@ -34,10 +34,13 @@ public class OptimizedMongoLoadRepositoryImpl<T> implements OptimizedMongoLoadRe
   // Used in trigger definitions
   public static final String PREVIOUS_VALS = "__previousValues";
   public static final String UPDATE_ID = PREVIOUS_VALS + ".__updateId";
+  public static final String LAST_UPDATE_DATE = "__lastUpdateDate";
   private static final Logger LOG = LoggerFactory.getLogger(OptimizedMongoLoadRepositoryImpl.class);
   // Internal only
   private static final String BACKUP_VALS = "__backupValues";
   private static final String CHANGED = "__changed";
+  private static final String ISINSERT = "__isinsert";
+
   private final MongoTemplate mongoTemplate;
   private final MappingMongoConverter mappingMongoConverter;
   private final MongoClient mongoClient;
@@ -153,7 +156,7 @@ public class OptimizedMongoLoadRepositoryImpl<T> implements OptimizedMongoLoadRe
     // Detecting an insert when upserting is tricky as _id is already populated but nothing else
     Document previousSize = new Document("$size", new Document("$objectToArray", "$$ROOT"));
     Document isInsert = new Document("$eq", Arrays.asList(previousSize, 1));
-    Document flagInsert = new Document("$set", new Document("_isInsert", isInsert));
+    Document flagInsert = new Document("$set", new Document(ISINSERT, isInsert));
 
     updateSteps.add(flagInsert);
 
@@ -165,6 +168,8 @@ public class OptimizedMongoLoadRepositoryImpl<T> implements OptimizedMongoLoadRe
     updateSteps.add(backupDelta);
 
     Document previousValues = new Document(UPDATE_ID, updateBatchId);
+    previousValues.put(PREVIOUS_VALS + "." + LAST_UPDATE_DATE, "$$NOW");
+
     List<Document> anyChange = new ArrayList<>();
     for (Map.Entry<String, Object> entry : unwoundFields.entrySet()) {
       // True if the value has changed
@@ -193,8 +198,11 @@ public class OptimizedMongoLoadRepositoryImpl<T> implements OptimizedMongoLoadRe
     Document finalUpdate =
         new Document("$cond", Arrays.asList("$" + CHANGED, "$" + PREVIOUS_VALS, "$" + BACKUP_VALS));
 
+    // For an insert all we want it the simestamp
     Document condFinal =
-        new Document("$cond", Arrays.asList("$_isInsert", "$$REMOVE", finalUpdate));
+        new Document(
+            "$cond",
+            Arrays.asList("$" + ISINSERT, new Document(LAST_UPDATE_DATE, "$$NOW"), finalUpdate));
 
     // Don't need our backup copy anymore
     updateSteps.add(
@@ -202,8 +210,12 @@ public class OptimizedMongoLoadRepositoryImpl<T> implements OptimizedMongoLoadRe
             "$set",
             new Document(BACKUP_VALS, "$$REMOVE")
                 .append(CHANGED, "$$REMOVE")
-                .append("_isInsert", "$$REMOVE")
+                .append(ISINSERT, "$$REMOVE")
                 .append(PREVIOUS_VALS, condFinal)));
+
+    for (Document s : updateSteps) {
+      LOG.info(s.toJson());
+    }
 
     // Because these expressive pipeline updates are using pipelines they are sometimes
     // Referred to as Aggregation Updates, that's the name of the Spring Data MongoDB class
@@ -287,7 +299,11 @@ public class OptimizedMongoLoadRepositoryImpl<T> implements OptimizedMongoLoadRe
         unwindNestedDocumentsInUpdate(
             (Document) entry.getValue(), out, basekey + entry.getKey() + ".");
       } else {
-        out.put(basekey + entry.getKey(), entry.getValue());
+        if (basekey.equals("") && entry.getKey().equals("_id")) {
+          // SKIP _id
+        } else {
+          out.put(basekey + entry.getKey(), entry.getValue());
+        }
       }
     }
   }
