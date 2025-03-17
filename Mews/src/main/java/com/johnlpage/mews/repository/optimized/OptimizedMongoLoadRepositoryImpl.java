@@ -161,7 +161,7 @@ public class OptimizedMongoLoadRepositoryImpl<T> implements OptimizedMongoLoadRe
 
       Document valueChanged =
           new Document("$ne", Arrays.asList("$" + entry.getKey(), entry.getValue()));
-      // If changed record old value otherwise record nothing
+      // If changed record old value otherwise record nothing but null if new field
       Document coerceEmptyToNull =
           new Document("$ifNull", Arrays.asList("$" + entry.getKey(), null));
       Document conditionalOnChange =
