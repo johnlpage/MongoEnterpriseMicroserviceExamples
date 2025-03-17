@@ -9,11 +9,9 @@ import com.johnlpage.mews.model.DocumentHistory;
 import com.johnlpage.mews.repository.optimized.OptimizedMongoLoadRepositoryImpl;
 import com.johnlpage.mews.util.AnnotationExtractor;
 import com.mongodb.bulk.BulkWriteResult;
+import com.mongodb.bulk.BulkWriteUpsert;
 import com.mongodb.client.ClientSession;
-import java.util.ArrayList;
-import java.util.Date;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import org.bson.Document;
 import org.bson.types.ObjectId;
 import org.slf4j.Logger;
@@ -23,10 +21,8 @@ import org.springframework.data.mongodb.core.query.Criteria;
 import org.springframework.data.mongodb.core.query.Query;
 import org.springframework.stereotype.Service;
 
-/*
- TODO: Refactor this into something more generic
+/* This trigger writes out a change history for documents modified in OptimizedMonogoLoadRepository*/
 
-*/
 @Service
 public class HistoryTriggerService<T> extends PostWriteTriggerService<T> {
   private static final Logger LOG = LoggerFactory.getLogger(HistoryTriggerService.class);
@@ -43,62 +39,108 @@ public class HistoryTriggerService<T> extends PostWriteTriggerService<T> {
 
   @Override
   public void postWriteTrigger(
-      ClientSession session,
-      BulkWriteResult result,
-      List<T> documents,
-      Class<T> clazz,
-      ObjectId updateId)
-      throws IllegalAccessException {
+          ClientSession session,
+          BulkWriteResult result,
+          List<T> documents,
+          Class<T> clazz,
+          ObjectId updateId)
+          throws IllegalAccessException {
 
-    Query query = new Query();
-    List<Object> testIdList = new ArrayList<>();
-    for (T v : documents) {
-      try {
-        testIdList.add(
-            AnnotationExtractor.getIdFromModel(v)); // This is easier to read than stream().map()
-      } catch (IllegalAccessException e) {
-        LOG.error("Model has no defined @ID !!{}", e.getMessage());
+    List<DocumentHistory> history = new ArrayList<>();
+
+    collectionName = AnnotationExtractor.getCollectionName(clazz);
+
+    // Add inserts to history
+    if( result.getUpserts().size() > 0) {
+      for (BulkWriteUpsert v : result.getUpserts()) {
+
+        DocumentHistory vih = new DocumentHistory();
+        vih.setRecordId(v.getId());
+        vih.setType("insert");
+        vih.setTimestamp(new Date());
+        history.add(vih); // Add this history records to the history list
+
       }
     }
-    if (collectionName == null) {
-      collectionName = AnnotationExtractor.getCollectionName(clazz);
-    }
 
-    query.addCriteria(Criteria.where("_id").in(testIdList)); // testid is in the list
-    query.addCriteria(Criteria.where(OptimizedMongoLoadRepositoryImpl.UPDATE_ID).is(updateId));
-    query.fields().include(OptimizedMongoLoadRepositoryImpl.PREVIOUS_VALS);
-    List<Document> modifiedOnly =
-        mongoTemplate.withSession(session).find(query, Document.class, collectionName);
+    //Add updates
+    if (result.getModifiedCount() > 0) {
+      Query query = new Query();
+      List<Object> testIdList = new ArrayList<>();
+      for (T v : documents) {
+        try {
+          testIdList.add(
+                  AnnotationExtractor.getIdFromModel(v)); // This is easier to read than stream().map()
+        } catch (IllegalAccessException e) {
+          LOG.error("Model has no defined @ID !!{}", e.getMessage());
+        }
+      }
 
-    // We want to take those and write them to another collection
-    List<DocumentHistory> history = new ArrayList<>();
-    for (Document v : modifiedOnly) {
-      DocumentHistory vih = new DocumentHistory();
-      vih.setRecordId(v.get("_id"));
-      vih.setChanges(v.get(OptimizedMongoLoadRepositoryImpl.PREVIOUS_VALS, Document.class));
-      vih.setTimestamp(new Date());
-      history.add(vih); // Add this history records to the history list
-    }
 
-    // Write them all in one operation, we can use insert which is fast
-    mongoTemplate.withSession(session).insert(history, collectionName + HISTORY_POSTFIX);
+      query.addCriteria(Criteria.where("_id").in(testIdList)); // testid is in the list
+      query.addCriteria(Criteria.where(OptimizedMongoLoadRepositoryImpl.UPDATE_ID).is(updateId));
+      query.fields().include(OptimizedMongoLoadRepositoryImpl.PREVIOUS_VALS);
+      List<Document> modifiedOnly =
+              mongoTemplate.withSession(session).find(query, Document.class, collectionName);
 
-    // We also need to capture any that have been deleted but we can assume the upstream keeps
-    // giving us them with the deleted flag set
+      // We want to take those and write them to another collection
 
-    history.clear();
-    for (T v : documents) {
-      if (hasDeleteFlag(v)) {
+      for (Document v : modifiedOnly) {
         DocumentHistory vih = new DocumentHistory();
-        vih.setRecordId(getIdFromModel(v));
-        Map<String, Object> finalState;
-        finalState = objectMapper.convertValue(v, new TypeReference<Map<String, Object>>() {});
-        vih.setChanges(finalState);
+        vih.setRecordId(v.get("_id"));
+        vih.setType("update");
+        Document previousValues = v.get(OptimizedMongoLoadRepositoryImpl.PREVIOUS_VALS, Document.class);
+        cleanMap(previousValues);
+        vih.setChanges(previousValues);
         vih.setTimestamp(new Date());
         history.add(vih); // Add this history records to the history list
       }
+
+
     }
+
+    // We also need to capture any that have been deleted
+    // we are assuming here that the upstream only send us a delete once ( as they then deleted it )
+    // If not we woudl need ot make this an upsert or ass a unique constraint and ignore the dup key error
+
+    if( result.getDeletedCount() > 0) {
+      for (T v : documents) {
+        if (hasDeleteFlag(v)) {
+          DocumentHistory vih = new DocumentHistory();
+          vih.setRecordId(getIdFromModel(v));
+          Map<String, Object> finalState;
+          finalState = objectMapper.convertValue(v, new TypeReference<Map<String, Object>>() {});
+          vih.setChanges(finalState);
+          vih.setType("delete");
+          vih.setTimestamp(new Date());
+          history.add(vih); // Add this history records to the history list
+        }
+      }
+    }
+
     // Write them all in one operation, we can use insert which is fast
     mongoTemplate.withSession(session).insert(history, collectionName + HISTORY_POSTFIX);
+  }
+
+
+  boolean cleanMap(Map<String, Object> map) {
+    Iterator<Map.Entry<String, Object>> iterator = map.entrySet().iterator();
+    boolean hasNonEmptyChildren = false;
+    while (iterator.hasNext()) {
+      Map.Entry<String, Object> entry = iterator.next();
+      Object value = entry.getValue();
+      if (value instanceof Map) { // Check if the value is a map
+        Map<String, Object> nestedMap = (Map<String, Object>) value;
+        // Recursively clean the nested map
+        if (!cleanMap(nestedMap)) {
+          iterator.remove(); // Remove if the nested map is empty after cleaning
+        } else {
+          hasNonEmptyChildren = true;
+        }
+      } else {
+        hasNonEmptyChildren = true; // Non-map entries are considered non-empty
+      }
+    }
+    return hasNonEmptyChildren; // Return true if any non-empty entries remain
   }
 }

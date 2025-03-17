@@ -147,6 +147,16 @@ public class OptimizedMongoLoadRepositoryImpl<T> implements OptimizedMongoLoadRe
 
     List<Document> updateSteps = new ArrayList<>();
 
+    // If this is an insert then $_id will be undefined, in that case we don't need a previous
+    // version
+    // Worst case if we didn't do this we would have a lot of superfluous history.
+    // Detecting an insert when upserting is tricky as _id is already populated but nothing else
+    Document previousSize = new Document("$size", new Document("$objectToArray", "$$ROOT"));
+    Document isInsert = new Document("$eq", Arrays.asList(previousSize, 1));
+    Document flagInsert = new Document("$set", new Document("_isInsert", isInsert));
+
+    updateSteps.add(flagInsert);
+
     Document backupDelta =
         new Document(
             "$set",
@@ -161,7 +171,7 @@ public class OptimizedMongoLoadRepositoryImpl<T> implements OptimizedMongoLoadRe
 
       Document valueChanged =
           new Document("$ne", Arrays.asList("$" + entry.getKey(), entry.getValue()));
-      // If changed record old value otherwise record nothing but null if new field
+      // If changed record old value otherwise record nothing
       Document coerceEmptyToNull =
           new Document("$ifNull", Arrays.asList("$" + entry.getKey(), null));
       Document conditionalOnChange =
@@ -183,13 +193,17 @@ public class OptimizedMongoLoadRepositoryImpl<T> implements OptimizedMongoLoadRe
     Document finalUpdate =
         new Document("$cond", Arrays.asList("$" + CHANGED, "$" + PREVIOUS_VALS, "$" + BACKUP_VALS));
 
+    Document condFinal =
+        new Document("$cond", Arrays.asList("$_isInsert", "$$REMOVE", finalUpdate));
+
     // Don't need our backup copy anymore
     updateSteps.add(
         new Document(
             "$set",
             new Document(BACKUP_VALS, "$$REMOVE")
                 .append(CHANGED, "$$REMOVE")
-                .append(PREVIOUS_VALS, finalUpdate)));
+                .append("_isInsert", "$$REMOVE")
+                .append(PREVIOUS_VALS, condFinal)));
 
     // Because these expressive pipeline updates are using pipelines they are sometimes
     // Referred to as Aggregation Updates, that's the name of the Spring Data MongoDB class
