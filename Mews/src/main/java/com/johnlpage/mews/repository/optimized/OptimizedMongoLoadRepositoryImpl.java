@@ -133,6 +133,18 @@ public class OptimizedMongoLoadRepositoryImpl<T> implements OptimizedMongoLoadRe
     Map<String, Object> unwoundFields = new HashMap<>();
     unwindNestedDocumentsInUpdate(bsonDocument, unwoundFields);
 
+    // Iterate over the map and modify the string values starting with $
+    //  As they will be in interpreted as variables to Documenmt("$literal","$thing")
+
+    for (Map.Entry<String, Object> entry : unwoundFields.entrySet()) {
+      if (entry.getValue() instanceof String value) {
+        if (value.startsWith("$")) {
+          // Prefix with _ if it starts with $
+          entry.setValue(new Document("$literal", value));
+        }
+      }
+    }
+
     List<Document> updateSteps = new ArrayList<>();
 
     Document backupDelta =
@@ -145,12 +157,18 @@ public class OptimizedMongoLoadRepositoryImpl<T> implements OptimizedMongoLoadRe
     Document previousValues = new Document(UPDATE_ID, updateBatchId);
     List<Document> anyChange = new ArrayList<>();
     for (Map.Entry<String, Object> entry : unwoundFields.entrySet()) {
+      // True if the value has changed
+
       Document valueChanged =
           new Document("$ne", Arrays.asList("$" + entry.getKey(), entry.getValue()));
+      // If changed record old value otherwise record nothing
+      Document coerceEmptyToNull =
+          new Document("$ifNull", Arrays.asList("$" + entry.getKey(), null));
       Document conditionalOnChange =
-          new Document("$cond", Arrays.asList(valueChanged, "$" + entry.getKey(), "$$REMOVE"));
+          new Document("$cond", Arrays.asList(valueChanged, coerceEmptyToNull, "$$REMOVE"));
+
       previousValues.append(PREVIOUS_VALS + "." + entry.getKey(), conditionalOnChange);
-      // List of all the conditionals
+      // List of all the conditionals so we can work out if anything changed
       anyChange.add(valueChanged);
     }
 
