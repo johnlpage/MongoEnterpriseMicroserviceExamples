@@ -7,28 +7,38 @@ import java.util.*;
 public class ObjectConverter {
 
   private static final List<String> DATE_FORMATS = new ArrayList<>();
+  private static final List<SimpleDateFormat> dateFormatters = new ArrayList<>();
 
   static {
     // Add various date formats you want to support
-    DATE_FORMATS.add("yyyy-MM-dd'T'HH:mm:ss"); // ISO 8601 with seconds
     DATE_FORMATS.add("yyyy-MM-dd"); // Basic date format
+    DATE_FORMATS.add("yyyy-MM-dd'T'HH:mm:ss"); // ISO 8601 with seconds
+    // DATE_FORMATS.add("MM/dd/yyyy");                 // US date format
+    //  DATE_FORMATS.add("dd/MM/yyyy");                 // European date format
     DATE_FORMATS.add("yyyy-MM-dd'T'HH:mm:ss.SSSX"); // ISO 8601 with milliseconds and timezone
     DATE_FORMATS.add("yyyy-MM-dd'T'HH:mm:ssX"); // ISO 8601 with seconds and timezone
-    DATE_FORMATS.add("MM/dd/yyyy"); // US date format
-    // DATE_FORMATS.add("dd/MM/yyyy");                 // European date format
     // Add more formats as needed
+
+    for (String format : DATE_FORMATS) {
+      SimpleDateFormat formatter = new SimpleDateFormat(format);
+      formatter.setTimeZone(TimeZone.getTimeZone("UTC"));
+      dateFormatters.add(formatter);
+    }
   }
 
   public static Object convertObject(Object input) {
     if (input instanceof Number) {
       return ((Number) input).doubleValue();
     }
-    if (input instanceof String) {
-      for (String format : DATE_FORMATS) {
-        try {
-          return parseDate((String) input, format);
-        } catch (ParseException e) {
-          // Continue to the next format
+    if (input instanceof String str) {
+      // Optimisation given the formats we support
+      if (!str.isEmpty() && str.length() >= 8 && Character.isDigit(str.charAt(0))) {
+        for (SimpleDateFormat sdf : dateFormatters) {
+          try {
+            return sdf.parse(str);
+          } catch (ParseException e) {
+            // Continue to the next format
+          } // DATE_FORMATS.add("dd/MM/yyyy");                 // European date format
         }
       }
       return input;
@@ -49,11 +59,5 @@ public class ObjectConverter {
     }
     // For other unhandled types, return as is
     return input;
-  }
-
-  private static Date parseDate(String dateStr, String format) throws ParseException {
-    SimpleDateFormat sdf = new SimpleDateFormat(format);
-    sdf.setTimeZone(TimeZone.getTimeZone("UTC")); // Set timezone if needed
-    return sdf.parse(dateStr);
   }
 }
