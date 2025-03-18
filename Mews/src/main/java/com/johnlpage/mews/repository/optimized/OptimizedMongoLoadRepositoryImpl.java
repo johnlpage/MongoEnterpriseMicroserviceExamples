@@ -39,7 +39,37 @@ public class OptimizedMongoLoadRepositoryImpl<T> implements OptimizedMongoLoadRe
   // Internal only
   private static final String BACKUP_VALS = "__backupValues";
   private static final String CHANGED = "__changed";
-  private static final String ISINSERT = "__isinsert";
+  private static final String IS_INSERT = "__isInsert";
+  private static final Document flagInsert;
+  private static final Document backupDelta;
+  private static final Document cleanUp;
+
+  static {
+    Document previousSize = new Document("$size", new Document("$objectToArray", "$$ROOT"));
+    Document isInsert = new Document("$eq", Arrays.asList(previousSize, 1));
+    flagInsert = new Document("$set", new Document(IS_INSERT, isInsert));
+
+    backupDelta =
+        new Document(
+            "$set",
+            new Document(PREVIOUS_VALS, new Document()).append(BACKUP_VALS, "$" + PREVIOUS_VALS));
+
+    // If there was no change then revert to BACKUP_VALS
+    Document finalUpdate =
+        new Document("$cond", Arrays.asList("$" + CHANGED, "$" + PREVIOUS_VALS, "$" + BACKUP_VALS));
+    // For an insert all we want it the timestamp
+    Document condFinal =
+        new Document(
+            "$cond",
+            Arrays.asList("$" + IS_INSERT, new Document(LAST_UPDATE_DATE, "$$NOW"), finalUpdate));
+    cleanUp =
+        new Document(
+            "$set",
+            new Document(BACKUP_VALS, "$$REMOVE")
+                .append(CHANGED, "$$REMOVE")
+                .append(IS_INSERT, "$$REMOVE")
+                .append(PREVIOUS_VALS, condFinal));
+  }
 
   private final MongoTemplate mongoTemplate;
   private final MappingMongoConverter mappingMongoConverter;
@@ -49,12 +79,12 @@ public class OptimizedMongoLoadRepositoryImpl<T> implements OptimizedMongoLoadRe
       List<T> items,
       Class<T> clazz,
       UpdateStrategy updateStrategy,
-      PostWriteTriggerService<T> postwrite)
+      PostWriteTriggerService<T> postWrite)
       throws IllegalAccessException {
 
     ClientSession session = null;
     ObjectId updateBatchId = new ObjectId();
-    boolean usingTransactions = postwrite != null;
+    boolean usingTransactions = postWrite != null;
 
     BulkOperations ops;
     if (usingTransactions) {
@@ -96,7 +126,7 @@ public class OptimizedMongoLoadRepositoryImpl<T> implements OptimizedMongoLoadRe
     try {
       BulkWriteResult result = ops.execute();
       if (usingTransactions) {
-        postwrite.postWriteTrigger(session, result, items, clazz, updateBatchId);
+        postWrite.postWriteTrigger(session, result, items, clazz, updateBatchId);
         session.commitTransaction();
       }
       return result;
@@ -137,7 +167,7 @@ public class OptimizedMongoLoadRepositoryImpl<T> implements OptimizedMongoLoadRe
     unwindNestedDocumentsInUpdate(bsonDocument, unwoundFields);
 
     // Iterate over the map and modify the string values starting with $
-    //  As they will be in interpreted as variables to Documenmt("$literal","$thing")
+    //  As they will be in interpreted as variables to Document("$literal","$thing")
 
     for (Map.Entry<String, Object> entry : unwoundFields.entrySet()) {
       if (entry.getValue() instanceof String value) {
@@ -154,17 +184,9 @@ public class OptimizedMongoLoadRepositoryImpl<T> implements OptimizedMongoLoadRe
     // version
     // Worst case if we didn't do this we would have a lot of superfluous history.
     // Detecting an insert when upserting is tricky as _id is already populated but nothing else
-    Document previousSize = new Document("$size", new Document("$objectToArray", "$$ROOT"));
-    Document isInsert = new Document("$eq", Arrays.asList(previousSize, 1));
-    Document flagInsert = new Document("$set", new Document(ISINSERT, isInsert));
 
+    // Defined statically
     updateSteps.add(flagInsert);
-
-    Document backupDelta =
-        new Document(
-            "$set",
-            new Document(PREVIOUS_VALS, new Document()).append(BACKUP_VALS, "$" + PREVIOUS_VALS));
-
     updateSteps.add(backupDelta);
 
     Document previousValues = new Document(UPDATE_ID, updateBatchId);
@@ -194,28 +216,15 @@ public class OptimizedMongoLoadRepositoryImpl<T> implements OptimizedMongoLoadRe
     // Set to new values
     updateSteps.add(new Document("$set", unwoundFields));
 
-    // If there was no change then revert to BACKUP_VALS
-    Document finalUpdate =
-        new Document("$cond", Arrays.asList("$" + CHANGED, "$" + PREVIOUS_VALS, "$" + BACKUP_VALS));
-
-    // For an insert all we want it the simestamp
-    Document condFinal =
-        new Document(
-            "$cond",
-            Arrays.asList("$" + ISINSERT, new Document(LAST_UPDATE_DATE, "$$NOW"), finalUpdate));
-
     // Don't need our backup copy anymore
-    updateSteps.add(
-        new Document(
-            "$set",
-            new Document(BACKUP_VALS, "$$REMOVE")
-                .append(CHANGED, "$$REMOVE")
-                .append(ISINSERT, "$$REMOVE")
-                .append(PREVIOUS_VALS, condFinal)));
+    updateSteps.add(cleanUp);
 
-    for (Document s : updateSteps) {
+    /* Uncomment to see The Pipeline Query, do so with a very simple document
+    for(Document s : updateSteps) {
       LOG.info(s.toJson());
     }
+
+     */
 
     // Because these expressive pipeline updates are using pipelines they are sometimes
     // Referred to as Aggregation Updates, that's the name of the Spring Data MongoDB class
@@ -299,9 +308,7 @@ public class OptimizedMongoLoadRepositoryImpl<T> implements OptimizedMongoLoadRe
         unwindNestedDocumentsInUpdate(
             (Document) entry.getValue(), out, basekey + entry.getKey() + ".");
       } else {
-        if (basekey.equals("") && entry.getKey().equals("_id")) {
-          // SKIP _id
-        } else {
+        if (!(basekey.isEmpty() && entry.getKey().equals("_id"))) {
           out.put(basekey + entry.getKey(), entry.getValue());
         }
       }
