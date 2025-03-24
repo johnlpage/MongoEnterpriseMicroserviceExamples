@@ -26,5 +26,6 @@ public class DocumentHistory {
   @Id ObjectId historyId;
   Object recordId;
   Date timestamp;
+  String type; // TOOO enum?
   Map<String, Object> changes;
 }

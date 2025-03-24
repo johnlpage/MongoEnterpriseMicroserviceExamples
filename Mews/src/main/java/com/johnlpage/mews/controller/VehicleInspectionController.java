@@ -40,7 +40,7 @@ public class VehicleInspectionController {
   private final VehicleInspectionQueryService queryService;
   private final VehicleInspectionJsonLoaderService loaderService;
   private final VehicleInspectionPreWriteTriggerService preWriteTriggerService;
-  private final VehicleInspectionHistoryService postWriteTriggerService;
+  private final VehicleInspectionHistoryTriggerService postWriteTriggerService;
   private final VehicleInspectionDownstreamService downstreamService;
 
   private final ObjectMapper objectMapper;

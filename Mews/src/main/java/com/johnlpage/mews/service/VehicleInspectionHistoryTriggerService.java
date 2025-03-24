@@ -10,9 +10,11 @@ import org.springframework.stereotype.Service;
 // That goes via the Repository, you may choose to add logging here for example
 
 @Service
-public class VehicleInspectionHistoryService extends HistoryTriggerService<VehicleInspection> {
+public class VehicleInspectionHistoryTriggerService
+    extends HistoryTriggerService<VehicleInspection> {
 
-  public VehicleInspectionHistoryService(MongoTemplate mongoTemplate, ObjectMapper objectMapper) {
+  public VehicleInspectionHistoryTriggerService(
+      MongoTemplate mongoTemplate, ObjectMapper objectMapper) {
     super(mongoTemplate, objectMapper);
   }
 }
