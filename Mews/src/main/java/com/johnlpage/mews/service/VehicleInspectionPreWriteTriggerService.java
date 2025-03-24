@@ -2,6 +2,7 @@ package com.johnlpage.mews.service;
 
 import com.johnlpage.mews.model.VehicleInspection;
 import com.johnlpage.mews.repository.VehicleInspectionRepository;
+import com.johnlpage.mews.service.generic.PreWriteTriggerService;
 import java.util.Random;
 import org.springframework.stereotype.Service;
 

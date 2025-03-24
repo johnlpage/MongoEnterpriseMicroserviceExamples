@@ -7,6 +7,7 @@ import com.johnlpage.mews.model.UpdateStrategy;
 import com.johnlpage.mews.model.Vehicle;
 import com.johnlpage.mews.model.VehicleInspection;
 import com.johnlpage.mews.service.*;
+import com.johnlpage.mews.service.generic.MongoDbJsonStreamingLoaderService;
 import jakarta.servlet.http.HttpServletRequest;
 import java.io.BufferedOutputStream;
 import java.io.IOException;

@@ -1,4 +1,4 @@
-package com.johnlpage.mews.service;
+package com.johnlpage.mews.service.generic;
 
 import com.mongodb.bulk.BulkWriteResult;
 import com.mongodb.client.ClientSession;
@@ -13,5 +13,4 @@ public class PostWriteTriggerService<T> {
       Class<T> clazz,
       ObjectId updateId)
       throws IllegalAccessException {}
-  ;
 }

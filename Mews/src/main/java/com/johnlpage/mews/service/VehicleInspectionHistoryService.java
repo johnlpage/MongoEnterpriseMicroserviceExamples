@@ -2,6 +2,7 @@ package com.johnlpage.mews.service;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.johnlpage.mews.model.VehicleInspection;
+import com.johnlpage.mews.service.generic.HistoryTriggerService;
 import org.springframework.data.mongodb.core.MongoTemplate;
 import org.springframework.stereotype.Service;
 

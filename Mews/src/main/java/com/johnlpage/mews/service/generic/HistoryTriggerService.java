@@ -1,4 +1,4 @@
-package com.johnlpage.mews.service;
+package com.johnlpage.mews.service.generic;
 
 import static com.johnlpage.mews.util.AnnotationExtractor.getIdFromModel;
 import static com.johnlpage.mews.util.AnnotationExtractor.hasDeleteFlag;
@@ -39,19 +39,19 @@ public class HistoryTriggerService<T> extends PostWriteTriggerService<T> {
 
   @Override
   public void postWriteTrigger(
-          ClientSession session,
-          BulkWriteResult result,
-          List<T> documents,
-          Class<T> clazz,
-          ObjectId updateId)
-          throws IllegalAccessException {
+      ClientSession session,
+      BulkWriteResult result,
+      List<T> documents,
+      Class<T> clazz,
+      ObjectId updateId)
+      throws IllegalAccessException {
 
     List<DocumentHistory> history = new ArrayList<>();
 
     collectionName = AnnotationExtractor.getCollectionName(clazz);
 
     // Add inserts to history
-    if( result.getUpserts().size() > 0) {
+    if (result.getUpserts().size() > 0) {
       for (BulkWriteUpsert v : result.getUpserts()) {
 
         DocumentHistory vih = new DocumentHistory();
@@ -59,29 +59,27 @@ public class HistoryTriggerService<T> extends PostWriteTriggerService<T> {
         vih.setType("insert");
         vih.setTimestamp(new Date());
         history.add(vih); // Add this history records to the history list
-
       }
     }
 
-    //Add updates
+    // Add updates
     if (result.getModifiedCount() > 0) {
       Query query = new Query();
       List<Object> testIdList = new ArrayList<>();
       for (T v : documents) {
         try {
           testIdList.add(
-                  AnnotationExtractor.getIdFromModel(v)); // This is easier to read than stream().map()
+              AnnotationExtractor.getIdFromModel(v)); // This is easier to read than stream().map()
         } catch (IllegalAccessException e) {
           LOG.error("Model has no defined @ID !!{}", e.getMessage());
         }
       }
 
-
       query.addCriteria(Criteria.where("_id").in(testIdList)); // testid is in the list
       query.addCriteria(Criteria.where(OptimizedMongoLoadRepositoryImpl.UPDATE_ID).is(updateId));
       query.fields().include(OptimizedMongoLoadRepositoryImpl.PREVIOUS_VALS);
       List<Document> modifiedOnly =
-              mongoTemplate.withSession(session).find(query, Document.class, collectionName);
+          mongoTemplate.withSession(session).find(query, Document.class, collectionName);
 
       // We want to take those and write them to another collection
 
@@ -89,21 +87,21 @@ public class HistoryTriggerService<T> extends PostWriteTriggerService<T> {
         DocumentHistory vih = new DocumentHistory();
         vih.setRecordId(v.get("_id"));
         vih.setType("update");
-        Document previousValues = v.get(OptimizedMongoLoadRepositoryImpl.PREVIOUS_VALS, Document.class);
+        Document previousValues =
+            v.get(OptimizedMongoLoadRepositoryImpl.PREVIOUS_VALS, Document.class);
         cleanMap(previousValues);
         vih.setChanges(previousValues);
         vih.setTimestamp(new Date());
         history.add(vih); // Add this history records to the history list
       }
-
-
     }
 
     // We also need to capture any that have been deleted
     // we are assuming here that the upstream only send us a delete once ( as they then deleted it )
-    // If not we woudl need ot make this an upsert or ass a unique constraint and ignore the dup key error
+    // If not we woudl need ot make this an upsert or ass a unique constraint and ignore the dup key
+    // error
 
-    if( result.getDeletedCount() > 0) {
+    if (result.getDeletedCount() > 0) {
       for (T v : documents) {
         if (hasDeleteFlag(v)) {
           DocumentHistory vih = new DocumentHistory();
@@ -121,7 +119,6 @@ public class HistoryTriggerService<T> extends PostWriteTriggerService<T> {
     // Write them all in one operation, we can use insert which is fast
     mongoTemplate.withSession(session).insert(history, collectionName + HISTORY_POSTFIX);
   }
-
 
   boolean cleanMap(Map<String, Object> map) {
     Iterator<Map.Entry<String, Object>> iterator = map.entrySet().iterator();

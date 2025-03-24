@@ -1,4 +1,4 @@
-package com.johnlpage.mews.service;
+package com.johnlpage.mews.service.generic;
 
 // TODO - Make this an interface?
 

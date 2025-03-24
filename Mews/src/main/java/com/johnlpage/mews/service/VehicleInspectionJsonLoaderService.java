@@ -4,6 +4,7 @@ import com.fasterxml.jackson.core.JsonFactory;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.johnlpage.mews.model.VehicleInspection;
 import com.johnlpage.mews.repository.optimized.OptimizedMongoLoadRepository;
+import com.johnlpage.mews.service.generic.MongoDbJsonStreamingLoaderService;
 import org.springframework.stereotype.Service;
 
 // This is just Layering Glue, Business logic goes here not direct database access

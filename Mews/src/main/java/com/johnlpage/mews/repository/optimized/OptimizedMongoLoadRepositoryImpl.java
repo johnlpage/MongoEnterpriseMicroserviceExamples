@@ -5,7 +5,7 @@ import static com.johnlpage.mews.util.AnnotationExtractor.hasDeleteFlag;
 import static org.springframework.data.mongodb.core.query.Criteria.where;
 
 import com.johnlpage.mews.model.UpdateStrategy;
-import com.johnlpage.mews.service.PostWriteTriggerService;
+import com.johnlpage.mews.service.generic.PostWriteTriggerService;
 import com.mongodb.bulk.BulkWriteResult;
 import com.mongodb.client.ClientSession;
 import com.mongodb.client.MongoClient;

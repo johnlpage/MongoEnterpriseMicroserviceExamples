@@ -1,7 +1,7 @@
 package com.johnlpage.mews.repository.optimized;
 
 import com.johnlpage.mews.model.UpdateStrategy;
-import com.johnlpage.mews.service.PostWriteTriggerService;
+import com.johnlpage.mews.service.generic.PostWriteTriggerService;
 import com.mongodb.bulk.BulkWriteResult;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
