@@ -29,7 +29,6 @@ public abstract class HistoryTriggerService<T> extends PostWriteTriggerService<T
   private static final Logger LOG = LoggerFactory.getLogger(HistoryTriggerService.class);
   private final MongoTemplate mongoTemplate;
   private final ObjectMapper objectMapper;
-  private String collectionName = null;
 
   public HistoryTriggerService(MongoTemplate mongoTemplate, ObjectMapper objectMapper) {
     super();
@@ -48,10 +47,10 @@ public abstract class HistoryTriggerService<T> extends PostWriteTriggerService<T
 
     List<DocumentHistory> history = new ArrayList<>();
 
-    collectionName = AnnotationExtractor.getCollectionName(clazz);
+    String collectionName = AnnotationExtractor.getCollectionName(clazz);
 
     // Add inserts to history
-    if (result.getUpserts().size() > 0) {
+    if (!result.getUpserts().isEmpty()) {
       for (BulkWriteUpsert v : result.getUpserts()) {
 
         DocumentHistory vih = new DocumentHistory();
@@ -116,7 +115,7 @@ public abstract class HistoryTriggerService<T> extends PostWriteTriggerService<T
           DocumentHistory vih = new DocumentHistory();
           vih.setRecordId(getIdFromModel(v));
           Map<String, Object> finalState;
-          finalState = objectMapper.convertValue(v, new TypeReference<Map<String, Object>>() {});
+          finalState = objectMapper.convertValue(v, new TypeReference<>() {});
           vih.setChanges(finalState);
           vih.setType("delete");
           vih.setTimestamp(new Date());
