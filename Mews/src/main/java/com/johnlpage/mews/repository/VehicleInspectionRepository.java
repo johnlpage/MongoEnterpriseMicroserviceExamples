@@ -1,6 +1,7 @@
 package com.johnlpage.mews.repository;
 
 import com.johnlpage.mews.model.VehicleInspection;
+import com.johnlpage.mews.repository.optimized.MongoHistoryRepository;
 import com.johnlpage.mews.repository.optimized.OptimizedMongoDownstreamRepository;
 import com.johnlpage.mews.repository.optimized.OptimizedMongoLoadRepository;
 import com.johnlpage.mews.repository.optimized.OptimizedMongoQueryRepository;
@@ -16,7 +17,8 @@ public interface VehicleInspectionRepository
     extends MongoRepository<VehicleInspection, Long>,
         OptimizedMongoLoadRepository<VehicleInspection>,
         OptimizedMongoQueryRepository<VehicleInspection>,
-        OptimizedMongoDownstreamRepository<VehicleInspection> {
+        OptimizedMongoDownstreamRepository<VehicleInspection>,
+        MongoHistoryRepository<VehicleInspection, Long> {
 
   /*
    * EXAMPLE REPOSITORY METHODS

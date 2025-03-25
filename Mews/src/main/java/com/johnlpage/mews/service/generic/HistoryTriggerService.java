@@ -24,9 +24,9 @@ import org.springframework.stereotype.Service;
 /* This trigger writes out a change history for documents modified in OptimizedMonogoLoadRepository*/
 
 @Service
-public class HistoryTriggerService<T> extends PostWriteTriggerService<T> {
+public abstract class HistoryTriggerService<T> extends PostWriteTriggerService<T> {
+  public static final String HISTORY_POSTFIX = "_history";
   private static final Logger LOG = LoggerFactory.getLogger(HistoryTriggerService.class);
-  private final String HISTORY_POSTFIX = "_history";
   private final MongoTemplate mongoTemplate;
   private final ObjectMapper objectMapper;
   private String collectionName = null;
@@ -76,7 +76,12 @@ public class HistoryTriggerService<T> extends PostWriteTriggerService<T> {
       }
 
       query.addCriteria(Criteria.where("_id").in(testIdList)); // testid is in the list
-      query.addCriteria(Criteria.where(OptimizedMongoLoadRepositoryImpl.UPDATE_ID).is(updateId));
+      query.addCriteria(
+          Criteria.where(
+                  OptimizedMongoLoadRepositoryImpl.PREVIOUS_VALS
+                      + "."
+                      + OptimizedMongoLoadRepositoryImpl.UPDATE_ID)
+              .is(updateId));
       query.fields().include(OptimizedMongoLoadRepositoryImpl.PREVIOUS_VALS);
       List<Document> modifiedOnly =
           mongoTemplate.withSession(session).find(query, Document.class, collectionName);
@@ -90,6 +95,10 @@ public class HistoryTriggerService<T> extends PostWriteTriggerService<T> {
         Document previousValues =
             v.get(OptimizedMongoLoadRepositoryImpl.PREVIOUS_VALS, Document.class);
         cleanMap(previousValues);
+        // Also remove __updatedId and __lastUpdateDate from this
+        previousValues.remove(OptimizedMongoLoadRepositoryImpl.UPDATE_ID);
+        previousValues.remove(OptimizedMongoLoadRepositoryImpl.LAST_UPDATE_DATE);
+
         vih.setChanges(previousValues);
         vih.setTimestamp(new Date());
         history.add(vih); // Add this history records to the history list
@@ -119,6 +128,8 @@ public class HistoryTriggerService<T> extends PostWriteTriggerService<T> {
     // Write them all in one operation, we can use insert which is fast
     mongoTemplate.withSession(session).insert(history, collectionName + HISTORY_POSTFIX);
   }
+
+  // Remove all the empty children so our history isn't full of empty objects
 
   boolean cleanMap(Map<String, Object> map) {
     Iterator<Map.Entry<String, Object>> iterator = map.entrySet().iterator();

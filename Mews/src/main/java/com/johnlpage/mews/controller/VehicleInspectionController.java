@@ -11,6 +11,8 @@ import com.johnlpage.mews.service.generic.MongoDbJsonStreamingLoaderService;
 import jakarta.servlet.http.HttpServletRequest;
 import java.io.BufferedOutputStream;
 import java.io.IOException;
+import java.io.OutputStream;
+import java.util.Date;
 import java.util.Iterator;
 import java.util.List;
 import java.util.stream.Stream;
@@ -19,6 +21,7 @@ import org.bson.json.JsonObject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.data.domain.Slice;
+import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -42,6 +45,7 @@ public class VehicleInspectionController {
   private final VehicleInspectionPreWriteTriggerService preWriteTriggerService;
   private final VehicleInspectionHistoryTriggerService postWriteTriggerService;
   private final VehicleInspectionDownstreamService downstreamService;
+  private final VehicleInspectionHistoryService historyService;
 
   private final ObjectMapper objectMapper;
 
@@ -56,9 +60,9 @@ public class VehicleInspectionController {
       @RequestParam(name = "updateStrategy", required = false, defaultValue = "REPLACE")
           UpdateStrategy updateStrategy) {
     LOG.info("Load inspections from JSON stream starting...");
-    MongoDbJsonStreamingLoaderService.JsonStreamingLoadResponse rval;
+    MongoDbJsonStreamingLoaderService.JsonStreamingLoadResponse returnValue;
     try {
-      rval =
+      returnValue =
           loaderService.loadFromJsonStream(
               request.getInputStream(),
               VehicleInspection.class,
@@ -68,14 +72,14 @@ public class VehicleInspectionController {
                   ? postWriteTriggerService
                   : null);
 
-      return new ResponseEntity<>(rval, HttpStatus.OK);
+      return new ResponseEntity<>(returnValue, HttpStatus.OK);
     } catch (Exception e) {
-      rval =
+      returnValue =
           new MongoDbJsonStreamingLoaderService.JsonStreamingLoadResponse(
               0, 0, 0, false, e.getMessage());
 
       // Log the exception if necessary and return HTTP 500 Internal Server Error
-      return new ResponseEntity<>(rval, HttpStatus.INTERNAL_SERVER_ERROR);
+      return new ResponseEntity<>(returnValue, HttpStatus.INTERNAL_SERVER_ERROR);
     }
   }
 
@@ -148,28 +152,14 @@ public class VehicleInspectionController {
    */
   @GetMapping(value = "/inspections/json", produces = MediaType.APPLICATION_JSON_VALUE)
   public StreamingResponseBody streamInspections() {
-    return outputStream -> {
-      try (BufferedOutputStream bufferedOutputStream = new BufferedOutputStream(outputStream);
-          Stream<VehicleInspection> inspectionStream = downstreamService.jsonExtractStream()) {
-        boolean isFirst = true;
-        Iterator<VehicleInspection> it = inspectionStream.iterator();
-        while (it.hasNext()) {
-          VehicleInspection inspection = it.next();
-          if (!isFirst) {
-            bufferedOutputStream.write("\n".getBytes());
-          }
-          bufferedOutputStream.write(objectMapper.writeValueAsBytes(inspection));
-          isFirst = false;
-        }
-      } catch (IOException e) {
-        LOG.error("Error during streaming inspections using Spring mode: {}", e.getMessage());
-      }
-    };
+
+    return outputStream ->
+        writeDocumentsToOutputStream(outputStream, downstreamService.jsonExtractStream());
   }
 
   /**
-   * Native version of streamInspections using RAWBson to populate JSONObject Have to tell MongoDB
-   * how to do the mapping
+   * Native version of streamInspections using RAWBson to populate JSONObject, this uses abotu half
+   * the CPU Have to tell MongoDB how to do any mapping of fields in the format though.
    */
   @GetMapping(value = "/inspections/jsonnative", produces = MediaType.APPLICATION_JSON_VALUE)
   public StreamingResponseBody streamInspectionsFast() {
@@ -210,5 +200,30 @@ public class VehicleInspectionController {
         LOG.error("Error during streaming inspections using native mode: {}", e.getMessage());
       }
     };
+  }
+
+  @GetMapping(value = "/inspections/asOf", produces = MediaType.APPLICATION_JSON_VALUE)
+  public StreamingResponseBody inspectionAtDate(
+      @RequestParam(name = "asOfDate", required = true) @DateTimeFormat(pattern = "yyyyMMddHHmmss")
+          Date asOfDate,
+      @RequestParam(name = "id", required = true) Long id) {
+    return outputStream ->
+        writeDocumentsToOutputStream(outputStream, historyService.asOfDate(id, asOfDate));
+  }
+
+  private void writeDocumentsToOutputStream(
+      OutputStream outputStream, Stream<VehicleInspection> recordStream) {
+    try (BufferedOutputStream bufferedOutputStream = new BufferedOutputStream(outputStream)) {
+      boolean isFirst = true;
+      for (VehicleInspection record : (Iterable<VehicleInspection>) recordStream::iterator) {
+        if (!isFirst) {
+          bufferedOutputStream.write("\n".getBytes());
+        }
+        bufferedOutputStream.write(objectMapper.writeValueAsBytes(record));
+        isFirst = false;
+      }
+    } catch (IOException e) {
+      LOG.error("Error during streaming documents using Spring mode: {}", e.getMessage());
+    }
   }
 }

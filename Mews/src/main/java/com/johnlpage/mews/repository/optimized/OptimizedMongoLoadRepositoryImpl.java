@@ -33,7 +33,7 @@ public class OptimizedMongoLoadRepositoryImpl<T> implements OptimizedMongoLoadRe
 
   // Used in trigger definitions
   public static final String PREVIOUS_VALS = "__previousValues";
-  public static final String UPDATE_ID = PREVIOUS_VALS + ".__updateId";
+  public static final String UPDATE_ID = "__updateId";
   public static final String LAST_UPDATE_DATE = "__lastUpdateDate";
   private static final Logger LOG = LoggerFactory.getLogger(OptimizedMongoLoadRepositoryImpl.class);
   // Internal only
@@ -189,7 +189,7 @@ public class OptimizedMongoLoadRepositoryImpl<T> implements OptimizedMongoLoadRe
     updateSteps.add(flagInsert);
     updateSteps.add(backupDelta);
 
-    Document previousValues = new Document(UPDATE_ID, updateBatchId);
+    Document previousValues = new Document(PREVIOUS_VALS + "." + UPDATE_ID, updateBatchId);
     previousValues.put(PREVIOUS_VALS + "." + LAST_UPDATE_DATE, "$$NOW");
 
     List<Document> anyChange = new ArrayList<>();

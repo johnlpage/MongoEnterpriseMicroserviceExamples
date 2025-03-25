@@ -2,6 +2,8 @@
 
 ## Mews
 
+*More Documentation in the Readme in the Mews Subdirectory*
+
 This Project contains a set of example of Enterprise
 Microservices using Java, Spring Boot , Spring Data MongoDB and
 native MongoDB capabilities.

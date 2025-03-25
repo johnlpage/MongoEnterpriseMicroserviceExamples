@@ -20,7 +20,7 @@ Eample usage
 
 ```shell
 curl -s \
--X POST "http://localhost:8080/api/inspections?updateStrategy=REPLACE"\
+-X POST "http://localhost:8080/api/inspections?updateStrategy=REPLACE" \
 -H "Content-Type: application/json" -T mot.json
 
 ```
@@ -260,6 +260,44 @@ curl -s -X GET http://localhost:8080/api/inspections/jsonNative
 ### Aggreagtions
 
 TODO
+
+### History
+
+If you load in data using UPDATEWITHHISTORY then alongside the data collection you get a colleciton_history that
+includes previous versions of fields. You can then use the MongoHistoryService to fetch prior versions
+
+To test you in multiple versions of the same data ( SAMPLE_DATA/history has example )
+
+```shell
+
+cd SAMPLE_DATA/history
+
+curl  \
+-X POST "http://localhost:8080/api/inspections?updateStrategy=UPDATEWITHHISTORY" \
+-H "Content-Type: application/json" -T v1.json
+
+sleep 1
+date +"%Y%m%d%H%M%S"
+
+curl  \
+-X POST "http://localhost:8080/api/inspections?updateStrategy=UPDATEWITHHISTORY" \
+-H "Content-Type: application/json" -T v2.json
+sleep 1
+date +"%Y%m%d%H%M%S"
+
+curl  \
+-X POST "http://localhost:8080/api/inspections?updateStrategy=UPDATEWITHHISTORY" \
+-H "Content-Type: application/json" -T v3.json
+
+
+```
+
+Now use the date time emitted to fetch the various versions
+
+```shell
+curl "http://localhost:8080/api/inspections/asOf?id=1&asOfDate=20250325123007"
+
+```
 
 ## Kafka
 
