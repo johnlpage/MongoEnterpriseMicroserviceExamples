@@ -1,0 +1,43 @@
+{
+  "testtype": "Normal Test",
+  "vehicle": {
+    "colour": "GREY",
+    "make": "NISSAN",
+    "model": "JUKE",
+    "vehicleid": 1730084
+  },
+  "postcode": "BA",
+  "testclass": 4,
+  "testresult": "Passed",
+  "faileditems": [
+    {
+      "faileditems": {
+        "rfrtype": "F",
+        "rfrid": 31009,
+        "details": {
+          "item": {
+            "itemname": "Side repeaters",
+            "category": {
+              "itemname": "Flashing type",
+              "category": {
+                "itemname": "Direction indicators",
+                "category": {
+                  "itemname": "Lamps, reflectors and electrical equipment"
+                }
+              }
+            }
+          },
+          "minoritem": "N",
+          "description": "Major",
+          "rfrid": 31009,
+          "text": "Y"
+        }
+      }
+    }
+  ],
+  "testid": 1,
+  "testmileage": 37840,
+  "firstusedate": "2022-01-02",
+  "fueltype": "PETROL",
+  "capacity": 1796
+}
