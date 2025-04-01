@@ -47,7 +47,7 @@ public class VehicleInspection {
    * Use this to capture any fields not captured explicitly As MongoDB's flexibility makes this easy
    */
   private Map<String, Object> payload = new HashMap<>();
-  
+
   @JsonAnySetter
   public void set(String key, Object value) {
     payload.put(key, ObjectConverter.convertObject(value));
