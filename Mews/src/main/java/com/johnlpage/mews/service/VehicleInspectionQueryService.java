@@ -45,8 +45,7 @@ public class VehicleInspectionQueryService {
     return repository.findById(id);
   }
 
-  public Slice<VehicleInspection> getInspectionByExample(
-      VehicleInspection probe, int page, int size) {
+  public Slice<VehicleInspection> getByExample(VehicleInspection probe, int page, int size) {
     ExampleMatcher matcher = ExampleMatcher.matching().withIgnoreNullValues();
     Example<VehicleInspection> example = Example.of(probe, matcher);
     return repository.findAll(example, PageRequest.of(page, size));

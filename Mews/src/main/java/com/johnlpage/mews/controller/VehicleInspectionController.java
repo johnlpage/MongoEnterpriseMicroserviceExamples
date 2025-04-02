@@ -59,7 +59,7 @@ public class VehicleInspectionController {
       @RequestParam(name = "futz", required = false, defaultValue = "false") Boolean futz,
       @RequestParam(name = "updateStrategy", required = false, defaultValue = "REPLACE")
           UpdateStrategy updateStrategy) {
-    LOG.info("Load inspections from JSON stream starting...");
+    LOG.info("Load data from JSON stream starting...");
     MongoDbJsonStreamingLoaderService.JsonStreamingLoadResponse returnValue;
     try {
       returnValue =
@@ -112,7 +112,7 @@ public class VehicleInspectionController {
 
     // Use the line below for immutable model
     // VehicleInspection probe = VehicleInspection.builder().model(model).build();
-    Slice<VehicleInspection> returnPage = queryService.getInspectionByExample(example, page, size);
+    Slice<VehicleInspection> returnPage = queryService.getByExample(example, page, size);
     PageDto<VehicleInspection> entity = new PageDto<>(returnPage);
     return ResponseEntity.ok(entity);
   }
@@ -158,8 +158,8 @@ public class VehicleInspectionController {
   }
 
   /**
-   * Native version of streamInspections using RAWBson to populate JSONObject, this uses abotu half
-   * the CPU Have to tell MongoDB how to do any mapping of fields in the format though.
+   * Native version of streamJson using RAWBson to populate JSONObject, this uses abotu half the CPU
+   * Have to tell MongoDB how to do any mapping of fields in the format though.
    */
   @GetMapping(value = "/inspections/jsonnative", produces = MediaType.APPLICATION_JSON_VALUE)
   public StreamingResponseBody streamJsonNative() {
@@ -184,26 +184,25 @@ public class VehicleInspectionController {
 
     return outputStream -> {
       try (BufferedOutputStream bufferedOutputStream = new BufferedOutputStream(outputStream);
-          Stream<JsonObject> inspectionStream =
-              downstreamService.nativeJsonExtractStream(formatRequired)) {
+          Stream<JsonObject> stream = downstreamService.nativeJsonExtractStream(formatRequired)) {
         boolean isFirst = true;
-        Iterator<JsonObject> iterator = inspectionStream.iterator();
+        Iterator<JsonObject> iterator = stream.iterator();
         while (iterator.hasNext()) {
-          JsonObject inspection = iterator.next();
+          JsonObject jsonObject = iterator.next();
           if (!isFirst) {
             bufferedOutputStream.write("\n".getBytes());
           }
-          bufferedOutputStream.write(inspection.getJson().getBytes());
+          bufferedOutputStream.write(jsonObject.getJson().getBytes());
           isFirst = false;
         }
       } catch (IOException e) {
-        LOG.error("Error during streaming inspections using native mode: {}", e.getMessage());
+        LOG.error("Error during streaming jsonObjects using native mode: {}", e.getMessage());
       }
     };
   }
 
   @GetMapping(value = "/inspections/asOf", produces = MediaType.APPLICATION_JSON_VALUE)
-  public StreamingResponseBody inspectionAtDate(
+  public StreamingResponseBody dataAtDate(
       @RequestParam(name = "asOfDate") @DateTimeFormat(pattern = "yyyyMMddHHmmss") Date asOfDate,
       @RequestParam(name = "id") Long id) {
     return outputStream ->
