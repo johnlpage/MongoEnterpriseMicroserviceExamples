@@ -41,7 +41,7 @@ public class VehicleInspectionQueryService {
     return repository.atlasSearchQuery(jsonString, MODELCLASS);
   }
 
-  public Optional<VehicleInspection> getInspectionById(Long id) {
+  public Optional<VehicleInspection> getById(Long id) {
     return repository.findById(id);
   }
 

@@ -85,10 +85,10 @@ public class VehicleInspectionController {
 
   /** Get By ID - */
   @GetMapping("/inspections/id/{id}")
-  public ResponseEntity<VehicleInspection> getInspectionById(@PathVariable Long id) {
+  public ResponseEntity<VehicleInspection> getById(@PathVariable Long id) {
     // While you can to straight to the repository it's best practise to use a service.
     return queryService
-        .getInspectionById(id)
+        .getById(id)
         .map(ResponseEntity::ok)
         .orElse(ResponseEntity.notFound().build());
   }
@@ -151,7 +151,7 @@ public class VehicleInspectionController {
    * object creation and doing it all in a projection on the server. Then using RAWBsonDocument
    */
   @GetMapping(value = "/inspections/json", produces = MediaType.APPLICATION_JSON_VALUE)
-  public StreamingResponseBody streamInspections() {
+  public StreamingResponseBody streamJson() {
 
     return outputStream ->
         writeDocumentsToOutputStream(outputStream, downstreamService.jsonExtractStream());
@@ -162,7 +162,7 @@ public class VehicleInspectionController {
    * the CPU Have to tell MongoDB how to do any mapping of fields in the format though.
    */
   @GetMapping(value = "/inspections/jsonnative", produces = MediaType.APPLICATION_JSON_VALUE)
-  public StreamingResponseBody streamInspectionsFast() {
+  public StreamingResponseBody streamJsonNative() {
 
     String formatRequired =
         """
