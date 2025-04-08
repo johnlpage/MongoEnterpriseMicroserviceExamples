@@ -90,7 +90,6 @@ public class OptimizedMongoQueryRepositoryImpl<T> implements OptimizedMongoQuery
 
     } catch (Exception e) {
       LOG.warn(e.getMessage(), e);
-      // TODO
       return List.of();
     }
   }
@@ -111,7 +110,6 @@ public class OptimizedMongoQueryRepositoryImpl<T> implements OptimizedMongoQuery
     return costManager(clazz, filter, projection, sort);
   }
 
-  // TODO - Move to own service?
   /**
    * Because the getModelByMongoQuery allows any query - we want to be able to assess each query and
    * then decide what we are doing based on the cost - for example disallow unindexed queries or

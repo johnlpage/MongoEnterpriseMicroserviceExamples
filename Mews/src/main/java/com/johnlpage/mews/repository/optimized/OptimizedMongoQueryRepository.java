@@ -9,7 +9,4 @@ public interface OptimizedMongoQueryRepository<T> {
   List<T> atlasSearchQuery(String jsonString, Class<T> clazz);
 
   int costMongoDbNativeQuery(String jsonString, Class<T> clazz);
-
-  // TODO - Add GetCost function to repo
-
 }
