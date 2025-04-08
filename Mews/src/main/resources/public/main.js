@@ -252,19 +252,25 @@ function onLoad() {
 
                         for (let f in mongoQuery) {
                             // TODO - Support for > , < , Dates etc.
-                            // FOr now it ignores objects
+
                             if (isNumberOrDate(mongoQuery[f])) {
                                 must.push({
                                     equals: {
                                         path: f, value: mongoQuery[f]
                                     }
                                 })
-                            } else if (mongoQuery[f] instanceof String) {
-                                must.push({
-                                    text: {
-                                        path: f, query: mongoQuery[f]
-                                    }
-                                })
+                            } else {
+                                // FOr now it ignores objects liek $gt, $lt or dates
+                                // Also you can use equals with strings only with a keyword analyzer
+                                asString = mongoQuery[f].toString()
+                                if (asString.startsWith("[object") == false) {
+                                    must.push({
+                                            text: {
+                                                path: f, query: asString
+                                            }
+                                        }
+                                    )
+                                }
                             }
                         }
                     }
