@@ -81,8 +81,7 @@ async function fetchDocument(context, document) {
             method: "POST", // Specify the method as POST
             headers: {
                 "Content-Type": "application/json", // Set the content type to JSON
-            },
-            // Convert the data to a JSON string
+            }, // Convert the data to a JSON string
             body: JSON.stringify(request),
         };
 
@@ -126,8 +125,7 @@ async function runGridQuery(context) {
             method: "POST", // Specify the method as POST
             headers: {
                 "Content-Type": "application/json", // Set the content type to JSON
-            },
-            // Convert the data to a JSON string
+            }, // Convert the data to a JSON string
             body: JSON.stringify(request),
         };
         const find = await fetch(queryEndpoint, options);
@@ -166,8 +164,7 @@ async function runGridSearch(context) {
             method: "POST", // Specify the method as POST
             headers: {
                 "Content-Type": "application/json", // Set the content type to JSON
-            },
-            // Convert the data to a JSON string
+            }, // Convert the data to a JSON string
             body: JSON.stringify(request),
         };
 
@@ -186,21 +183,24 @@ async function runGridSearch(context) {
     context.isQuerying = false;
 }
 
+function isNumberOrDate(value) {
+    if (typeof value == "number") {
+        return true;
+    }
+    let parsedDate = new Date(value);
+    if (!isNaN(parsedDate)) return true;
+
+    return false;
+}
+
 function onLoad() {
     const app = Vue.createApp({
         data() {
             return {
-                choices: {},
-                queryableFields: {}, // Stores the list of items
-                gridFields: {},
-                labels: {},
-                queryResults: [],
-                selectedDoc: {},
-                isQuerying: false,
-                fulltext: "test"
+                choices: {}, queryableFields: {}, // Stores the list of items
+                gridFields: {}, labels: {}, queryResults: [], selectedDoc: {}, isQuerying: false, fulltext: "test"
             };
-        },
-        computed: {
+        }, computed: {
             mongoQuery: {
                 get() {
                     // Change < and > and Not
@@ -227,7 +227,6 @@ function onLoad() {
                                 if (typeof this.queryableFields[choice] == "number") {
                                     val = Number(val);
                                 } else if (val.length > 9) {
-
                                     let parsedDate = new Date(val);
                                     if (!isNaN(parsedDate)) {
                                         val = {"$date": parsedDate.toISOString()};
@@ -239,35 +238,67 @@ function onLoad() {
                     }
                     return rval;
                 },
-            },
-            searchQuery: {
+            }, searchQuery: {
                 /* ATLAS SEARCH QUERY */
                 get() {
-                    return {index: "default", text: {query: this.fulltext, path: {"wildcard": "*"}}}
+                    let rval = {index: "default"}
+                    let textClause = {}
+                    if (this.fulltext) {
+                        textClause = {text: {query: this.fulltext, path: {"wildcard": "*"}}}
+                    }
+                    let must = []
+                    if (Object.keys(this.mongoQuery).length > 0) {
+                        let mongoQuery = JSON.parse(JSON.stringify(this.mongoQuery)) // Deep copy
+
+                        for (let f in mongoQuery) {
+                            // TODO - Support for > , < , Dates etc.
+                            // FOr now it ignores objects
+                            if (isNumberOrDate(mongoQuery[f])) {
+                                must.push({
+                                    equals: {
+                                        path: f, value: mongoQuery[f]
+                                    }
+                                })
+                            } else if (mongoQuery[f] instanceof String) {
+                                must.push({
+                                    text: {
+                                        path: f, query: mongoQuery[f]
+                                    }
+                                })
+                            }
+                        }
+                    }
+
+                    if (must.length > 0) {
+                        if (Object.keys(textClause).length > 0) {
+                            must.push(textClause);
+                        }
+                        rval = {...rval, compound: {must}}
+                    } else if (Object.keys(textClause).length > 0) {
+                        rval = {...rval, ...textClause}
+                    }
+
+
+                    return rval;
                 }
             }
-        },
-        mounted() {
+        }, mounted() {
             // Fetch data when the component is mounted.
             fetchCollectionInfo().then((data) => {
                 this.queryableFields = data.queryableFields || {};
                 this.gridFields = data.gridFields || {};
                 this.labels = data.labels || {};
             });
-        },
-        methods: {
+        }, methods: {
             runGridQuery() {
                 this.isQuerying = true;
                 runGridQuery(this);
-            },
-            runGridSearch() {
+            }, runGridSearch() {
                 this.isQuerying = true;
                 runGridSearch(this);
-            },
-            fetchDocument(document) {
+            }, fetchDocument(document) {
                 fetchDocument(this, document);
-            },
-            formatForGrid,
+            }, formatForGrid,
         },
     });
 

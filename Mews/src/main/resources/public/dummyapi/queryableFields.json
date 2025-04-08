@@ -2,7 +2,8 @@
   "vehicle.vehicleid": 1,
   "vehicle.make": [
     "FORD",
-    "VW"
+    "VOLKSWAGEN",
+    "AUDI"
   ],
   "vehicle.model": [
     "ESCORT",

@@ -38,12 +38,12 @@
                             </div>
                         </div>
                         <button :disabled="isQuerying" @click="runGridQuery" class="btn btn-primary w-100"
-                                type="button">Query Database
+                                type="button">MongoDB find()
                         </button>
                     </form>
                 </div>
                 <div class="container-fluid mt-1">
-                    MongoDB Query:
+                    MongoDB Query API:
                     <div class="border p-3 pre-box">
                             <pre>
 <code class="language-javascript">
@@ -56,7 +56,7 @@
                     Atlas Search
                     <input :type="'text'" class="form-control mt-3 " v-model="fulltext">
                     <button :disabled="isQuerying" @click="runGridSearch" class="btn btn-primary mt-3 mb-3 w-100"
-                            type="button">Lucene Search
+                            type="button">Atlas Search (Lucene)
                     </button>
                     <div class="border p-3 mb-3 pre-box">
                             <pre>
