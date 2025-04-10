@@ -101,8 +101,8 @@ public class OptimizedMongoLoadRepositoryImpl<T> implements OptimizedMongoLoadRe
       if (hasDeleteFlag(item)) {
 
         /* TODO - Figure out history on this, when we delete one we need to keep it in history
-        For now we are auditing a delete and removing the top level document but keeping the last
-         version in history. We could alternatively purge from history too*/
+        For now we are auditing a delete op and removing the top level document but keeping the last
+        version in history. We could alternatively purge all from history too */
 
         ops.remove(query);
 
@@ -134,6 +134,8 @@ public class OptimizedMongoLoadRepositoryImpl<T> implements OptimizedMongoLoadRe
     } catch (Exception e) {
       // TODO - Add code to retry if a transient transaction error, that would happen if
       // two threads had updates to the same document and means retrying the whole set
+      // Only happens if playing a bunch of updates with multiple updates to same doc in different
+      // simultaneous batches Ties into dead letter queue etc.
 
       LOG.error(e.getMessage());
       if (usingTransactions && session.hasActiveTransaction()) {
@@ -163,7 +165,11 @@ public class OptimizedMongoLoadRepositoryImpl<T> implements OptimizedMongoLoadRe
     mappingMongoConverter.write(item, bsonDocument);
 
     // Compute all the individual scalar values that have changed.
-    // Arrays are just treated as scalars for now (TODO - Unwind arrays too, IMPORTANT)
+    // Arrays are just treated as scalars for now
+    // Unwinding arrays is possible using a.1.b a.2.b syntax however if we then use just update
+    // a.1.b becomes  { a: { 1 : {b : "X"}} not { a:[null,{b:b}]} - to fix that we need to move to a
+    // piplined update and in that we cannot use dot paths - this needs more thought.
+
     Map<String, Object> unwoundFields = new HashMap<>();
     unwindNestedDocumentsInUpdate(bsonDocument, unwoundFields);
 
@@ -248,7 +254,7 @@ public class OptimizedMongoLoadRepositoryImpl<T> implements OptimizedMongoLoadRe
       return CompletableFuture.completedFuture(writeMany(toSave, clazz, updateStrategy, null));
     } catch (Exception e) {
       LOG.error(e.getMessage());
-      // TODO Handle Failed writes going to a dead letter queue or similar.
+      // TODO Consider Failed writes going to a dead letter queue or similar.
       // That may be something you do from the CompletableFuture
       return CompletableFuture.failedFuture(e);
     }
@@ -266,7 +272,7 @@ public class OptimizedMongoLoadRepositoryImpl<T> implements OptimizedMongoLoadRe
           writeMany(toSave, clazz, updateStrategy, postTrigger));
     } catch (Exception e) {
       LOG.error(e.getMessage());
-      // TODO Handle Failed writes going to a dead letter queue or similar.
+      // TODO Consider Failed writes going to a dead letter queue or similar.
       // That may be something you do from the CompletableFuture
       return CompletableFuture.failedFuture(e);
     }
@@ -277,7 +283,7 @@ public class OptimizedMongoLoadRepositoryImpl<T> implements OptimizedMongoLoadRe
     mappingMongoConverter.write(item, bsonDocument);
 
     // Compute all the individual scalar values that have changed.
-    // Arrays are just treated as scalars for now (todo)
+    // Arrays are just treated as scalars for now - complex topic.
 
     Document unwoundFields = new Document();
     unwindNestedDocumentsInUpdate(bsonDocument, unwoundFields);
@@ -290,10 +296,10 @@ public class OptimizedMongoLoadRepositoryImpl<T> implements OptimizedMongoLoadRe
   }
 
   /**
-   * This makes all nested, non array fields (arrays are a todo) into individual paths so they can
-   * be considered and set independently - in a simple case { a: 1, b: { c:2, d:3}} --> { a:1,
-   * "b.c":2, "b.d":3 } We use this to get the list of field paths we are updating and MongoDB can
-   * then diff them individually internally to calculate minimum change.
+   * This makes all nested, non array fields into individual paths so they can be considered and set
+   * independently - in a simple case { a: 1, b: { c:2, d:3}} --> { a:1, "b.c":2, "b.d":3 } We use
+   * this to get the list of field paths we are updating and MongoDB can then diff them individually
+   * internally to calculate minimum change.
    */
   private void unwindNestedDocumentsInUpdate(
       Map<String, Object> in, Map<String, Object> out, String basekey) {

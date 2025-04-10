@@ -26,7 +26,7 @@ public class MongoHistoryRepositoryImpl<T, I> implements MongoHistoryRepository<
 
   public Stream<T> GetRecordByIdAsOfDate(I recordId, Date asOf, Class<T> clazz) {
     // Create a query object from the criteria
-    Criteria criteria = Criteria.where("_id").is(recordId); // TODO Move up
+    Criteria criteria = Criteria.where("_id").is(recordId);
     return GetRecordsAsOfDate(criteria, asOf, clazz);
   }
 
@@ -57,7 +57,8 @@ public class MongoHistoryRepositoryImpl<T, I> implements MongoHistoryRepository<
 
     /*
      use $lookup to fetch the History records for it
-     TODO - Deal with an insert operation if we have one we shouldn't return the document
+     TODO - We always fetch the earliest version but if we have an 'insert' we should probably
+     not return it at all.
     */
 
     AggregationPipeline lookupHistoryPipeline =
@@ -268,11 +269,6 @@ public class MongoHistoryRepositoryImpl<T, I> implements MongoHistoryRepository<
         new Document(
             "$arrayToObject",
             List.of(List.of(new Document("k", "$$this.k").append("v", "$$this.v"))));
-
-    /*
-     If no path then it's all in key, arguably path is expensive to compute
-     We should just check $$this.k for a dot (TODO)
-    */
 
     Document isRootElement = new Document("$eq", List.of(path, ""));
 

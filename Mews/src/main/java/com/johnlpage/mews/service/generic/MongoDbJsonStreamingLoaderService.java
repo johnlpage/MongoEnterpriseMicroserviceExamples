@@ -24,8 +24,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
-/* TODO - Refactor this to seperate out the JSON Stream parsing */
-
 @Service
 @RequiredArgsConstructor
 public abstract class MongoDbJsonStreamingLoaderService<T> {

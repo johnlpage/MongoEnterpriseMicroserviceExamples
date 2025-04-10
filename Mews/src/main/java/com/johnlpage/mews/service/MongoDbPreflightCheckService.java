@@ -25,11 +25,7 @@ import org.springframework.stereotype.Service;
 public class MongoDbPreflightCheckService {
   private static final Logger LOG = LoggerFactory.getLogger(MongoDbPreflightCheckService.class);
 
-  /**
-   * Defining this a JSON makes it easy to read but still hard coded. todo - create Atlas Search
-   * indexes todo - create Atlas Vector Indexes todo - extend this to include schema validation
-   * check.
-   */
+  /** Defining this a JSON makes it easy to read but still hard coded. */
   private static final String SCHEMA_AND_INDEXES =
       """
   {
@@ -62,12 +58,7 @@ public class MongoDbPreflightCheckService {
     this.mongoTemplate = mongoTemplate;
   }
 
-  /**
-   * Ensure all Collections exist, create them or quit depending on flag.
-   *
-   * <p>todo - ensure that have required properties like timeseries or validation using
-   * getCollectionInfos
-   */
+  /** Ensure all Collections exist, create them or quit depending on flag. */
   List<Document> ensureCollectionsExist(Document schemaAndIndexes) {
     MongoDatabase database = mongoTemplate.getDb();
 
@@ -175,7 +166,6 @@ public class MongoDbPreflightCheckService {
             // failed
             LOG.warn("Collection '{}' does not have searchIndex {}", collectionName, requiredName);
             if (createSearchIndexes) {
-              // TODO make search index
               LOG.info("Creating Search Index");
               createSearchIndex(collectionName, requiredName, requiredDefinition);
             } else {

@@ -251,7 +251,7 @@ function onLoad() {
                         let mongoQuery = JSON.parse(JSON.stringify(this.mongoQuery)) // Deep copy
 
                         for (let f in mongoQuery) {
-                            // TODO - Support for > , < , Dates etc.
+                            // Support for > , < , Dates etc. in Search would go here.
 
                             if (isNumberOrDate(mongoQuery[f])) {
                                 must.push({
