@@ -182,17 +182,18 @@ public class MongoDbPreflightCheckService {
   @Bean
   public ApplicationRunner mongoPreflightCheck() {
     return args -> {
-      LOG.info("PREFLIGHT CHECK");
+      LOG.info("*** PREFLIGHT CHECK STARTED ***");
       if (createRequiredIndexes) {
         LOG.warn(
-            "THIS IS CONFIGURED TO AUTOMATICALLY CREATE INDEXES - THIS IS NOT RECOMMENDED IN PRODUCTION");
+            "!!! MEMEX IS CONFIGURED TO AUTOMATICALLY CREATE MISSING INDEXES - THIS IS NOT RECOMMENDED IN "
+                + "PRODUCTION !");
       }
 
       Document schemaAndIndexes = Document.parse(SCHEMA_AND_INDEXES);
       List<Document> requiredInfo = ensureCollectionsExist(schemaAndIndexes);
       ensureRequiredIndexesExist(requiredInfo);
       ensureRequiredSearchIndexesExist(requiredInfo);
-      LOG.info("PREFLIGHT CHECK COMPLETE");
+      LOG.info("*** PREFLIGHT CHECK COMPLETE ***");
     };
   }
 
