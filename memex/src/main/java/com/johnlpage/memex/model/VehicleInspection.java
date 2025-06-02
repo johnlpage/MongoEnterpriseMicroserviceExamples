@@ -10,6 +10,7 @@ import org.springframework.data.annotation.Id;
 import org.springframework.data.annotation.Transient;
 import org.springframework.data.annotation.Version;
 import org.springframework.data.mongodb.core.mapping.Document;
+import org.springframework.data.mongodb.core.mapping.Field;
 
 /* Replace @Data with this to make an Immutable model
  * which is a little more efficient but no setters just a builder
@@ -27,7 +28,11 @@ import org.springframework.data.mongodb.core.mapping.Document;
 @Document(collection = "vehicleinspection")
 public class VehicleInspection {
   @Id Long testid;
-  @Version Long version;
+
+  @Field("version_field")
+  @Version
+  Long version;
+
   Date testdate;
   String testclass;
   String testtype;
