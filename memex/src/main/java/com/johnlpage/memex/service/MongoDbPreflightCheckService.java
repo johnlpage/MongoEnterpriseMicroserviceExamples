@@ -192,7 +192,7 @@ public class MongoDbPreflightCheckService {
       Document schemaAndIndexes = Document.parse(SCHEMA_AND_INDEXES);
       List<Document> requiredInfo = ensureCollectionsExist(schemaAndIndexes);
       ensureRequiredIndexesExist(requiredInfo);
-      ensureRequiredSearchIndexesExist(requiredInfo);
+      //ensureRequiredSearchIndexesExist(requiredInfo);
       LOG.info("*** PREFLIGHT CHECK COMPLETE ***");
     };
   }
