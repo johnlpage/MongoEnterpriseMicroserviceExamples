@@ -186,42 +186,7 @@ public class OptimizedMongoLoadRepositoryImpl<T> implements OptimizedMongoLoadRe
         }
         return result;
       } else {
-        return new BulkWriteResult() {
-          @Override
-          public boolean wasAcknowledged() {
-            return false;
-          }
-
-          @Override
-          public int getInsertedCount() {
-            return 0;
-          }
-
-          @Override
-          public int getMatchedCount() {
-            return 0;
-          }
-
-          @Override
-          public int getDeletedCount() {
-            return 0;
-          }
-
-          @Override
-          public int getModifiedCount() {
-            return 0;
-          }
-
-          @Override
-          public List<BulkWriteInsert> getInserts() {
-            return List.of();
-          }
-
-          @Override
-          public List<BulkWriteUpsert> getUpserts() {
-            return List.of();
-          }
-        };
+        return getEmptyBWResult();
       }
     } catch (Exception e) {
       // TODO - Add code to retry if a transient transaction error, that would happen if
@@ -235,6 +200,45 @@ public class OptimizedMongoLoadRepositoryImpl<T> implements OptimizedMongoLoadRe
       }
       throw e; // Rethrow to handle upstream
     }
+  }
+
+  private BulkWriteResult getEmptyBWResult() {
+    return new BulkWriteResult() {
+      @Override
+      public boolean wasAcknowledged() {
+        return false;
+      }
+
+      @Override
+      public int getInsertedCount() {
+        return 0;
+      }
+
+      @Override
+      public int getMatchedCount() {
+        return 0;
+      }
+
+      @Override
+      public int getDeletedCount() {
+        return 0;
+      }
+
+      @Override
+      public int getModifiedCount() {
+        return 0;
+      }
+
+      @Override
+      public List<BulkWriteInsert> getInserts() {
+        return List.of();
+      }
+
+      @Override
+      public List<BulkWriteUpsert> getUpserts() {
+        return List.of();
+      }
+    };
   }
 
   /**
