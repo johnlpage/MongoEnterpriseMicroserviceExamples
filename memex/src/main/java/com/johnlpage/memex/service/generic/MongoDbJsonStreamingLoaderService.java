@@ -14,6 +14,7 @@ import java.io.EOFException;
 import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicInteger;
 import lombok.AllArgsConstructor;
@@ -23,6 +24,10 @@ import org.apache.catalina.connector.ClientAbortException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
+import jakarta.validation.ConstraintViolation;
+import jakarta.validation.Validation;
+import jakarta.validation.Validator;
+import jakarta.validation.ValidatorFactory;
 
 @Service
 @RequiredArgsConstructor
@@ -39,6 +44,7 @@ public abstract class MongoDbJsonStreamingLoaderService<T> {
   public JsonStreamingLoadResponse loadFromJsonStream(
       InputStream inputStream,
       Class<T> type,
+      InvalidDataHandlerService<T> invalidDataHandlerService,
       UpdateStrategy updateStrategy,
       PreWriteTriggerService<T> pretrigger,
       PostWriteTriggerService<T> posttrigger) {
@@ -62,12 +68,14 @@ public abstract class MongoDbJsonStreamingLoaderService<T> {
           JsonNode node = objectMapper.readTree(parser);
 
           T document = objectMapper.treeToValue(node, type);
+
           if (pretrigger != null) {
             // For a mutable model
             pretrigger.modifyMutableDataPreWrite(document);
             // for an immutable model
             // document = pretrigger.newImmutableDataPreWritedocument);
           }
+
           count++;
 
           toSave.add(document);
@@ -76,7 +84,8 @@ public abstract class MongoDbJsonStreamingLoaderService<T> {
             toSave.clear();
             futures.add(
                 repository
-                    .asyncWriteMany(copyOfToSave, type, updateStrategy, posttrigger)
+                    .asyncWriteMany(
+                        copyOfToSave, type, invalidDataHandlerService, updateStrategy, posttrigger)
                     .thenApply(
                         bulkWriteResult -> {
                           updates.addAndGet(bulkWriteResult.getModifiedCount());
@@ -92,7 +101,8 @@ public abstract class MongoDbJsonStreamingLoaderService<T> {
       if (!toSave.isEmpty()) {
         futures.add(
             repository
-                .asyncWriteMany(toSave, type, updateStrategy, posttrigger)
+                .asyncWriteMany(
+                    toSave, type, invalidDataHandlerService, updateStrategy, posttrigger)
                 .thenApply(
                     bulkWriteResult -> {
                       updates.addAndGet(bulkWriteResult.getModifiedCount());

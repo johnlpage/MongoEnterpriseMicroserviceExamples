@@ -47,6 +47,7 @@ public class VehicleInspectionController {
   private final VehicleInspectionHistoryTriggerService postWriteTriggerService;
   private final VehicleInspectionDownstreamService downstreamService;
   private final VehicleInspectionHistoryService historyService;
+  private final VehicleInspectionInvalidDataHandlerService invalidDataHandlerService;
 
   private final ObjectMapper objectMapper;
   private final VehicleInspectionRepository vehicleInspectionRepository;
@@ -74,6 +75,7 @@ public class VehicleInspectionController {
           loaderService.loadFromJsonStream(
               request.getInputStream(),
               VehicleInspection.class,
+              invalidDataHandlerService,
               updateStrategy,
               futz ? preWriteTriggerService : null,
               updateStrategy.equals(UpdateStrategy.UPDATEWITHHISTORY)

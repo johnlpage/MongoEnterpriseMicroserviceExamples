@@ -5,6 +5,7 @@
     <groupId>com.johnlpage.datagen</groupId>
     <artifactId>DataGen</artifactId>
     <version>1.0</version>
+    
     <dependencies>
         <!-- Dependency for Apache Commons CSV -->
         <dependency>

@@ -5,6 +5,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.johnlpage.memex.model.UpdateStrategy;
 import com.johnlpage.memex.model.VehicleInspection;
 import com.johnlpage.memex.repository.optimized.OptimizedMongoLoadRepository;
+import com.johnlpage.memex.service.VehicleInspectionInvalidDataHandlerService;
 import com.johnlpage.memex.service.generic.PostWriteTriggerService;
 import com.johnlpage.memex.service.generic.PreWriteTriggerService;
 import com.mongodb.bulk.BulkWriteResult;
@@ -32,6 +33,7 @@ public class VehicleInspectionKafkaConsumer {
   private static final org.slf4j.Logger LOG =
       LoggerFactory.getLogger(VehicleInspectionKafkaConsumer.class);
   private final OptimizedMongoLoadRepository<VehicleInspection> repository;
+  private final VehicleInspectionInvalidDataHandlerService invalidDataHandler;
   private final ObjectMapper objectMapper;
   private final JsonFactory jsonFactory;
   private final AtomicLong lastMessageTime = new AtomicLong(System.currentTimeMillis());
@@ -76,7 +78,7 @@ public class VehicleInspectionKafkaConsumer {
     toSave.clear();
     CompletableFuture<BulkWriteResult> future =
         repository.asyncWriteMany(
-            copyOfToSave, VehicleInspection.class, updateStrategy, posttrigger);
+            copyOfToSave, VehicleInspection.class, invalidDataHandler, updateStrategy, posttrigger);
 
     futures.add(
         future.thenApply(
