@@ -8,11 +8,14 @@ import com.johnlpage.memex.service.generic.PostWriteTriggerService;
 import com.mongodb.bulk.BulkWriteResult;
 import com.mongodb.client.ClientSession;
 import com.mongodb.client.MongoClient;
-import java.lang.reflect.Field;
+
+import java.lang.annotation.Annotation;
+
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
 import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
+import lombok.SneakyThrows;
 import org.bson.Document;
 import org.bson.types.ObjectId;
 import org.slf4j.Logger;
@@ -22,10 +25,12 @@ import org.springframework.data.mongodb.core.FindAndReplaceOptions;
 import org.springframework.data.mongodb.core.MongoTemplate;
 import org.springframework.data.mongodb.core.aggregation.*;
 import org.springframework.data.mongodb.core.convert.MappingMongoConverter;
+
 import org.springframework.data.mongodb.core.query.Query;
 import org.springframework.data.mongodb.core.query.Update;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Repository;
+import org.springframework.data.mongodb.core.mapping.Field;
 
 @RequiredArgsConstructor
 @Repository
@@ -57,11 +62,13 @@ public class OptimizedMongoLoadRepositoryImpl<T> implements OptimizedMongoLoadRe
     // If there was no change then revert to BACKUP_VALS
     Document finalUpdate =
         new Document("$cond", Arrays.asList("$" + CHANGED, "$" + PREVIOUS_VALS, "$" + BACKUP_VALS));
+
     // For an insert all we want it the timestamp
     Document condFinal =
         new Document(
             "$cond",
             Arrays.asList("$" + IS_INSERT, new Document(LAST_UPDATE_DATE, "$$NOW"), finalUpdate));
+
     cleanUp =
         new Document(
             "$set",
@@ -74,6 +81,18 @@ public class OptimizedMongoLoadRepositoryImpl<T> implements OptimizedMongoLoadRe
   private final MongoTemplate mongoTemplate;
   private final MappingMongoConverter mappingMongoConverter;
   private final MongoClient mongoClient;
+
+  private static <T> void addVersionField(T item) throws IllegalAccessException {
+    java.lang.reflect.Field versionField = getVersionField(item);
+    if (versionField != null) {
+
+      if (versionField.getType() == Long.class) {
+        versionField.set(item, 1L);
+      } else if (versionField.getType() == Integer.class) {
+        versionField.set(item, 1);
+      }
+    }
+  }
 
   public BulkWriteResult writeMany(
       List<T> items,
@@ -108,24 +127,30 @@ public class OptimizedMongoLoadRepositoryImpl<T> implements OptimizedMongoLoadRe
 
       } else {
         if (updateStrategy == UpdateStrategy.INSERT) {
-          // If a @Version annotation is in the model then make sure we set it to 1
-          Field versionField = getVersionField(item);
-          if (versionField != null) {
-            versionField.set(item, 1); // On insert set the versions to 1
-          }
+          // If a @Version annotation is in the model, then make sure we set it to 1
+          // This means that save() will work with it properly
+          addVersionField(item);
           ops.insert(item); // This will throw exceptions on duplicates
         } else if (updateStrategy == UpdateStrategy.UPDATE) {
-          // TODO - Version field ?
-          useSimpleUpdate(item, ops, query); // Unwinds and uses $set - smaller oplog, less network
 
+          // useSimpleUpdate(item, ops, query); // Unwinds and uses $set - smaller oplog, less
+          // network
+          // Left in for comparison after we moved to always smart updates
+          useSmartUpdate(item, ops, query, updateBatchId, false);
         } else if (updateStrategy == UpdateStrategy.UPDATEWITHHISTORY) {
           // TODO - Version field
-          useSmartUpdate(item, ops, query, updateBatchId);
+          useSmartUpdate(item, ops, query, updateBatchId, true);
         } else {
-          // Basic overwrite, can be a little less CPU but more network/disk
+          // Basic full overwrite can be a little less CPU, but more network/disk
           // Still better than Spring's default
 
-          // TODO - Version field ?
+          // If a @Version annotation is in the model, then make sure we set it to 1
+          // This means that save() will work with it properly
+          // When we replace we always set version back to 1, this means that a replace
+          // with the same upstream is a no-op, you really shoudlnt be using save() to update
+          // somethign you replace from upstream
+
+          addVersionField(item);
           ops.replaceOne(query, item, FindAndReplaceOptions.options().upsert());
         }
       }
@@ -166,18 +191,40 @@ public class OptimizedMongoLoadRepositoryImpl<T> implements OptimizedMongoLoadRe
    * <p>We can combine this with a transaction and a query to fetch just the updated documents for
    * various post-update transactional trigger activities.
    */
-  private void useSmartUpdate(T item, BulkOperations ops, Query query, ObjectId updateBatchId) {
-    // Generate a Mongo Document with all the required fields in and all the mappings applied
-    // Was using various Spring builders for this, but it was a lot slower and more CPU to build
-    // them  programmatically with the fluent builders as they weren't designed for that .
+  @SneakyThrows
+  private void useSmartUpdate(
+      T item, BulkOperations ops, Query query, ObjectId updateBatchId, boolean withHistory) {
+    // Generate a Mongo Document with all the required fields in, and all the mappings applied
+    // we were using various Spring builders for this, but it was a lot slower and more CPU to build
+    // them programmatically with the MongoDB fluent builders as they weren't designed for this use
+    // case.
+
     Document bsonDocument = new Document();
     mappingMongoConverter.write(item, bsonDocument);
 
+    String versionFieldName = null;
+
+    java.lang.reflect.Field versionField = getVersionField(item);
+
+    if (versionField != null) {
+      // I need the database field name  if defined
+      versionFieldName = versionField.getName();
+
+      if (versionField.isAnnotationPresent(Field.class)) {
+        // Get the @Field annotation
+        Field annotation = versionField.getAnnotation(Field.class);
+        // Extract the database field name from @Field annotation
+        versionFieldName = annotation.value();
+      }
+
+      bsonDocument.remove(versionFieldName); // We won't have a version in an incoming doc
+    }
+
     // Compute all the individual scalar values that have changed.
     // Arrays are just treated as scalars for now
-    // Unwinding arrays is possible using a.1.b a.2.b syntax however if we then use just update
+    // Unwinding arrays is possible using a.1.b a.2.b syntax, however, if we then use just update
     // a.1.b becomes  { a: { 1 : {b : "X"}} not { a:[null,{b:b}]} - to fix that we need to move to a
-    // piplined update and in that we cannot use dot paths - this needs more thought.
+    // pipelined update and in that we cannot use dot paths - this needs more thought.
 
     Map<String, Object> unwoundFields = new HashMap<>();
     unwindNestedDocumentsInUpdate(bsonDocument, unwoundFields);
@@ -196,41 +243,76 @@ public class OptimizedMongoLoadRepositoryImpl<T> implements OptimizedMongoLoadRe
 
     List<Document> updateSteps = new ArrayList<>();
 
-    // If this is an insert then $_id will be undefined, in that case we don't need a previous
+    // If this is an insert then $_id will be undefined, in that case, we don't need a previous
     // version
-    // Worst case if we didn't do this we would have a lot of superfluous history.
+    // Worst case if we didn't do this, we would have a lot of superfluous history.
     // Detecting an insert when upserting is tricky as _id is already populated but nothing else
 
     // Defined statically
+
+    // Set a temp field to say is this is actually an insert
     updateSteps.add(flagInsert);
+    // Take the previous version of the embedded 'latest_change' history and back it up
     updateSteps.add(backupDelta);
 
+    // Create a new latest_change history document put the updateId and the Time in it
     Document previousValues = new Document(PREVIOUS_VALS + "." + UPDATE_ID, updateBatchId);
     previousValues.put(PREVIOUS_VALS + "." + LAST_UPDATE_DATE, "$$NOW");
 
+    // Iterate over all fields conditionally setting any that change into the latest_change
     List<Document> anyChange = new ArrayList<>();
     for (Map.Entry<String, Object> entry : unwoundFields.entrySet()) {
       // True if the value has changed
 
       Document valueChanged =
           new Document("$ne", Arrays.asList("$" + entry.getKey(), entry.getValue()));
-      // If changed record old value otherwise record nothing
-      Document coerceEmptyToNull =
-          new Document("$ifNull", Arrays.asList("$" + entry.getKey(), null));
-      Document conditionalOnChange =
-          new Document("$cond", Arrays.asList(valueChanged, coerceEmptyToNull, "$$REMOVE"));
 
-      previousValues.append(PREVIOUS_VALS + "." + entry.getKey(), conditionalOnChange);
+      // If we aren't recording the history we just need the valueChanged array
+      if (withHistory) {
+        // If changed record the old value otherwise record nothing
+        Document coerceEmptyToNull =
+            new Document("$ifNull", Arrays.asList("$" + entry.getKey(), null));
+        Document conditionalOnChange =
+            new Document("$cond", Arrays.asList(valueChanged, coerceEmptyToNull, "$$REMOVE"));
+
+        previousValues.append(PREVIOUS_VALS + "." + entry.getKey(), conditionalOnChange);
+      }
       // List of all the conditionals so we can work out if anything changed
       anyChange.add(valueChanged);
     }
 
-    // If any changed set flag to true
+    // If ANY changed set CHANGED flag to true and create a new latest_update
     previousValues.append(CHANGED, new Document("$or", anyChange));
     updateSteps.add(new Document("$set", previousValues));
 
-    // Set to new values
+    // Set to new values - if nothing changed then the server will make this a no-op
     updateSteps.add(new Document("$set", unwoundFields));
+
+    // We need to support version fields
+    // If there is a @Version field and
+    // If, and only if there are other changes - then we need to increment the version field by 1
+    // If this is an insert then we need to set the version field to 1
+
+    if (versionField != null) {
+
+      // { $set : { versionFieldName : { $cond : [ "$__isInsert" ,
+      //                                            1,
+      //                                            {$cond : [  "__changed" ,
+      //                                                       { $add :  [ "$versionFieldName",1]}
+      //                                                       "$versionFieldName"]
+      //                                                       }}}
+      Object typedOne = 1;
+      if (versionField.getType() == Long.class) {
+        typedOne = 1L;
+      }
+      Document nextVersion = new Document("$add", Arrays.asList("$" + versionFieldName, typedOne));
+
+      Document updatedIfChanged =
+          new Document("$cond", Arrays.asList("$" + CHANGED, nextVersion, "$" + versionFieldName));
+      Document versionFieldValue =
+          new Document("$cond", Arrays.asList("$" + IS_INSERT, 1, updatedIfChanged));
+      updateSteps.add(new Document("$set", new Document(versionFieldName, versionFieldValue)));
+    }
 
     // Don't need our backup copy anymore
     updateSteps.add(cleanUp);
@@ -287,6 +369,10 @@ public class OptimizedMongoLoadRepositoryImpl<T> implements OptimizedMongoLoadRe
     }
   }
 
+  /* No longer used but left in for reference, using this is a little faster
+     but if you use it to update @Versoin then even if no data changes, it's still
+     a version update and a write - which is 100% NOT acceptable.
+  */
   private void useSimpleUpdate(T item, BulkOperations ops, Query query) {
     Document bsonDocument = new Document();
     mappingMongoConverter.write(item, bsonDocument);
@@ -316,7 +402,7 @@ public class OptimizedMongoLoadRepositoryImpl<T> implements OptimizedMongoLoadRe
 
     for (Map.Entry<String, Object> entry : in.entrySet()) {
       // If it's a document then recurse
-      // Don't recurse into Arrays (It's possible but there are caveats to think
+      // Don't recurse into Arrays (It's possible, but there are icky limitations to think
       // about like deletions)
       if (entry.getValue() instanceof Document) {
         unwindNestedDocumentsInUpdate(
