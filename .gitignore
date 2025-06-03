@@ -33,7 +33,7 @@
 hs_err_pid*
 replay_pid*
 /DataGen/.idea/
-/Mews/.idea/
+/memex/.idea/
 /SAMPLE_DATA/VOSA/
-/Mews/target/
+/memex/target/
 /DataGen/target/
