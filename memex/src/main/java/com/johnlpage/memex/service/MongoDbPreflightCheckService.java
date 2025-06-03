@@ -47,11 +47,14 @@ public class MongoDbPreflightCheckService {
   @Value("${memex.preflight.createRequiredIndexes:true}")
   private boolean createRequiredIndexes;
 
-  @Value("${memex.preflight.createRequiredIndexes:true}")
+  @Value("${memex.preflight.createCollections:true}")
   private boolean createCollections;
 
-  @Value("${memex.preflight.createRequiredIndexes:true}")
+  @Value("${memex.preflight.createSearchIndexes:true}")
   private boolean createSearchIndexes;
+
+  @Value("${memex.atlassearch.enabled:true}")
+  private boolean atlasSearchEnabled;
 
   public MongoDbPreflightCheckService(ApplicationContext context, MongoTemplate mongoTemplate) {
     this.context = context;
@@ -192,7 +195,9 @@ public class MongoDbPreflightCheckService {
       Document schemaAndIndexes = Document.parse(SCHEMA_AND_INDEXES);
       List<Document> requiredInfo = ensureCollectionsExist(schemaAndIndexes);
       ensureRequiredIndexesExist(requiredInfo);
-      //ensureRequiredSearchIndexesExist(requiredInfo);
+      if(atlasSearchEnabled) {
+        ensureRequiredSearchIndexesExist(requiredInfo);
+      }
       LOG.info("*** PREFLIGHT CHECK COMPLETE ***");
     };
   }
