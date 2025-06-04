@@ -93,7 +93,7 @@ Feature: Vehicle Inspection API Management
           "testmileage": 50000,
           "postcode": "SW1A 0AA",
           "fuel": "Petrol",
-          "capacity": 1.6,
+          "capacity": 56,
           "firstusedate": "2018-01-15T00:00:00Z",
           "faileditems": [],
           "vehicle": {
@@ -112,7 +112,7 @@ Feature: Vehicle Inspection API Management
           "testmileage": 60000,
           "postcode": "SW1A 0AB",
           "fuel": "Diesel",
-          "capacity": 2.0,
+          "capacity": 76,
           "firstusedate": "2019-03-20T00:00:00Z",
           "faileditems": ["Brakes", "Lights"],
           "vehicle": {
