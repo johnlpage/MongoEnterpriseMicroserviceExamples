@@ -16,8 +16,12 @@ import io.cucumber.spring.CucumberContextConfiguration;
 import io.restassured.http.ContentType;
 import io.restassured.path.json.JsonPath;
 import io.restassured.response.Response;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.TimeUnit;
+
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.web.server.LocalServerPort;
 import org.springframework.test.context.DynamicPropertyRegistry;
@@ -47,7 +51,7 @@ public class InspectionSteps {
     private int port;
 
     private Response response;
-    private String payload;
+    private LocalDateTime capturedTimestamp;
 
     public String baseUrl() {
         return "http://localhost:" + port;
@@ -58,13 +62,13 @@ public class InspectionSteps {
         return Boolean.parseBoolean(bool);
     }
 
-    @Given("a payload:")
-    public void givenPayload(String payload) {
-        this.payload = payload;
-    }
-
     @Given("the following vehicle inspections exist:")
     public void givenVehicleInspectionsExist(DataTable dataTable) {
+        // test assumes it exists however it would be better to create it here
+    }
+
+    @Given("the following vehicle inspections exist and have historical data as of {string}:")
+    public void givenVehicleInspectionsExist(String date, DataTable dataTable) {
         // test assumes it exists however it would be better to create it here
     }
 
@@ -73,20 +77,41 @@ public class InspectionSteps {
         // test assumes it does not exist however it would be better to delete it here
     }
 
-    @When("I send a POST request to {string}")
-    public void iSendAPOSTRequestTo(String localUrl) {
+    @Given("I capture the current timestamp")
+    public void iCaptureTheCurrentTimestamp() {
+        this.capturedTimestamp = LocalDateTime.now();
+    }
+
+    @Given("I wait for {int} second(s)")
+    public void iWaitForSeconds(int seconds) throws InterruptedException {
+        TimeUnit.SECONDS.sleep(seconds);
+    }
+
+    @When("I send a POST request to {string} with the payload:")
+    public void iSendAPOSTRequestTo(String localUrl, String payload) {
+        String processedUrl = processUrl(localUrl);
         response = given()
                 .baseUri(baseUrl())
                 .contentType(ContentType.JSON)
                 .body(payload)
-                .post(localUrl);
+                .post(processedUrl);
+    }
+
+    private String processUrl(String localUrl) {
+        String processedUrl = localUrl;
+        if (this.capturedTimestamp != null && processedUrl.contains("<timestamp>")) {
+            String formattedTimestamp = this.capturedTimestamp.format(DateTimeFormatter.ofPattern("yyyyMMddHHmmss"));
+            processedUrl = processedUrl.replace("<timestamp>", formattedTimestamp);
+        }
+        return processedUrl;
     }
 
     @When("I send a GET request to {string}")
     public void userSendsGetRequest(String localUrl) {
+        String processedUrl = processUrl(localUrl);
         response = given()
                 .baseUri(baseUrl())
-                .get(localUrl);
+                .get(processedUrl);
     }
 
     @Then("the response status code should be {int}")
@@ -165,6 +190,34 @@ public class InspectionSteps {
                 // Otherwise, check the direct key-value pair
                 assertThat(item, hasKey(key));
                 assertThat(item.get(key), equalTo(value));
+            }
+        }
+    }
+
+    @Then("the {string} header should be {string}")
+    public void theContentTypeHeaderShouldBe(String header, String expectedContentType) {
+        assertNotNull(response, "Response should not be null");
+        response.then().header(header, expectedContentType);
+    }
+
+    @Then("the response should be a stream of valid JSON objects, each on a new line")
+    public void theResponseShouldBeAStreamOfValidJsonObjectsEachOnANewLine() {
+        assertNotNull(response, "Response should not be null");
+        String body = response.getBody().asString();
+        assertNotNull(body, "Response body should not be null");
+        assertFalse(body.isEmpty(), "Response body should not be empty for stream check");
+
+        // Split by any standard newline character(s)
+        String[] lines = body.split("\\r?\\n"); 
+        assertTrue(lines.length > 0, "Response body should contain at least one line for stream check");
+
+        for (String line : lines) {
+            // Skip potentially empty lines that might result from splitting (e.g., trailing newline)
+            if (line.trim().isEmpty()) continue; 
+            try {
+                JsonPath.from(line); // This will throw an exception if the line is not valid JSON
+            } catch (Exception e) {
+                fail("Line is not a valid JSON object: '" + line + "'. Error: " + e.getMessage());
             }
         }
     }
