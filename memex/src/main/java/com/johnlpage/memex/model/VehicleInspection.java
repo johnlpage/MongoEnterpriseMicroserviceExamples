@@ -11,6 +11,7 @@ import org.springframework.data.annotation.Transient;
 import org.springframework.data.annotation.Version;
 import org.springframework.data.mongodb.core.mapping.Document;
 import org.springframework.data.mongodb.core.mapping.Field;
+import jakarta.validation.constraints.*;
 
 /* Replace @Data with this to make an Immutable model
  * which is a little more efficient but no setters just a builder
@@ -41,7 +42,10 @@ public class VehicleInspection {
   String postcode;
   Vehicle vehicle;
   String files;
+
+  @Min(49)
   Long capacity;
+
   Date firstusedate;
   /* Use this to flag from the JSON we want to remove the record */
   @Transient @DeleteFlag Boolean deleted;

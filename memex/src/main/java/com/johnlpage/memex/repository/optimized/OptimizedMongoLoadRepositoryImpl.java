@@ -4,13 +4,17 @@ import static com.johnlpage.memex.util.AnnotationExtractor.*;
 import static org.springframework.data.mongodb.core.query.Criteria.where;
 
 import com.johnlpage.memex.model.UpdateStrategy;
+import com.johnlpage.memex.service.generic.InvalidDataHandlerService;
 import com.johnlpage.memex.service.generic.PostWriteTriggerService;
+import com.mongodb.bulk.BulkWriteInsert;
 import com.mongodb.bulk.BulkWriteResult;
+import com.mongodb.bulk.BulkWriteUpsert;
 import com.mongodb.client.ClientSession;
 import com.mongodb.client.MongoClient;
-
-import java.lang.annotation.Annotation;
-
+import jakarta.validation.ConstraintViolation;
+import jakarta.validation.Validation;
+import jakarta.validation.Validator;
+import jakarta.validation.ValidatorFactory;
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
 import java.util.stream.Collectors;
@@ -20,22 +24,21 @@ import org.bson.Document;
 import org.bson.types.ObjectId;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.boot.actuate.metrics.data.MetricsRepositoryMethodInvocationListener;
 import org.springframework.data.mongodb.core.BulkOperations;
 import org.springframework.data.mongodb.core.FindAndReplaceOptions;
 import org.springframework.data.mongodb.core.MongoTemplate;
 import org.springframework.data.mongodb.core.aggregation.*;
 import org.springframework.data.mongodb.core.convert.MappingMongoConverter;
-
+import org.springframework.data.mongodb.core.mapping.Field;
 import org.springframework.data.mongodb.core.query.Query;
 import org.springframework.data.mongodb.core.query.Update;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Repository;
-import org.springframework.data.mongodb.core.mapping.Field;
 
 @RequiredArgsConstructor
 @Repository
 public class OptimizedMongoLoadRepositoryImpl<T> implements OptimizedMongoLoadRepository<T> {
-
   // Used in trigger definitions
   public static final String PREVIOUS_VALS = "__previousValues";
   public static final String UPDATE_ID = "__updateId";
@@ -78,9 +81,12 @@ public class OptimizedMongoLoadRepositoryImpl<T> implements OptimizedMongoLoadRe
                 .append(PREVIOUS_VALS, condFinal));
   }
 
+  private final MetricsRepositoryMethodInvocationListener metricsRepositoryMethodInvocationListener;
   private final MongoTemplate mongoTemplate;
   private final MappingMongoConverter mappingMongoConverter;
   private final MongoClient mongoClient;
+  ValidatorFactory factory = Validation.buildDefaultValidatorFactory();
+  Validator validator = factory.getValidator();
 
   private static <T> void addVersionField(T item) throws IllegalAccessException {
     java.lang.reflect.Field versionField = getVersionField(item);
@@ -97,6 +103,7 @@ public class OptimizedMongoLoadRepositoryImpl<T> implements OptimizedMongoLoadRe
   public BulkWriteResult writeMany(
       List<T> items,
       Class<T> clazz,
+      InvalidDataHandlerService<T> invalidDataHandlerService,
       UpdateStrategy updateStrategy,
       PostWriteTriggerService<T> postWrite)
       throws IllegalAccessException {
@@ -104,6 +111,7 @@ public class OptimizedMongoLoadRepositoryImpl<T> implements OptimizedMongoLoadRe
     ClientSession session = null;
     ObjectId updateBatchId = new ObjectId();
     boolean usingTransactions = postWrite != null;
+    int nOps = 0;
 
     BulkOperations ops;
     if (usingTransactions) {
@@ -115,6 +123,17 @@ public class OptimizedMongoLoadRepositoryImpl<T> implements OptimizedMongoLoadRe
     }
 
     for (T item : items) {
+
+      // Validate after the trigger before write.
+      Set<ConstraintViolation<T>> violations = validator.validate(item);
+      if (!violations.isEmpty()) {
+        // We have unacceptable data - send it to the bad data handler class if defined
+        if (invalidDataHandlerService != null
+            && !invalidDataHandlerService.handleInvalidData(item, violations, clazz)) {
+          continue; // Default always rejects
+        }
+      }
+      nOps++;
       Object idValue = getIdFromModel(item);
       Query query = new Query(where("_id").is(idValue));
       if (hasDeleteFlag(item)) {
@@ -159,12 +178,16 @@ public class OptimizedMongoLoadRepositoryImpl<T> implements OptimizedMongoLoadRe
     // If we have a postWriteTrigger then we want this update to be
     // In a transaction if not we don't
     try {
-      BulkWriteResult result = ops.execute();
-      if (usingTransactions) {
-        postWrite.postWriteTrigger(session, result, items, clazz, updateBatchId);
-        session.commitTransaction();
+      if (nOps > 0) {
+        BulkWriteResult result = ops.execute();
+        if (usingTransactions) {
+          postWrite.postWriteTrigger(session, result, items, clazz, updateBatchId);
+          session.commitTransaction();
+        }
+        return result;
+      } else {
+        return getEmptyBWResult();
       }
-      return result;
     } catch (Exception e) {
       // TODO - Add code to retry if a transient transaction error, that would happen if
       // two threads had updates to the same document and means retrying the whole set
@@ -177,6 +200,45 @@ public class OptimizedMongoLoadRepositoryImpl<T> implements OptimizedMongoLoadRe
       }
       throw e; // Rethrow to handle upstream
     }
+  }
+
+  private BulkWriteResult getEmptyBWResult() {
+    return new BulkWriteResult() {
+      @Override
+      public boolean wasAcknowledged() {
+        return false;
+      }
+
+      @Override
+      public int getInsertedCount() {
+        return 0;
+      }
+
+      @Override
+      public int getMatchedCount() {
+        return 0;
+      }
+
+      @Override
+      public int getDeletedCount() {
+        return 0;
+      }
+
+      @Override
+      public int getModifiedCount() {
+        return 0;
+      }
+
+      @Override
+      public List<BulkWriteInsert> getInserts() {
+        return List.of();
+      }
+
+      @Override
+      public List<BulkWriteUpsert> getUpserts() {
+        return List.of();
+      }
+    };
   }
 
   /**
@@ -295,12 +357,14 @@ public class OptimizedMongoLoadRepositoryImpl<T> implements OptimizedMongoLoadRe
 
     if (versionField != null) {
 
-      // { $set : { versionFieldName : { $cond : [ "$__isInsert" ,
-      //                                            1,
-      //                                            {$cond : [  "__changed" ,
-      //                                                       { $add :  [ "$versionFieldName",1]}
-      //                                                       "$versionFieldName"]
-      //                                                       }}}
+      /*
+       { $set : { versionFieldName : { $cond : [ "$__isInsert" ,
+                                                  1,
+                                                  {$cond : [  "__changed" ,
+                                                             { $add :  [ "$versionFieldName",1]}
+                                                             "$versionFieldName"]
+                                                             }}}
+      */
       Object typedOne = 1;
       if (versionField.getType() == Long.class) {
         typedOne = 1L;
@@ -339,10 +403,14 @@ public class OptimizedMongoLoadRepositoryImpl<T> implements OptimizedMongoLoadRe
    */
   @Async("loadExecutor")
   public CompletableFuture<BulkWriteResult> asyncWriteMany(
-      List<T> toSave, Class<T> clazz, UpdateStrategy updateStrategy) {
+      List<T> toSave,
+      Class<T> clazz,
+      InvalidDataHandlerService<T> invalidDataHandlerService,
+      UpdateStrategy updateStrategy) {
     try {
       // Update some thread safe counts for upserts, deletes and modifications.
-      return CompletableFuture.completedFuture(writeMany(toSave, clazz, updateStrategy, null));
+      return CompletableFuture.completedFuture(
+          writeMany(toSave, clazz, invalidDataHandlerService, updateStrategy, null));
     } catch (Exception e) {
       LOG.error(e.getMessage());
       // TODO Consider Failed writes going to a dead letter queue or similar.
@@ -355,12 +423,13 @@ public class OptimizedMongoLoadRepositoryImpl<T> implements OptimizedMongoLoadRe
   public CompletableFuture<BulkWriteResult> asyncWriteMany(
       List<T> toSave,
       Class<T> clazz,
+      InvalidDataHandlerService<T> invalidDataHandlerService,
       UpdateStrategy updateStrategy,
       PostWriteTriggerService<T> postTrigger) {
     try {
       // Update some thread safe counts for upserts, deletes and modifications.
       return CompletableFuture.completedFuture(
-          writeMany(toSave, clazz, updateStrategy, postTrigger));
+          writeMany(toSave, clazz, invalidDataHandlerService, updateStrategy, postTrigger));
     } catch (Exception e) {
       LOG.error(e.getMessage());
       // TODO Consider Failed writes going to a dead letter queue or similar.

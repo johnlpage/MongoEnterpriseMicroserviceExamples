@@ -19,7 +19,7 @@ public class DataGen {
     String outputPath;
 
     if (args.length < 3) {
-      System.out.println("Usage: java -jar DataGen.jar definitionDirectory count outputPath");
+      System.out.println(" 1 Usage: java -jar DataGen.jar definitionDirectory count outputPath");
       System.exit(1);
     }
     directoryPath = args[0];
