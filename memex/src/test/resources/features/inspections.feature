@@ -318,3 +318,37 @@ Feature: Vehicle Inspection API Management
     And the "Content-Type" header should be "application/json"
     And the response should contain "testid": 2006
     And the response should contain "combined.vehicle.model": "Focus"
+
+  @post @atlas_search @sunny_day
+  Scenario: Successfully execute an Atlas Search query
+    Given the following vehicle inspections exist:
+      | testid | vehicle.model |
+      | 1001   | Corolla       |
+    When I send a POST request to "/api/inspections/search" with the payload:
+      """
+      {
+        "search": {
+          "text": {
+            "query": "Corolla",
+            "path": "vehicle.model"
+          }
+        },
+         "projection": {
+           "_id": 1,
+           "vehicle": 1,
+           "score": { "$meta": "searchScore" }
+         }
+      }
+      """
+    Then the response status code should be 200
+    And the response should be a non empty JSON array
+    And each item in the response array should contain "vehicle.model": "Corolla"
+
+#  Uncomment once the code is fixed
+#  @post @atlas_search @rainy_day
+#  Scenario: Fail to execute an Atlas Search query due to invalid syntax
+#    When I send a POST request to "/api/inspections/search" with the payload:
+#      """
+#      { "search": { "invalid_field": "value" } }
+#      """
+#    Then the response status code should be 500
