@@ -161,10 +161,12 @@ public class VehicleInspectionController {
    * object creation and doing it all in a projection on the server. Then using RAWBsonDocument
    */
   @GetMapping(value = "/inspections/json", produces = MediaType.APPLICATION_JSON_VALUE)
-  public StreamingResponseBody streamJson() {
+  public ResponseEntity<StreamingResponseBody> streamJson() {
 
-    return outputStream ->
-        writeDocumentsToOutputStream(outputStream, downstreamService.jsonExtractStream());
+    return ResponseEntity.ok()
+            .contentType(MediaType.APPLICATION_JSON)
+            .body(outputStream ->
+                    writeDocumentsToOutputStream(outputStream, downstreamService.jsonExtractStream()));
   }
 
   /**
@@ -172,7 +174,7 @@ public class VehicleInspectionController {
    * Have to tell MongoDB how to do any mapping of fields in the format though.
    */
   @GetMapping(value = "/inspections/jsonnative", produces = MediaType.APPLICATION_JSON_VALUE)
-  public StreamingResponseBody streamJsonNative() {
+  public ResponseEntity<StreamingResponseBody> streamJsonNative() {
 
     String formatRequired =
         """
@@ -192,33 +194,35 @@ public class VehicleInspectionController {
         }
         """;
 
-    return outputStream -> {
-      try (BufferedOutputStream bufferedOutputStream = new BufferedOutputStream(outputStream);
-          Stream<JsonObject> stream = downstreamService.nativeJsonExtractStream(formatRequired)) {
-        boolean isFirst = true;
-        Iterator<JsonObject> iterator = stream.iterator();
-        while (iterator.hasNext()) {
-          JsonObject jsonObject = iterator.next();
-          if (!isFirst) {
-            bufferedOutputStream.write("\n".getBytes());
-          }
-          bufferedOutputStream.write(jsonObject.getJson().getBytes());
-          isFirst = false;
-        }
-      } catch (IOException e) {
-        LOG.error("Error during streaming jsonObjects using native mode: {}", e.getMessage());
-      }
-    };
+    return ResponseEntity.ok()
+            .contentType(MediaType.APPLICATION_JSON)
+            .body(outputStream -> {
+              try (BufferedOutputStream bufferedOutputStream = new BufferedOutputStream(outputStream);
+                   Stream<JsonObject> stream = downstreamService.nativeJsonExtractStream(formatRequired)) {
+                boolean isFirst = true;
+                Iterator<JsonObject> iterator = stream.iterator();
+                while (iterator.hasNext()) {
+                  JsonObject jsonObject = iterator.next();
+                  if (!isFirst) {
+                    bufferedOutputStream.write("\n".getBytes());
+                  }
+                  bufferedOutputStream.write(jsonObject.getJson().getBytes());
+                  isFirst = false;
+                }
+              } catch (IOException e) {
+                LOG.error("Error during streaming jsonObjects using native mode: {}", e.getMessage());
+              }
+            });
   }
 
   @GetMapping(value = "/inspections/asOf", produces = MediaType.APPLICATION_JSON_VALUE)
   public ResponseEntity<StreamingResponseBody> dataAtDate(
-      @RequestParam(name = "asOfDate") @DateTimeFormat(pattern = "yyyyMMddHHmmss") Date asOfDate,
-      @RequestParam(name = "id") Long id) {
+          @RequestParam(name = "asOfDate") @DateTimeFormat(pattern = "yyyyMMddHHmmss") Date asOfDate,
+          @RequestParam(name = "id") Long id) {
     return ResponseEntity.ok()
             .contentType(MediaType.APPLICATION_JSON)
             .body(outputStream ->
-        writeDocumentsToOutputStream(outputStream, historyService.asOfDate(id, asOfDate)));
+                    writeDocumentsToOutputStream(outputStream, historyService.asOfDate(id, asOfDate)));
   }
 
   private void writeDocumentsToOutputStream(

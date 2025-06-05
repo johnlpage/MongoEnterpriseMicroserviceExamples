@@ -135,6 +135,23 @@ Feature: Vehicle Inspection API Management
       | UPDATEWITHHISTORY | true  | 2005 | 2006 |
       | REPLACE           | true  | 2007 | 2008 |
 
+  @post @load_stream @sunny_day
+  Scenario: Successfully load a stream of vehicle inspections with different update strategies and futz options
+    When I send a POST request to "/api/inspections?updateStrategy=UPDATEWITHHISTORY&futz=true" with the payload:
+      """
+      [
+        {
+          "testid": 2007,
+          "deleted": true
+        }
+      ]
+      """
+    Then the response status code should be 200
+    And the response should contain "deletes": 1
+    And the response should contain "success": true
+    When I send a GET request to "/api/inspections/id/2007"
+    Then the response status code should be 404
+
   @post @load_stream @rainy_day
   Scenario: Fail to load a stream of vehicle inspections due to invalid JSON
     When I send a POST request to "/api/inspections?updateStrategy=REPLACE" with the payload:
@@ -246,6 +263,7 @@ Feature: Vehicle Inspection API Management
       | 2002   | Ford         |
     When I send a GET request to "/api/inspections/json"
     Then the response status code should be 200
+    And the "Content-Type" header should be "application/json"
     And the "Transfer-Encoding" header should be "chunked"
     And the response should be a stream of valid JSON objects, each on a new line
 
@@ -257,6 +275,7 @@ Feature: Vehicle Inspection API Management
       | 2002   | Ford         |
     When I send a GET request to "/api/inspections/jsonnative"
     Then the response status code should be 200
+    And the "Content-Type" header should be "application/json"
     And the "Transfer-Encoding" header should be "chunked"
     And the response should be a stream of valid JSON objects, each on a new line
 
@@ -265,6 +284,7 @@ Feature: Vehicle Inspection API Management
     Given the following vehicle inspections exist and have historical data as of "2023-10-25 12:00:00":
       | testid | vehicle.make |
       | 2006   | Ford         |
+    And I wait for 1 second
     And I capture the current timestamp
     And I wait for 1 second
     And I send a POST request to "/api/inspections?updateStrategy=UPDATEWITHHISTORY&futz=true" with the payload:
@@ -295,5 +315,6 @@ Feature: Vehicle Inspection API Management
     When I send a GET request to "/api/inspections/asOf?id=2006&asOfDate=<timestamp>"
     Then the response status code should be 200
     And the "Transfer-Encoding" header should be "chunked"
+    And the "Content-Type" header should be "application/json"
     And the response should contain "testid": 2006
     And the response should contain "combined.vehicle.model": "Focus"
