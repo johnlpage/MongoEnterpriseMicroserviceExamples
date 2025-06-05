@@ -6,7 +6,7 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static io.restassured.RestAssured.given;
 import static org.junit.jupiter.api.Assertions.*;
 
-import com.johnlpage.memex.MemexApplication;
+import com.johnlpage.memex.cucumber.CucumberTestsContainersConfig;
 import io.cucumber.datatable.DataTable;
 import io.cucumber.java.ParameterType;
 import io.cucumber.java.en.Given;
@@ -24,28 +24,12 @@ import java.util.concurrent.TimeUnit;
 
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.web.server.LocalServerPort;
-import org.springframework.test.context.DynamicPropertyRegistry;
-import org.springframework.test.context.DynamicPropertySource;
-import org.testcontainers.containers.MongoDBContainer;
-import org.testcontainers.junit.jupiter.Container;
-import org.testcontainers.junit.jupiter.Testcontainers;
+import org.springframework.test.context.ActiveProfiles;
 
-@Testcontainers
 @CucumberContextConfiguration
-@SpringBootTest(classes = MemexApplication.class, webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
+@SpringBootTest(classes = CucumberTestsContainersConfig.class, webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
+@ActiveProfiles("test")
 public class InspectionSteps {
-
-    @Container
-    static MongoDBContainer mongoDBContainer = new MongoDBContainer("mongo:8");
-
-    @DynamicPropertySource
-    static void containersProperties(DynamicPropertyRegistry registry) {
-        mongoDBContainer.start();
-        registry.add("spring.data.mongodb.uri", mongoDBContainer::getReplicaSetUrl);
-        registry.add("spring.data.mongodb.database", () -> MEMEX);
-    }
-
-    public static final String MEMEX = "memex";
 
     @LocalServerPort
     private int port;
