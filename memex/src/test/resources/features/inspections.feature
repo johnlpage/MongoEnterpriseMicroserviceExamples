@@ -265,6 +265,8 @@ Feature: Vehicle Inspection API Management
     Given the following vehicle inspections exist and have historical data as of "2023-10-25 12:00:00":
       | testid | vehicle.make |
       | 2006   | Ford         |
+    And I capture the current timestamp
+    And I wait for 1 second
     And I send a POST request to "/api/inspections?updateStrategy=UPDATEWITHHISTORY&futz=true" with the payload:
       """
       [
@@ -277,24 +279,21 @@ Feature: Vehicle Inspection API Management
           "testmileage": 60000,
           "postcode": "SW1A 0AB",
           "fuel": "Diesel",
-          "capacity": 2.0,
+          "capacity": 80,
           "firstusedate": "2019-03-20T00:00:00Z",
           "faileditems": ["Brakes", "Lights"],
           "vehicle": {
             "make": "Ford",
-            "model": "Pocus",
+            "model": "Fiesta",
             "year": 2019,
             "vin": "VIN0987654321FEDCBA"
           }
         }
       ]
       """
-    And I wait for 1 second
-    And I capture the current timestamp
-    And I wait for 1 second
     And the response status code should be 200
     When I send a GET request to "/api/inspections/asOf?id=2006&asOfDate=<timestamp>"
     Then the response status code should be 200
     And the "Transfer-Encoding" header should be "chunked"
-#    And the response should be a non empty JSON array - TODO: understand what test data is needed for asOfDate returns a non-empty array
-#    And each item in the response array should contain "vehicle.model": "Focus"
+    And the response should contain "testid": 2006
+    And the response should contain "combined.vehicle.model": "Focus"

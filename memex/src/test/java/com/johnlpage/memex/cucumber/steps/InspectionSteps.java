@@ -16,7 +16,7 @@ import io.cucumber.spring.CucumberContextConfiguration;
 import io.restassured.http.ContentType;
 import io.restassured.path.json.JsonPath;
 import io.restassured.response.Response;
-import java.time.LocalDateTime;
+import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.Map;
@@ -51,7 +51,7 @@ public class InspectionSteps {
     private int port;
 
     private Response response;
-    private LocalDateTime capturedTimestamp;
+    private ZonedDateTime capturedTimestamp;
 
     public String baseUrl() {
         return "http://localhost:" + port;
@@ -79,7 +79,7 @@ public class InspectionSteps {
 
     @Given("I capture the current timestamp")
     public void iCaptureTheCurrentTimestamp() {
-        this.capturedTimestamp = LocalDateTime.now();
+        this.capturedTimestamp = ZonedDateTime.now();
     }
 
     @Given("I wait for {int} second(s)")

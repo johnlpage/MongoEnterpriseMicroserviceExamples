@@ -212,11 +212,13 @@ public class VehicleInspectionController {
   }
 
   @GetMapping(value = "/inspections/asOf", produces = MediaType.APPLICATION_JSON_VALUE)
-  public StreamingResponseBody dataAtDate(
+  public ResponseEntity<StreamingResponseBody> dataAtDate(
       @RequestParam(name = "asOfDate") @DateTimeFormat(pattern = "yyyyMMddHHmmss") Date asOfDate,
       @RequestParam(name = "id") Long id) {
-    return outputStream ->
-        writeDocumentsToOutputStream(outputStream, historyService.asOfDate(id, asOfDate));
+    return ResponseEntity.ok()
+            .contentType(MediaType.APPLICATION_JSON)
+            .body(outputStream ->
+        writeDocumentsToOutputStream(outputStream, historyService.asOfDate(id, asOfDate)));
   }
 
   private void writeDocumentsToOutputStream(
