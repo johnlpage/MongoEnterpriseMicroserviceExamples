@@ -63,8 +63,8 @@ Feature: Vehicle Inspection API Management
   @get @by_id @sunny_day
   Scenario: Successfully retrieve a vehicle inspection by ID
     Given the following vehicle inspections exist:
-      | testid | vehicle.model |
-      | 1001   | Corolla       |
+      | json                                                                                  |
+      | {"testid": 1001, "vehicle": {"model": "Corolla"}}                                     |
     When I send a GET request to "/api/inspections/id/1001"
     Then the response status code should be 200
     And the response should contain "testid": 1001
@@ -136,7 +136,10 @@ Feature: Vehicle Inspection API Management
       | REPLACE           | true  | 2007 | 2008 |
 
   @post @load_stream @sunny_day
-  Scenario: Successfully load a stream of vehicle inspections with different update strategies and futz options
+  Scenario: Successfully delete a vehicle inspection
+    Given the following vehicle inspections exist:
+      | json                                                 |
+      | {"testid": 2007}                                     |
     When I send a POST request to "/api/inspections?updateStrategy=UPDATEWITHHISTORY&futz=true" with the payload:
       """
       [
@@ -173,11 +176,11 @@ Feature: Vehicle Inspection API Management
   @get @by_model @sunny_day
   Scenario Outline: Successfully retrieve vehicle inspections by model with pagination
     Given the following vehicle inspections exist:
-      | testid | vehicle.model |
-      | 2002   | Focus         |
-      | 2004   | Focus         |
-      | 2006   | Focus         |
-      | 2008   | Focus         |
+      | json                                                                                    |
+      | {"testid": 2002, "vehicle": {"model": "Focus"}}                                         |
+      | {"testid": 2004, "vehicle": {"model": "Focus"}}                                         |
+      | {"testid": 2006, "vehicle": {"model": "Focus"}}                                         |
+      | {"testid": 2008, "vehicle": {"model": "Focus"}}                                         |
     When I send a GET request to "/api/inspections/model/<model>?page=<page>&size=<size>"
     Then the response status code should be 200
     And the response should contain "content" with <expected_count> items
@@ -204,9 +207,9 @@ Feature: Vehicle Inspection API Management
   @post @mongo_query @sunny_day
   Scenario: Successfully execute a native MongoDB query with sorting and filter on non-indexed field
     Given the following vehicle inspections exist:
-      | testid | vehicle.make |
-      | 1001   | Toyota       |
-      | 2002   | Ford         |
+    | json                                                                                  |
+    | {"testid": 1001, "vehicle": {"make": "Toyota"}}                                       |
+    | {"testid": 2002, "vehicle": {"make": "Ford"}}                                         |
     When I send a POST request to "/api/inspections/query" with the payload:
       """
       {
@@ -225,9 +228,9 @@ Feature: Vehicle Inspection API Management
   @post @mongo_query @sunny_day
   Scenario: Successfully execute a native MongoDB query with sorting and filter on indexed field
     Given the following vehicle inspections exist:
-      | testid | vehicle.model |
-      | 1001   | Corolla       |
-      | 2002   | Focus         |
+      | json                                                                                    |
+      | {"testid": 1001, "vehicle": {"model": "Corolla"}}                                       |
+      | {"testid": 2002, "vehicle": {"model": "Focus"}}                                         |
     When I send a POST request to "/api/inspections/query" with the payload:
       """
       {
@@ -258,9 +261,9 @@ Feature: Vehicle Inspection API Management
   @get @stream_json @sunny_day
   Scenario: Successfully stream all vehicle inspections as JSON
     Given the following vehicle inspections exist:
-      | testid | vehicle.make |
-      | 1001   | Toyota       |
-      | 2002   | Ford         |
+      | json                                                                                  |
+      | {"testid": 1001, "vehicle": {"make": "Toyota"}}                                       |
+      | {"testid": 2002, "vehicle": {"make": "Ford"}}                                         |
     When I send a GET request to "/api/inspections/json"
     Then the response status code should be 200
     And the "Content-Type" header should be "application/json"
@@ -270,9 +273,9 @@ Feature: Vehicle Inspection API Management
   @get @stream_json_native @sunny_day
   Scenario: Successfully stream all vehicle inspections as native JSON
     Given the following vehicle inspections exist:
-      | testid | vehicle.make |
-      | 1001   | Toyota       |
-      | 2002   | Ford         |
+      | json                                                                                  |
+      | {"testid": 1001, "vehicle": {"make": "Toyota"}}                                       |
+      | {"testid": 2002, "vehicle": {"make": "Ford"}}                                         |
     When I send a GET request to "/api/inspections/jsonnative"
     Then the response status code should be 200
     And the "Content-Type" header should be "application/json"
@@ -281,9 +284,9 @@ Feature: Vehicle Inspection API Management
 
   @get @as_of @sunny_day
   Scenario: Successfully retrieve vehicle inspection history as of a specific date
-    Given the following vehicle inspections exist and have historical data as of "2023-10-25 12:00:00":
-      | testid | vehicle.make |
-      | 2006   | Ford         |
+    Given the following vehicle inspections exist:
+      | json                                                                                |
+      | {"testid": 2006, "vehicle": {"make": "Ford", "model": "Focus"}}                     |
     And I wait for 1 second
     And I capture the current timestamp
     And I wait for 1 second
