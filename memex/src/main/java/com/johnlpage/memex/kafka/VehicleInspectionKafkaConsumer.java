@@ -9,7 +9,6 @@ import com.johnlpage.memex.service.VehicleInspectionInvalidDataHandlerService;
 import com.johnlpage.memex.service.generic.PostWriteTriggerService;
 import com.johnlpage.memex.service.generic.PreWriteTriggerService;
 import com.mongodb.bulk.BulkWriteResult;
-import jakarta.annotation.PreDestroy;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
@@ -18,6 +17,8 @@ import java.util.concurrent.atomic.AtomicLong;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.LoggerFactory;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+import org.springframework.context.event.ContextClosedEvent;
+import org.springframework.context.event.EventListener;
 import org.springframework.kafka.annotation.KafkaListener;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
@@ -100,8 +101,8 @@ public class VehicleInspectionKafkaConsumer {
     }
   }
 
-  @PreDestroy
-  public void onShutdown() {
+  @EventListener
+  public void onContextClosed(ContextClosedEvent event) {
     sendBatch();
     System.out.println("Kafka Listener is shutting down.");
     CompletableFuture<Void> allFutures =
