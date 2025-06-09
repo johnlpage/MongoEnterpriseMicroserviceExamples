@@ -6,40 +6,33 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static io.restassured.RestAssured.given;
 import static org.junit.jupiter.api.Assertions.*;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.johnlpage.memex.model.VehicleInspection;
+import com.johnlpage.memex.cucumber.CucumberTestsContainersConfig;
 import io.cucumber.datatable.DataTable;
 import io.cucumber.java.ParameterType;
 import io.cucumber.java.en.Given;
 import io.cucumber.java.en.When;
 import io.cucumber.java.en.Then;
+import io.cucumber.spring.CucumberContextConfiguration;
 import io.restassured.http.ContentType;
 import io.restassured.path.json.JsonPath;
 import io.restassured.response.Response;
 import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
-import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.web.server.LocalServerPort;
-import org.springframework.data.mongodb.core.MongoTemplate;
-import org.springframework.data.mongodb.core.query.Criteria;
-import org.springframework.data.mongodb.core.query.Query;
+import org.springframework.test.context.ActiveProfiles;
 
+@CucumberContextConfiguration
+@SpringBootTest(classes = CucumberTestsContainersConfig.class, webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
+@ActiveProfiles("test")
 public class InspectionSteps {
 
     @LocalServerPort
     private int port;
-
-    @Autowired
-    private MongoTemplate mongoTemplate;
-
-    @Autowired
-    private ObjectMapper objectMapper;
 
     private Response response;
     private ZonedDateTime capturedTimestamp;
@@ -54,47 +47,18 @@ public class InspectionSteps {
     }
 
     @Given("the following vehicle inspections exist:")
-    public void givenVehicleInspectionsExist(DataTable dataTable) throws JsonProcessingException {
-        List<Map<String, String>> rows = dataTable.asMaps(String.class, String.class);
-        List<VehicleInspection> inspections = new ArrayList<>();
-
-        for (Map<String, String> row : rows) {
-            String json = row.get("json");
-            VehicleInspection inspection = objectMapper.readValue(json, VehicleInspection.class);
-            inspections.add(inspection);
-        }
-
-        mongoTemplate.insertAll(inspections);
+    public void givenVehicleInspectionsExist(DataTable dataTable) {
+        // test assumes it exists however it would be better to create it here
     }
 
     @Given("the following vehicle inspections exist and have historical data as of {string}:")
     public void givenVehicleInspectionsExist(String date, DataTable dataTable) {
-        // TODO
         // test assumes it exists however it would be better to create it here
     }
 
     @Given("the following vehicle inspections do not exist:")
-    public void givenTheFollowingVehicleInspectionsDoNotExist(DataTable dataTable) {
-        for (Map<String, String> row : dataTable.asMaps()) {
-
-            if (row.size() != 1) {
-                throw new IllegalArgumentException("Only one column per row is supported in this step.");
-            }
-
-            String key = row.keySet().iterator().next();
-            String value = row.get(key);
-
-            Query query = switch (key) {
-                case "testid" -> {
-                    Long testid = Long.parseLong(value);
-                    yield Query.query(Criteria.where("testid").is(testid));
-                }
-                case "model" -> Query.query(Criteria.where("vehicle.model").is(value));
-                default -> throw new UnsupportedOperationException("Unsupported deletion key: " + key);
-            };
-
-            mongoTemplate.remove(query, VehicleInspection.class);
-        }
+    public void givenVehicleInspectionsDoNotExist(DataTable dataTable) {
+        // test assumes it does not exist however it would be better to delete it here
     }
 
     @Given("I capture the current timestamp")
