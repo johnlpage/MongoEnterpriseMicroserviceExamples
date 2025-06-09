@@ -28,6 +28,8 @@ jobs:
         java-version: '17'
         distribution: 'temurin'
         cache: maven
+    - name: debug
+      run: pwd
     - name: Build with Maven
       run: mvn -B verify --file pom.xml
 
