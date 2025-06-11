@@ -54,6 +54,40 @@ To ensure test data isolation and prevent unintended side effects, vehicle inspe
 
 These properties can be adjusted in `src/test/resources/application-test.properties` if necessary for specific testing needs, but ensure they define a sensible range and that all tests strictly adhere to operating only within the specified `testid` boundaries.
 
+## Adding a New Test
+
+To add a new Cucumber test, follow these general steps:
+
+1.  **Define Scenarios in a `.feature` file**:
+    *   Locate an existing relevant `.feature` file in `src/test/resources/features/` (e.g., `inspections.rest.crud.feature`, `inspections.kafka.feature`) or create a new one if testing a new feature area or interaction type.
+    *   Write your test scenarios using Gherkin syntax (Given/When/Then). Clearly describe the preconditions, actions to be performed, and expected outcomes.
+    *   Use tags (`@tagname`) to categorize your scenarios or features (e.g., `@restapi`, `@kafka`, `@sunny_day`).
+
+2.  **Implement Step Definitions**:
+    *   For each Gherkin step in your scenario, you'll need a corresponding Java method in a step definition class. These classes are organized by concern within `src/test/java/com/johnlpage/memex/cucumber/steps/`:
+        *   `MongoPreConditionSteps.java`: For steps setting up or verifying database state (`@Given`).
+        *   `RestApiSteps.java`: For steps interacting with the REST API (`@When`, `@Then`).
+        *   `TimeManagementSteps.java`: For steps related to time (capturing timestamps, waiting).
+        *   `KafkaConsumerSteps.java`: For steps interacting with Kafka consumers/topics.
+        *   If your new steps cover a distinct area of functionality that doesn't fit well into any of the existing `Steps` classes above (e.g., interacting with a new external service, or a completely different domain of application logic), it's appropriate to create a new Java class for these step definitions within the `src/test/java/com/johnlpage/memex/cucumber/steps/` package. Ensure it follows the same patterns for dependency injection (e.g., `@Autowired` fields) and Spring configuration if needed.
+    *   **Reuse existing steps**: Before writing new step definition methods, check if existing ones in the relevant files can be reused.
+    *   **Create new steps**: If a step is new, add a public method annotated with `@Given`, `@When`, or `@Then` and a regex matching your Gherkin step to the appropriate class:
+        *   **Data Setup (`@Given` in `MongoPreConditionSteps.java`)**: 
+        
+            Use `MongoTemplate` for direct database interaction.
+            Crucially, ensure any `testid` values for `VehicleInspection` data are validated using the injected `VehicleInspectionIdRangeValidator` to adhere to the configured range in `application-test.properties`.
+        *   **API Interaction (`@When`/`@Then` in `RestApiSteps.java`)**:
+            
+            Use Rest Assured to build, send HTTP requests, and validate responses.
+            Utilize the injected `MacrosRegister` if your Gherkin step includes URL placeholders (e.g., `<timestamp>`) that need to be dynamically replaced.
+
+3.  **Run Your Test**:
+    *   Execute the tests (e.g., using `mvn clean verify` or by running the specific feature/scenario from your IDE).
+    *   Ensure your new test passes and doesn't break existing tests.
+
+4.  **Check Code Coverage**:
+    *   After your tests pass, review the JaCoCo code coverage report (see "Code Coverage" section below) to ensure your changes are adequately covered.
+
 ### Code Coverage
 
 We use **JaCoCo** to measure code coverage by our tests.
