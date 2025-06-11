@@ -6,49 +6,29 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static io.restassured.RestAssured.given;
 import static org.junit.jupiter.api.Assertions.*;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.johnlpage.memex.model.VehicleInspection;
-import io.cucumber.datatable.DataTable;
+import com.johnlpage.memex.cucumber.service.MacrosRegister;
 import io.cucumber.java.ParameterType;
-import io.cucumber.java.en.Given;
 import io.cucumber.java.en.When;
 import io.cucumber.java.en.Then;
 import io.restassured.http.ContentType;
 import io.restassured.path.json.JsonPath;
 import io.restassured.response.Response;
 
-import java.time.ZonedDateTime;
-import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.TimeUnit;
 
-import org.bson.Document;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.test.web.server.LocalServerPort;
-import org.springframework.data.mongodb.core.MongoTemplate;
-import org.springframework.data.mongodb.core.query.Criteria;
-import org.springframework.data.mongodb.core.query.Query;
-import org.springframework.data.mongodb.core.query.Update;
 
-public class InspectionSteps {
+public class RestApiSteps {
 
     @LocalServerPort
     private int port;
 
     @Autowired
-    private MongoTemplate mongoTemplate;
-
-    @Autowired
-    private ObjectMapper objectMapper;
-
-    @Autowired
-    private VehicleInspectionIdRangeValidator idRangeValidator;
+    MacrosRegister macroRegister;
 
     private Response response;
-    private ZonedDateTime capturedTimestamp;
 
     public String baseUrl() {
         return "http://localhost:" + port;
@@ -59,83 +39,9 @@ public class InspectionSteps {
         return Boolean.parseBoolean(bool);
     }
 
-    @Given("the following vehicle inspections exist:")
-    public void givenVehicleInspectionsExist(DataTable dataTable) throws JsonProcessingException {
-        List<Map<String, String>> rows = dataTable.asMaps(String.class, String.class);
-
-        for (Map<String, String> row : rows) {
-            String json = row.get("vehicleInspection");
-            VehicleInspection inspection = objectMapper.readValue(json, VehicleInspection.class);
-            Long testId = inspection.getTestid();
-            assertNotNull(testId, "testid is expected to be part of the data input");
-
-            idRangeValidator.validate(testId);
-            Query query = Query.query(Criteria.where("_id").is(testId));
-
-            Document updateDoc = new Document(objectMapper.convertValue(inspection, Map.class));
-            Update update = Update.fromDocument(updateDoc);
-
-            mongoTemplate.upsert(query, update, VehicleInspection.class);
-
-        }
-    }
-
-    @Given("the vehicle inspections in range {long}-{long} do not exist")
-    public void theFollowingVehicleInspectionsInRangeDoesNotExist(long startId, long endId) {
-        idRangeValidator.validateRange(startId, endId);
-        Query query = new Query();
-        query.addCriteria(Criteria.where("_id").gte(startId).lte(endId));
-        mongoTemplate.remove(query, VehicleInspection.class);
-    }
-
-    @Given("the vehicle inspection with id {long} does not exist")
-    public void theFollowingVehicleInspectionDoesNotExist(long testId) {
-        idRangeValidator.validate(testId);
-        Query query = new Query();
-        query.addCriteria(Criteria.where("_id").is(testId));
-        mongoTemplate.remove(query, VehicleInspection.class);
-    }
-
-    @Given("the following vehicle inspections do not exist:")
-    public void givenTheFollowingVehicleInspectionsDoNotExist(DataTable dataTable) {
-        for (Map<String, String> row : dataTable.asMaps()) {
-            if (row.size() != 1) {
-                throw new IllegalArgumentException("Only one column per row is supported in this step.");
-            }
-
-            String key = row.keySet().iterator().next();
-            String value = row.get(key);
-
-            long rangeStart = idRangeValidator.getRangeStart();
-            long rangeEnd = idRangeValidator.getRangeEnd();
-
-            Query query = Query.query(Criteria.where("_id").gte(rangeStart).lte(rangeEnd));
-
-            if (key.equalsIgnoreCase("testid")) {
-                long testid = Long.parseLong(value);
-                idRangeValidator.validate(testid);
-                query = Query.query(Criteria.where("_id").is(testid));
-            } else {
-                query.addCriteria(Criteria.where(key).is(value));
-            }
-            mongoTemplate.remove(query, VehicleInspection.class);
-
-        }
-    }
-
-    @Given("I capture the current timestamp")
-    public void iCaptureTheCurrentTimestamp() {
-        this.capturedTimestamp = ZonedDateTime.now();
-    }
-
-    @Given("I wait for {int} second(s)")
-    public void iWaitForSeconds(int seconds) throws InterruptedException {
-        TimeUnit.SECONDS.sleep(seconds);
-    }
-
     @When("I send a POST request to {string} with the payload:")
     public void iSendAPOSTRequestTo(String localUrl, String payload) {
-        String processedUrl = processUrl(localUrl);
+        String processedUrl = macroRegister.replaceMacros(localUrl);
         response = given()
                 .baseUri(baseUrl())
                 .contentType(ContentType.JSON)
@@ -143,18 +49,9 @@ public class InspectionSteps {
                 .post(processedUrl);
     }
 
-    private String processUrl(String localUrl) {
-        String processedUrl = localUrl;
-        if (this.capturedTimestamp != null && processedUrl.contains("<timestamp>")) {
-            String formattedTimestamp = this.capturedTimestamp.format(DateTimeFormatter.ofPattern("yyyyMMddHHmmss"));
-            processedUrl = processedUrl.replace("<timestamp>", formattedTimestamp);
-        }
-        return processedUrl;
-    }
-
     @When("I send a GET request to {string}")
     public void userSendsGetRequest(String localUrl) {
-        String processedUrl = processUrl(localUrl);
+        String processedUrl = macroRegister.replaceMacros(localUrl);
         response = given()
                 .baseUri(baseUrl())
                 .get(processedUrl);

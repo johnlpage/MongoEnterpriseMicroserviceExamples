@@ -1,4 +1,4 @@
-package com.johnlpage.memex.cucumber.steps;
+package com.johnlpage.memex.cucumber.service;
 
 import lombok.Getter;
 import org.springframework.beans.factory.annotation.Value;
@@ -11,7 +11,7 @@ public class VehicleInspectionIdRangeValidator {
     @Value("${memex.test.data.vehicleinspection-testid-range.start:10000}")
     private long rangeStart;
 
-    @Value("${memex.test.data.vehicleinspection-testid-range.end:20000}")
+    @Value("${memex.test.data.vehicleinspection-testid-range.end:11000}")
     private long rangeEnd;
 
     public void validate(long id) {

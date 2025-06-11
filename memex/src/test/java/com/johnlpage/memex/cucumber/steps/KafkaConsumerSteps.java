@@ -3,27 +3,23 @@ package com.johnlpage.memex.cucumber.steps;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.node.ObjectNode;
+import com.johnlpage.memex.cucumber.service.VehicleInspectionIdRangeValidator;
 import com.johnlpage.memex.model.VehicleInspection;
-import io.cucumber.datatable.DataTable;
 import io.cucumber.java.en.Then;
 import io.cucumber.java.en.When;
 import org.assertj.core.api.Assertions;
-import org.bson.Document;
-import org.springframework.beans.BeanWrapperImpl;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.mongodb.core.MongoTemplate;
 import org.springframework.data.mongodb.core.query.Criteria;
 import org.springframework.data.mongodb.core.query.Query;
 import org.springframework.kafka.core.KafkaTemplate;
 
-import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 
 
-public class VehicleInspectionKafkaConsumerSteps {
+public class KafkaConsumerSteps {
 
     @Autowired
     private KafkaTemplate<String, String> kafkaTemplate;

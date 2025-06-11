@@ -39,6 +39,21 @@ For integration tests requiring a database, we use Testcontainers to spin up a M
     *   **Requirement**: A Docker daemon must be running locally for this to work (e.g., by starting Docker Desktop).
 *   **Using an External MongoDB**: If you do not have Docker available, or wish to use a specific external MongoDB instance for testing, you can specify its connection string by setting the `spring.data.mongodb.uri` property in `src/test/resources/application-test.properties`. In this case, Testcontainers will not attempt to start a local MongoDB container.
 
+### Test Data `testid` Range
+
+To ensure test data isolation and prevent unintended side effects, vehicle inspection `testid` values used during test setup and execution **must** fall within a dedicated range. This range is defined by the following properties in `src/test/resources/application-test.properties`:
+*   `memex.test.data.vehicleinspection-testid-range.start`
+*   `memex.test.data.vehicleinspection-testid-range.end`
+
+**Important:**
+*   When writing or modifying tests, ensure all `testid` values used for creating, querying, or deleting test data are within this configured range.
+*   Tests **must not** attempt to read, modify, or delete data outside of this dedicated test ID range. This is crucial for preventing tests from interfering with each other or with any non-test data.
+*   Using a `testid` outside of this range during test data manipulation will lead to test failures.
+
+**Caution**: If you configure the tests to run against a real (non-Testcontainer) MongoDB instance, be aware that the tests **will modify data within this `testid` range on that MongoDB instance.** Ensure this range does not overlap with critical data if using a shared or persistent MongoDB server for testing. It is generally recommended to use Testcontainers or a dedicated, ephemeral test database to avoid accidental data modification.
+
+These properties can be adjusted in `src/test/resources/application-test.properties` if necessary for specific testing needs, but ensure they define a sensible range and that all tests strictly adhere to operating only within the specified `testid` boundaries.
+
 ### Code Coverage
 
 We use **JaCoCo** to measure code coverage by our tests.
