@@ -6,33 +6,46 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static io.restassured.RestAssured.given;
 import static org.junit.jupiter.api.Assertions.*;
 
-import com.johnlpage.memex.cucumber.CucumberTestsContainersConfig;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.johnlpage.memex.model.VehicleInspection;
 import io.cucumber.datatable.DataTable;
 import io.cucumber.java.ParameterType;
 import io.cucumber.java.en.Given;
 import io.cucumber.java.en.When;
 import io.cucumber.java.en.Then;
-import io.cucumber.spring.CucumberContextConfiguration;
 import io.restassured.http.ContentType;
 import io.restassured.path.json.JsonPath;
 import io.restassured.response.Response;
+
 import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
-import org.springframework.boot.test.context.SpringBootTest;
+import org.bson.Document;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.test.web.server.LocalServerPort;
-import org.springframework.test.context.ActiveProfiles;
+import org.springframework.data.mongodb.core.MongoTemplate;
+import org.springframework.data.mongodb.core.query.Criteria;
+import org.springframework.data.mongodb.core.query.Query;
+import org.springframework.data.mongodb.core.query.Update;
 
-@CucumberContextConfiguration
-@SpringBootTest(classes = CucumberTestsContainersConfig.class, webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
-@ActiveProfiles("test")
 public class InspectionSteps {
 
     @LocalServerPort
     private int port;
+
+    @Autowired
+    private MongoTemplate mongoTemplate;
+
+    @Autowired
+    private ObjectMapper objectMapper;
+
+    @Autowired
+    private VehicleInspectionIdRangeValidator idRangeValidator;
 
     private Response response;
     private ZonedDateTime capturedTimestamp;
@@ -42,23 +55,72 @@ public class InspectionSteps {
     }
 
     @ParameterType("true|false")
-    public Boolean bool(String bool){
+    public Boolean bool(String bool) {
         return Boolean.parseBoolean(bool);
     }
 
     @Given("the following vehicle inspections exist:")
-    public void givenVehicleInspectionsExist(DataTable dataTable) {
-        // test assumes it exists however it would be better to create it here
+    public void givenVehicleInspectionsExist(DataTable dataTable) throws JsonProcessingException {
+        List<Map<String, String>> rows = dataTable.asMaps(String.class, String.class);
+
+        for (Map<String, String> row : rows) {
+            String json = row.get("vehicleInspection");
+            VehicleInspection inspection = objectMapper.readValue(json, VehicleInspection.class);
+            Long testId = inspection.getTestid();
+            assertNotNull(testId, "testid is expected to be part of the data input");
+
+            idRangeValidator.validate(testId);
+            Query query = Query.query(Criteria.where("_id").is(testId));
+
+            Document updateDoc = new Document(objectMapper.convertValue(inspection, Map.class));
+            Update update = Update.fromDocument(updateDoc);
+
+            mongoTemplate.upsert(query, update, VehicleInspection.class);
+
+        }
     }
 
-    @Given("the following vehicle inspections exist and have historical data as of {string}:")
-    public void givenVehicleInspectionsExist(String date, DataTable dataTable) {
-        // test assumes it exists however it would be better to create it here
+    @Given("the vehicle inspections in range {long}-{long} do not exist")
+    public void theFollowingVehicleInspectionsInRangeDoesNotExist(long startId, long endId) {
+        idRangeValidator.validateRange(startId, endId);
+        Query query = new Query();
+        query.addCriteria(Criteria.where("_id").gte(startId).lte(endId));
+        mongoTemplate.remove(query, VehicleInspection.class);
+    }
+
+    @Given("the vehicle inspection with id {long} does not exist")
+    public void theFollowingVehicleInspectionDoesNotExist(long testId) {
+        idRangeValidator.validate(testId);
+        Query query = new Query();
+        query.addCriteria(Criteria.where("_id").is(testId));
+        mongoTemplate.remove(query, VehicleInspection.class);
     }
 
     @Given("the following vehicle inspections do not exist:")
-    public void givenVehicleInspectionsDoNotExist(DataTable dataTable) {
-        // test assumes it does not exist however it would be better to delete it here
+    public void givenTheFollowingVehicleInspectionsDoNotExist(DataTable dataTable) {
+        for (Map<String, String> row : dataTable.asMaps()) {
+            if (row.size() != 1) {
+                throw new IllegalArgumentException("Only one column per row is supported in this step.");
+            }
+
+            String key = row.keySet().iterator().next();
+            String value = row.get(key);
+
+            long rangeStart = idRangeValidator.getRangeStart();
+            long rangeEnd = idRangeValidator.getRangeEnd();
+
+            Query query = Query.query(Criteria.where("_id").gte(rangeStart).lte(rangeEnd));
+
+            if (key.equalsIgnoreCase("testid")) {
+                long testid = Long.parseLong(value);
+                idRangeValidator.validate(testid);
+                query = Query.query(Criteria.where("_id").is(testid));
+            } else {
+                query.addCriteria(Criteria.where(key).is(value));
+            }
+            mongoTemplate.remove(query, VehicleInspection.class);
+
+        }
     }
 
     @Given("I capture the current timestamp")
@@ -156,7 +218,7 @@ public class InspectionSteps {
         List<Map<String, Object>> list = jsonPath.getList("$");
         assertFalse(list.isEmpty(), "Response array should not be empty for this check");
         for (Map<String, Object> item : list) {
-            if(key.indexOf('.') > 0) {
+            if (key.indexOf('.') > 0) {
                 // If the value is a vehicle field, we need to check the nested structure
                 String[] parts = key.split("\\.");
                 assertThat(item, hasKey(parts[0]));
@@ -192,12 +254,12 @@ public class InspectionSteps {
         assertFalse(body.isEmpty(), "Response body should not be empty for stream check");
 
         // Split by any standard newline character(s)
-        String[] lines = body.split("\\r?\\n"); 
+        String[] lines = body.split("\\r?\\n");
         assertTrue(lines.length > 0, "Response body should contain at least one line for stream check");
 
         for (String line : lines) {
             // Skip potentially empty lines that might result from splitting (e.g., trailing newline)
-            if (line.trim().isEmpty()) continue; 
+            if (line.trim().isEmpty()) continue;
             try {
                 JsonPath.from(line); // This will throw an exception if the line is not valid JSON
             } catch (Exception e) {

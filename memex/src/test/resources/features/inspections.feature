@@ -8,10 +8,11 @@ Feature: Vehicle Inspection API Management
 
   @post @one_inspection @sunny_day
   Scenario: Successfully save a single vehicle inspection
+    Given the vehicle inspection with id 10001 does not exist
     When I send a POST request to "/api/inspection" with the payload:
       """
       {
-        "testid": 1001,
+        "testid": 10001,
         "testdate": "2023-10-26T10:00:00Z",
         "testclass": "Class 1",
         "testtype": "Annual",
@@ -35,10 +36,11 @@ Feature: Vehicle Inspection API Management
 
   @post @one_inspection @rainy_day
   Scenario: Fail to save a single vehicle inspection due to malformed JSON
+    Given the vehicle inspection with id 10002 does not exist
     When I send a POST request to "/api/inspection" with the payload:
       """
       {
-        "testid": 1002,
+        "testid": 10002,
         "testdate": "2023-10-26T10:00:00Z",
         "testclass": "Class 1",
         "testtype": "Annual",
@@ -63,24 +65,25 @@ Feature: Vehicle Inspection API Management
   @get @by_id @sunny_day
   Scenario: Successfully retrieve a vehicle inspection by ID
     Given the following vehicle inspections exist:
-      | testid | vehicle.model |
-      | 1001   | Corolla       |
-    When I send a GET request to "/api/inspections/id/1001"
+      | vehicleInspection                                                                      |
+      | {"testid": 10001, "vehicle": {"model": "Corolla"}}                                     |
+    When I send a GET request to "/api/inspections/id/10001"
     Then the response status code should be 200
-    And the response should contain "testid": 1001
+    And the response should contain "testid": 10001
     And the response should contain "vehicle.model": "Corolla"
 
   @get @by_id @rainy_day
   Scenario: Fail to retrieve a vehicle inspection by non-existent ID
     Given the following vehicle inspections do not exist:
       | testid |
-      | 4002   |
-    When I send a GET request to "/api/inspections/id/4002"
+      | 10001  |
+    When I send a GET request to "/api/inspections/id/10001"
     Then the response status code should be 404
     And the response should be empty
 
   @post @load_stream @sunny_day
   Scenario Outline: Successfully load a stream of vehicle inspections with different update strategies and futz options
+    Given the vehicle inspections in range 10001-10008 do not exist
     When I send a POST request to "/api/inspections?updateStrategy=<strategy>&futz=<futz>" with the payload:
       """
       [
@@ -130,18 +133,21 @@ Feature: Vehicle Inspection API Management
 
     Examples:
       | strategy          | futz  | id1  | id2  |
-      | REPLACE           | false | 2001 | 2002 |
-      | UPDATE            | false | 2003 | 2004 |
-      | UPDATEWITHHISTORY | true  | 2005 | 2006 |
-      | REPLACE           | true  | 2007 | 2008 |
+      | REPLACE           | false | 10001 | 10002 |
+      | UPDATE            | false | 10003 | 10004 |
+      | UPDATEWITHHISTORY | true  | 10005 | 10006 |
+      | REPLACE           | true  | 10007 | 10008 |
 
   @post @load_stream @sunny_day
-  Scenario: Successfully load a stream of vehicle inspections with different update strategies and futz options
+  Scenario: Successfully delete a vehicle inspection
+    Given the following vehicle inspections exist:
+      | vehicleInspection                                                 |
+      | {"testid": 10007}                                                 |
     When I send a POST request to "/api/inspections?updateStrategy=UPDATEWITHHISTORY&futz=true" with the payload:
       """
       [
         {
-          "testid": 2007,
+          "testid": 10007,
           "deleted": true
         }
       ]
@@ -149,20 +155,21 @@ Feature: Vehicle Inspection API Management
     Then the response status code should be 200
     And the response should contain "deletes": 1
     And the response should contain "success": true
-    When I send a GET request to "/api/inspections/id/2007"
+    When I send a GET request to "/api/inspections/id/10007"
     Then the response status code should be 404
 
   @post @load_stream @rainy_day
   Scenario: Fail to load a stream of vehicle inspections due to invalid JSON
+    Given the vehicle inspections in range 10001-10002 do not exist
     When I send a POST request to "/api/inspections?updateStrategy=REPLACE" with the payload:
       """
       [
         {
-          "testid": 3001,
+          "testid": 10001,
           "testdate": "2023-10-26T10:00:00Z"
         },
         { // Malformed object, missing closing brace
-          "testid": 3002,
+          "testid": 10002,
           "testdate": "2023-10-27T11:00:00Z"
       ]
       """
@@ -173,11 +180,11 @@ Feature: Vehicle Inspection API Management
   @get @by_model @sunny_day
   Scenario Outline: Successfully retrieve vehicle inspections by model with pagination
     Given the following vehicle inspections exist:
-      | testid | vehicle.model |
-      | 2002   | Focus         |
-      | 2004   | Focus         |
-      | 2006   | Focus         |
-      | 2008   | Focus         |
+      | vehicleInspection                                                                                    |
+      | {"testid": 10002, "vehicle": {"model": "Focus"}}                                         |
+      | {"testid": 10004, "vehicle": {"model": "Focus"}}                                         |
+      | {"testid": 10006, "vehicle": {"model": "Focus"}}                                         |
+      | {"testid": 10008, "vehicle": {"model": "Focus"}}                                         |
     When I send a GET request to "/api/inspections/model/<model>?page=<page>&size=<size>"
     Then the response status code should be 200
     And the response should contain "content" with <expected_count> items
@@ -193,8 +200,8 @@ Feature: Vehicle Inspection API Management
   @get @by_model @sunny_day
   Scenario: Retrieve no vehicle inspections for a non-existent model
     Given the following vehicle inspections do not exist:
-      | model            |
-      | NonExistentModel |
+      | vehicle.model            |
+      | NonExistentModel         |
     When I send a GET request to "/api/inspections/model/NonExistentModel"
     Then the response status code should be 200
     And the response should contain "content" with 0 items
@@ -204,9 +211,9 @@ Feature: Vehicle Inspection API Management
   @post @mongo_query @sunny_day
   Scenario: Successfully execute a native MongoDB query with sorting and filter on non-indexed field
     Given the following vehicle inspections exist:
-      | testid | vehicle.make |
-      | 1001   | Toyota       |
-      | 2002   | Ford         |
+    | vehicleInspection                                                                      |
+    | {"testid": 10001, "vehicle": {"make": "Toyota"}}                                       |
+    | {"testid": 10002, "vehicle": {"make": "Ford"}}                                         |
     When I send a POST request to "/api/inspections/query" with the payload:
       """
       {
@@ -225,9 +232,9 @@ Feature: Vehicle Inspection API Management
   @post @mongo_query @sunny_day
   Scenario: Successfully execute a native MongoDB query with sorting and filter on indexed field
     Given the following vehicle inspections exist:
-      | testid | vehicle.model |
-      | 1001   | Corolla       |
-      | 2002   | Focus         |
+      | vehicleInspection                                                                                    |
+      | {"testid": 10001, "vehicle": {"model": "Corolla"}}                                       |
+      | {"testid": 10002, "vehicle": {"model": "Focus"}}                                         |
     When I send a POST request to "/api/inspections/query" with the payload:
       """
       {
@@ -258,9 +265,9 @@ Feature: Vehicle Inspection API Management
   @get @stream_json @sunny_day
   Scenario: Successfully stream all vehicle inspections as JSON
     Given the following vehicle inspections exist:
-      | testid | vehicle.make |
-      | 1001   | Toyota       |
-      | 2002   | Ford         |
+      | vehicleInspection                                                                      |
+      | {"testid": 10001, "vehicle": {"make": "Toyota"}}                                       |
+      | {"testid": 10002, "vehicle": {"make": "Ford"}}                                         |
     When I send a GET request to "/api/inspections/json"
     Then the response status code should be 200
     And the "Content-Type" header should be "application/json"
@@ -270,9 +277,9 @@ Feature: Vehicle Inspection API Management
   @get @stream_json_native @sunny_day
   Scenario: Successfully stream all vehicle inspections as native JSON
     Given the following vehicle inspections exist:
-      | testid | vehicle.make |
-      | 1001   | Toyota       |
-      | 2002   | Ford         |
+      | vehicleInspection                                                                      |
+      | {"testid": 10001, "vehicle": {"make": "Toyota"}}                                       |
+      | {"testid": 10002, "vehicle": {"make": "Ford"}}                                         |
     When I send a GET request to "/api/inspections/jsonnative"
     Then the response status code should be 200
     And the "Content-Type" header should be "application/json"
@@ -281,9 +288,9 @@ Feature: Vehicle Inspection API Management
 
   @get @as_of @sunny_day
   Scenario: Successfully retrieve vehicle inspection history as of a specific date
-    Given the following vehicle inspections exist and have historical data as of "2023-10-25 12:00:00":
-      | testid | vehicle.make |
-      | 2006   | Ford         |
+    Given the following vehicle inspections exist:
+      | vehicleInspection                                                                    |
+      | {"testid": 10001, "vehicle": {"make": "Ford", "model": "Focus"}}                     |
     And I wait for 1 second
     And I capture the current timestamp
     And I wait for 1 second
@@ -291,7 +298,7 @@ Feature: Vehicle Inspection API Management
       """
       [
         {
-          "testid": 2006,
+          "testid": 10001,
           "testdate": "2025-10-27T11:00:00Z",
           "testclass": "Class 2",
           "testtype": "Interim",
@@ -312,18 +319,19 @@ Feature: Vehicle Inspection API Management
       ]
       """
     And the response status code should be 200
-    When I send a GET request to "/api/inspections/asOf?id=2006&asOfDate=<timestamp>"
+    When I send a GET request to "/api/inspections/asOf?id=10001&asOfDate=<timestamp>"
     Then the response status code should be 200
     And the "Transfer-Encoding" header should be "chunked"
     And the "Content-Type" header should be "application/json"
-    And the response should contain "testid": 2006
+    And the response should contain "testid": 10001
     And the response should contain "combined.vehicle.model": "Focus"
 
   @post @atlas_search @sunny_day
   Scenario: Successfully execute an Atlas Search query
     Given the following vehicle inspections exist:
-      | testid | vehicle.model |
-      | 1001   | Corolla       |
+      | vehicleInspection                                                                    |
+      | {"testid": 10001, "vehicle": {"model": "Corolla"}}                                   |
+    And I wait for 1 second
     When I send a POST request to "/api/inspections/search" with the payload:
       """
       {
