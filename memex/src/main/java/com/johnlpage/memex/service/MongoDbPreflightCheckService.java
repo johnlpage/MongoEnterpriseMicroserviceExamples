@@ -47,10 +47,10 @@ public class MongoDbPreflightCheckService {
   @Value("${memex.preflight.createRequiredIndexes:true}")
   private boolean createRequiredIndexes;
 
-  @Value("${memex.preflight.createRequiredIndexes:true}")
+  @Value("${memex.preflight.createCollections:true}")
   private boolean createCollections;
 
-  @Value("${memex.preflight.createRequiredIndexes:true}")
+  @Value("${memex.preflight.createSearchIndexes:true}")
   private boolean createSearchIndexes;
 
   public MongoDbPreflightCheckService(ApplicationContext context, MongoTemplate mongoTemplate) {
