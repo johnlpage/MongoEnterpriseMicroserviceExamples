@@ -12,7 +12,7 @@ It is freely licensed using Apache 2 to allow you to take the code and
 do whatever you want with it.
 
 It's been provided with a Web Service / REST Controller to
-make it easy to access and test and learn from but this can easily be replaces with
+make it easy to access and test and learn from but this can easily be replaced with
 Kafka or Batch based processing. Several of the services
 are designed to work with streams.
 
