@@ -15,10 +15,7 @@ on:
     branches: [ "main" ]
   workflow_dispatch:
   
-permissions:
-  pull-requests: write
-  contents: write
-  checks: write
+permissions: write-all
       
 jobs:
   build:
