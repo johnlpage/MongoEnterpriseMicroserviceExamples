@@ -6,7 +6,7 @@ Feature: Vehicle Inspection REST API - Point-in-Time History (As Of)
   @get @as_of @sunny_day
   Scenario: Successfully retrieve vehicle inspection history as of a specific date
     Given the following vehicle inspections exist:
-      | vehicleInspection                                                |
+      | vehicleinspection                                                |
       | {"testid": 10001, "vehicle": {"make": "Ford", "model": "Focus"}} |
     And I wait for 1 second
     And I capture the current timestamp to "<timestamp>" with "yyyyMMddHHmmss" pattern

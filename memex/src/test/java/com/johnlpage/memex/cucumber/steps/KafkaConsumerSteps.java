@@ -33,6 +33,7 @@ public class KafkaConsumerSteps {
     @Autowired
     private VehicleInspectionIdRangeValidator idRangeValidator;
 
+    // TODO: Use public API to save the vehicle inspections
     @When("I send {int} vehicle inspections starting with id {long} to kafka with:")
     public void sendVehicleInspectionsToKafka(int count, long startId, String jsonTemplate) throws JsonProcessingException {
         idRangeValidator.validate(startId);
@@ -49,6 +50,7 @@ public class KafkaConsumerSteps {
         }
     }
 
+    // TODO: Use public API to verify the vehicle inspections are saved
     @Then("verify {int} vehicle inspections are saved starting from id {long} in mongo with:")
     public void verifyVehicleInspectionsSaved(int count, long startId, String expectedJson) throws JsonProcessingException {
         long endId = startId + count - 1;

@@ -18,21 +18,17 @@ import java.util.List;
 import java.util.Map;
 
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.web.server.LocalServerPort;
+import org.springframework.beans.factory.annotation.Value;
 
 public class RestApiSteps {
 
-    @LocalServerPort
-    private int port;
+    @Value("${memex.base-url}")
+    private String baseUrl;
 
     @Autowired
     MacrosRegister macroRegister;
 
     private Response response;
-
-    public String baseUrl() {
-        return "http://localhost:" + port;
-    }
 
     @ParameterType("true|false")
     public Boolean bool(String bool) {
@@ -43,7 +39,7 @@ public class RestApiSteps {
     public void iSendAPOSTRequestTo(String localUrl, String payload) {
         String processedUrl = macroRegister.replaceMacros(localUrl);
         response = given()
-                .baseUri(baseUrl())
+                .baseUri(baseUrl)
                 .contentType(ContentType.JSON)
                 .body(payload)
                 .post(processedUrl);
@@ -53,7 +49,7 @@ public class RestApiSteps {
     public void userSendsGetRequest(String localUrl) {
         String processedUrl = macroRegister.replaceMacros(localUrl);
         response = given()
-                .baseUri(baseUrl())
+                .baseUri(baseUrl)
                 .get(processedUrl);
     }
 
