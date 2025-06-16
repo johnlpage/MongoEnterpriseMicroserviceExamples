@@ -1,6 +1,6 @@
 package com.johnlpage.memex.repository.optimized;
 
-import com.johnlpage.memex.model.UpdateStrategy;
+import com.johnlpage.memex.util.UpdateStrategy;
 import com.johnlpage.memex.service.generic.InvalidDataHandlerService;
 import com.johnlpage.memex.service.generic.PostWriteTriggerService;
 import com.mongodb.bulk.BulkWriteResult;

@@ -1,4 +1,4 @@
-package com.johnlpage.memex.model;
+package com.johnlpage.memex.util;
 
 /**
  * This IS used to set whether we are using a simple replace ro a recursive field update to

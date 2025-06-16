@@ -5,7 +5,7 @@ import com.fasterxml.jackson.core.JsonParser;
 import com.fasterxml.jackson.core.JsonToken;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.johnlpage.memex.model.UpdateStrategy;
+import com.johnlpage.memex.util.UpdateStrategy;
 import com.johnlpage.memex.repository.optimized.OptimizedMongoLoadRepository;
 import com.mongodb.bulk.BulkWriteResult;
 import jakarta.annotation.Nullable;
@@ -24,10 +24,6 @@ import org.apache.catalina.connector.ClientAbortException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
-import jakarta.validation.ConstraintViolation;
-import jakarta.validation.Validation;
-import jakarta.validation.Validator;
-import jakarta.validation.ValidatorFactory;
 
 @Service
 @RequiredArgsConstructor
@@ -35,6 +31,7 @@ public abstract class MongoDbJsonStreamingLoaderService<T> {
 
   private static final Logger LOG =
       LoggerFactory.getLogger(MongoDbJsonStreamingLoaderService.class);
+  private static final int BATCH_SIZE = 200;
   private final OptimizedMongoLoadRepository<T> repository;
   private final ObjectMapper objectMapper;
   private final JsonFactory jsonFactory;
@@ -79,7 +76,7 @@ public abstract class MongoDbJsonStreamingLoaderService<T> {
           count++;
 
           toSave.add(document);
-          if (toSave.size() >= 100) {
+          if (toSave.size() >= BATCH_SIZE) {
             List<T> copyOfToSave = List.copyOf(toSave);
             toSave.clear();
             futures.add(

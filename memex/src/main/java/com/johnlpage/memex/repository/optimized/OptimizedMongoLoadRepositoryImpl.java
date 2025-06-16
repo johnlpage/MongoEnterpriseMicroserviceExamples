@@ -3,7 +3,7 @@ package com.johnlpage.memex.repository.optimized;
 import static com.johnlpage.memex.util.AnnotationExtractor.*;
 import static org.springframework.data.mongodb.core.query.Criteria.where;
 
-import com.johnlpage.memex.model.UpdateStrategy;
+import com.johnlpage.memex.util.UpdateStrategy;
 import com.johnlpage.memex.service.generic.InvalidDataHandlerService;
 import com.johnlpage.memex.service.generic.PostWriteTriggerService;
 import com.mongodb.bulk.BulkWriteInsert;
