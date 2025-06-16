@@ -8,7 +8,7 @@ Feature: Vehicle Inspection REST API - Atlas Search Functionality
     Given the following vehicle inspections exist:
       | vehicleinspection                                  |
       | {"testid": 10001, "vehicle": {"model": "Corolla"}} |
-    And I wait for 1 second
+    And I wait for 2 seconds
     When I send a POST request to "/api/inspections/search" with the payload:
       """
       {

@@ -11,7 +11,7 @@ Feature: Vehicle Inspection Kafka Integration
     """
     {"capacity": 60, "vehicle": {"make": "Ford"}}
     """
-    Then I wait for 2 second
+    Then I wait for 2 seconds
     And verify 100 vehicle inspections starting from id 10000 do exist with:
     """
     {"capacity": 60, "vehicle": {"make": "Ford"}}
