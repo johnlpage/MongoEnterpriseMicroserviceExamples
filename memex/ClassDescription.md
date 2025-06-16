@@ -8,6 +8,9 @@ Memex.
 Memex comes as a working example application with most reusable functionality abstracted into reusable templated
 classes. If you cannot simply reuse these as they are, you can derive from them or modify them as needed.
 
+Memex also comes with a simple browser-based UI to demonstrate the query endpoints. This is not intended as reusable
+code.
+
 # Model Classes
 
 Model classes represent the data objects used by your application. They typically map to the objects you persist in the
