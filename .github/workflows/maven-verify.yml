@@ -14,14 +14,15 @@ on:
   pull_request:
     branches: [ "main" ]
   workflow_dispatch:
-
+  
+permissions:
+  pull-requests: write
+  contents: write
+  checks: write
+      
 jobs:
   build:
     runs-on: ubuntu-latest
-    permissions:
-      pull-requests: write
-      contents: write
-      checks: write
       
     steps:
     - uses: actions/checkout@v4
