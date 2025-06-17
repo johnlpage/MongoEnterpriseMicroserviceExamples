@@ -131,7 +131,7 @@ public class VehicleInspectionController {
    * This is a very "Raw" API interface that lets the caller design their own query and projection
    * etc.
    */
-  @PostMapping("/inspections/query")
+  @PostMapping(value ="/inspections/query", produces = MediaType.APPLICATION_JSON_VALUE)
   public ResponseEntity<String> mongoQuery(@RequestBody String requestBody) {
     List<VehicleInspection> result = queryService.mongoDbNativeQuery(requestBody);
     try {

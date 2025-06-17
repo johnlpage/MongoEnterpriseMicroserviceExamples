@@ -1,5 +1,7 @@
 package com.johnlpage.memex.cucumber.steps;
 
+import static org.junit.jupiter.api.Assertions.*;
+
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -7,25 +9,37 @@ import com.johnlpage.memex.cucumber.service.VehicleInspectionIdRangeValidator;
 import com.johnlpage.memex.model.VehicleInspection;
 import io.cucumber.java.en.Then;
 import io.cucumber.java.en.When;
+import jakarta.annotation.PostConstruct;
 import org.assertj.core.api.Assertions;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.data.mongodb.core.MongoTemplate;
-import org.springframework.data.mongodb.core.query.Criteria;
-import org.springframework.data.mongodb.core.query.Query;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.core.ParameterizedTypeReference;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.kafka.core.KafkaTemplate;
+import org.springframework.web.client.RestClient;
 
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 
-
 public class KafkaConsumerSteps {
+
+    @Value("${memex.base-url}")
+    private String apiBaseUrl;
 
     @Autowired
     private KafkaTemplate<String, String> kafkaTemplate;
 
     @Autowired
-    private MongoTemplate mongoTemplate;
+    private RestClient.Builder restClientBuilder;
+
+    private RestClient restClient;
+
+    @PostConstruct
+    public void init() {
+        this.restClient = restClientBuilder.baseUrl(apiBaseUrl).build();
+    }
 
     @Autowired
     private ObjectMapper objectMapper;
@@ -33,8 +47,8 @@ public class KafkaConsumerSteps {
     @Autowired
     private VehicleInspectionIdRangeValidator idRangeValidator;
 
-    @When("I send {int} vehicle inspections starting with id {long} to kafka with:")
-    public void sendVehicleInspectionsToKafka(int count, long startId, String jsonTemplate) throws JsonProcessingException {
+    @When("I send {int} vehicle inspections starting with id {long} to kafka {string} topic with:")
+    public void sendVehicleInspectionsToKafka(int count, long startId, String topicName, String jsonTemplate) throws JsonProcessingException {
         idRangeValidator.validate(startId);
         long endIdInclusive = startId + count - 1;
         idRangeValidator.validate(endIdInclusive);
@@ -45,28 +59,43 @@ public class KafkaConsumerSteps {
             vehicleInspection.setTestid(testId);
 
             String message = objectMapper.writeValueAsString(vehicleInspection);
-            kafkaTemplate.send("test", message);
+            kafkaTemplate.send(topicName, message);
         }
     }
 
-    @Then("verify {int} vehicle inspections are saved starting from id {long} in mongo with:")
+    @Then("{int} vehicle inspections starting from id {long} do exist with:")
     public void verifyVehicleInspectionsSaved(int count, long startId, String expectedJson) throws JsonProcessingException {
         long endId = startId + count - 1;
         idRangeValidator.validateRange(startId, endId);
 
         JsonNode expectedNode = objectMapper.readTree(expectedJson);
 
-        Query query = Query.query(Criteria.where("testid").gte(startId).lte(endId));
-        List<VehicleInspection> inspections = mongoTemplate.find(query, VehicleInspection.class);
+        String rangeCheck = "\"_id\": {\"$gte\": " + startId + ", \"$lte\": " + endId + "}";
+        String mongoQueryJson = String.format("{\"filter\": {%s}}", rangeCheck);
 
-        Assertions.assertThat(inspections).hasSize(count);
+        ResponseEntity<List<VehicleInspection>> responseEntity = restClient.post()
+                .uri(apiBaseUrl + "/api/inspections/query")
+                .contentType(MediaType.APPLICATION_JSON)
+                .body(mongoQueryJson)
+                .retrieve()
+                .toEntity(new ParameterizedTypeReference<List<VehicleInspection>>() {
+                });
 
-        for (VehicleInspection inspection : inspections) {
-            JsonNode inspectionJson = objectMapper.readTree(objectMapper.writeValueAsString(inspection));
-            assertJsonContains(expectedNode, inspectionJson);
-        }
+        assertTrue(responseEntity.getStatusCode().is2xxSuccessful());
+        List<VehicleInspection> inspections = responseEntity.getBody();
+
+        assertNotNull(inspections);
+        assertEquals(count, inspections.size());
+        inspections.forEach((inspection) -> {
+            JsonNode actualJson = null;
+            try {
+                actualJson = objectMapper.readTree(objectMapper.writeValueAsString(inspection));
+            } catch (JsonProcessingException e) {
+                throw new RuntimeException("Vehicle inspection verification failed for testid: " + inspection.getTestid(), e);
+            }
+            assertJsonContains(expectedNode, actualJson);
+        });
     }
-
 
     private void assertJsonContains(JsonNode expected, JsonNode actual) {
         for (Iterator<Map.Entry<String, JsonNode>> it = expected.fields(); it.hasNext(); ) {
@@ -86,5 +115,4 @@ public class KafkaConsumerSteps {
             }
         }
     }
-
 }
