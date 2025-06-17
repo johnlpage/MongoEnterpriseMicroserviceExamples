@@ -14,8 +14,6 @@ on:
   pull_request:
     branches: [ "main" ]
   workflow_dispatch:
-  
-permissions: write-all
       
 jobs:
   build:
@@ -47,11 +45,3 @@ jobs:
         # Github personal token to add comments to Pull Request
         token: ${{ secrets.GITHUB_TOKEN }}
         title: '# Java Code Coverage Report'
-
-    - name: Cucumber Report
-      uses: deblockt/cucumber-report-annotations-action@v1.7
-      with:
-        access-token: ${{ secrets.GITHUB_TOKEN }}
-        path: "**/Cucumber.json"
-        
-          
