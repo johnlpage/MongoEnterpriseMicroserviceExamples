@@ -1,4 +1,4 @@
-package com.johnlpage.memex.model;
+package com.johnlpage.memex.util;
 
 import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;

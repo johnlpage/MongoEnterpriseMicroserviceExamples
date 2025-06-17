@@ -3,7 +3,7 @@ package com.johnlpage.memex.controller;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.johnlpage.memex.dto.PageDto;
-import com.johnlpage.memex.model.UpdateStrategy;
+import com.johnlpage.memex.util.UpdateStrategy;
 import com.johnlpage.memex.model.Vehicle;
 import com.johnlpage.memex.model.VehicleInspection;
 import com.johnlpage.memex.repository.VehicleInspectionRepository;
@@ -164,9 +164,10 @@ public class VehicleInspectionController {
   public ResponseEntity<StreamingResponseBody> streamJson() {
 
     return ResponseEntity.ok()
-            .contentType(MediaType.APPLICATION_JSON)
-            .body(outputStream ->
-                    writeDocumentsToOutputStream(outputStream, downstreamService.jsonExtractStream()));
+        .contentType(MediaType.APPLICATION_JSON)
+        .body(
+            outputStream ->
+                writeDocumentsToOutputStream(outputStream, downstreamService.jsonExtractStream()));
   }
 
   /**
@@ -195,10 +196,13 @@ public class VehicleInspectionController {
         """;
 
     return ResponseEntity.ok()
-            .contentType(MediaType.APPLICATION_JSON)
-            .body(outputStream -> {
-              try (BufferedOutputStream bufferedOutputStream = new BufferedOutputStream(outputStream);
-                   Stream<JsonObject> stream = downstreamService.nativeJsonExtractStream(formatRequired)) {
+        .contentType(MediaType.APPLICATION_JSON)
+        .body(
+            outputStream -> {
+              try (BufferedOutputStream bufferedOutputStream =
+                      new BufferedOutputStream(outputStream);
+                  Stream<JsonObject> stream =
+                      downstreamService.nativeJsonExtractStream(formatRequired)) {
                 boolean isFirst = true;
                 Iterator<JsonObject> iterator = stream.iterator();
                 while (iterator.hasNext()) {
@@ -210,19 +214,21 @@ public class VehicleInspectionController {
                   isFirst = false;
                 }
               } catch (IOException e) {
-                LOG.error("Error during streaming jsonObjects using native mode: {}", e.getMessage());
+                LOG.error(
+                    "Error during streaming jsonObjects using native mode: {}", e.getMessage());
               }
             });
   }
 
   @GetMapping(value = "/inspections/asOf", produces = MediaType.APPLICATION_JSON_VALUE)
   public ResponseEntity<StreamingResponseBody> dataAtDate(
-          @RequestParam(name = "asOfDate") @DateTimeFormat(pattern = "yyyyMMddHHmmss") Date asOfDate,
-          @RequestParam(name = "id") Long id) {
+      @RequestParam(name = "asOfDate") @DateTimeFormat(pattern = "yyyyMMddHHmmss") Date asOfDate,
+      @RequestParam(name = "id") Long id) {
     return ResponseEntity.ok()
-            .contentType(MediaType.APPLICATION_JSON)
-            .body(outputStream ->
-                    writeDocumentsToOutputStream(outputStream, historyService.asOfDate(id, asOfDate)));
+        .contentType(MediaType.APPLICATION_JSON)
+        .body(
+            outputStream ->
+                writeDocumentsToOutputStream(outputStream, historyService.asOfDate(id, asOfDate)));
   }
 
   private void writeDocumentsToOutputStream(

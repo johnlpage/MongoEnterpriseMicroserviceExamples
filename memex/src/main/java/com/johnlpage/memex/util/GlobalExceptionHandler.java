@@ -1,4 +1,4 @@
-package com.johnlpage.memex.controller;
+package com.johnlpage.memex.util;
 
 import org.apache.catalina.connector.ClientAbortException;
 import org.slf4j.Logger;

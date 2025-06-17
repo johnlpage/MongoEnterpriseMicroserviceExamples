@@ -2,7 +2,7 @@ package com.johnlpage.memex.kafka;
 
 import com.fasterxml.jackson.core.JsonFactory;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.johnlpage.memex.model.UpdateStrategy;
+import com.johnlpage.memex.util.UpdateStrategy;
 import com.johnlpage.memex.model.VehicleInspection;
 import com.johnlpage.memex.repository.optimized.OptimizedMongoLoadRepository;
 import com.johnlpage.memex.service.VehicleInspectionInvalidDataHandlerService;

@@ -25,7 +25,7 @@ public interface VehicleInspectionRepository
    *
    *
   // Find inspections by engine capacity - auto generated query
-  List<VehicleInspection> findByCapacityGreaterThan(Long engineCapacity);
+  List<VehicleInspection> findAllByCapacityGreaterThan(Long engineCapacity);
 
   // Custom query to find vehicle inspections by vehicle make and model
   @Query("{ 'vehicle.make': ?0, 'vehicle.model': ?1 }")

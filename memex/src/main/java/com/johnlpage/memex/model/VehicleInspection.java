@@ -1,6 +1,7 @@
 package com.johnlpage.memex.model;
 
 import com.fasterxml.jackson.annotation.*;
+import com.johnlpage.memex.util.DeleteFlag;
 import com.johnlpage.memex.util.ObjectConverter;
 import java.util.Date;
 import java.util.HashMap;
@@ -43,7 +44,7 @@ public class VehicleInspection {
   Vehicle vehicle;
   String files;
 
-  @Min(49)
+  @Min(1)
   Long capacity;
 
   Date firstusedate;

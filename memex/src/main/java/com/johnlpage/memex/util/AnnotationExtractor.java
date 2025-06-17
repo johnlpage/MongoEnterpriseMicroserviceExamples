@@ -1,7 +1,6 @@
 package com.johnlpage.memex.util;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.johnlpage.memex.model.DeleteFlag;
 import jakarta.annotation.Nullable;
 import java.lang.reflect.Field;
 import java.util.HashMap;
