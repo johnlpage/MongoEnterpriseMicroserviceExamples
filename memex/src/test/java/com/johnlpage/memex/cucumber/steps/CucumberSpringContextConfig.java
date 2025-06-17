@@ -16,7 +16,7 @@ import org.springframework.test.context.TestPropertySource;
 @CucumberContextConfiguration
 @SpringBootTest(classes = CucumberTestsContainersConfig.class, webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 @ActiveProfiles("test")
-@EmbeddedKafka(partitions = 1, topics = {"test"})
+@EmbeddedKafka
 public class CucumberSpringContextConfig {
 
 }

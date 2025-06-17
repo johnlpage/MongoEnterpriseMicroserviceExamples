@@ -47,8 +47,8 @@ public class KafkaConsumerSteps {
     @Autowired
     private VehicleInspectionIdRangeValidator idRangeValidator;
 
-    @When("I send {int} vehicle inspections starting with id {long} to kafka with:")
-    public void sendVehicleInspectionsToKafka(int count, long startId, String jsonTemplate) throws JsonProcessingException {
+    @When("I send {int} vehicle inspections starting with id {long} to kafka {string} topic with:")
+    public void sendVehicleInspectionsToKafka(int count, long startId, String topicName, String jsonTemplate) throws JsonProcessingException {
         idRangeValidator.validate(startId);
         long endIdInclusive = startId + count - 1;
         idRangeValidator.validate(endIdInclusive);
@@ -59,11 +59,11 @@ public class KafkaConsumerSteps {
             vehicleInspection.setTestid(testId);
 
             String message = objectMapper.writeValueAsString(vehicleInspection);
-            kafkaTemplate.send("test", message);
+            kafkaTemplate.send(topicName, message);
         }
     }
 
-    @Then("verify {int} vehicle inspections starting from id {long} do exist with:")
+    @Then("{int} vehicle inspections starting from id {long} do exist with:")
     public void verifyVehicleInspectionsSaved(int count, long startId, String expectedJson) throws JsonProcessingException {
         long endId = startId + count - 1;
         idRangeValidator.validateRange(startId, endId);
@@ -115,12 +115,4 @@ public class KafkaConsumerSteps {
             }
         }
     }
-
-    public ResponseEntity<VehicleInspection> makeGetVehicleInspectionByIdRequest(long id) {
-        return restClient.get()
-                .uri(apiBaseUrl + "/api/inspections/id/" + id)
-                .retrieve()
-                .toEntity(VehicleInspection.class);
-    }
-
 }

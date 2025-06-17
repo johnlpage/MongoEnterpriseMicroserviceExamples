@@ -112,7 +112,7 @@ public class RestApiSteps {
         assertFalse(list.isEmpty(), "Response array should not be empty for this check");
         for (Map<String, Object> item : list) {
             if (key.indexOf('.') > 0) {
-                // If the value is a vehicle field, we need to check the nested structure
+                // If the value is an embedded document field, we need to check the nested structure
                 String[] parts = key.split("\\.");
                 assertThat(item, hasKey(parts[0]));
                 Object nestedValue = item.get(parts[0]);

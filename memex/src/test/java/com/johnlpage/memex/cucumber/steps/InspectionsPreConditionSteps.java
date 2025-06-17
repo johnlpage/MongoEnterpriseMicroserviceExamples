@@ -47,7 +47,7 @@ public class InspectionsPreConditionSteps {
         List<VehicleInspection> inspections = new ArrayList<>();
 
         for (Map<String, String> row : rows) {
-            String json = row.get("vehicleinspection");
+            String json = row.values().iterator().next(); // Assuming each row has a single JSON string value
             VehicleInspection inspection = objectMapper.readValue(json, VehicleInspection.class);
             inspections.add(inspection);
             Long testId = inspection.getTestid();
