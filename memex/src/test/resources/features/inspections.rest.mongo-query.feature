@@ -6,7 +6,7 @@ Feature: Vehicle Inspection REST API - Native MongoDB Query Execution
   @post @sunny_day
   Scenario: Successfully execute a native MongoDB query with sorting and filter on non-indexed field
     Given the following vehicle inspections exist:
-      | vehicleInspection                                |
+      | vehicleinspection                                |
       | {"testid": 10001, "vehicle": {"make": "Toyota"}} |
       | {"testid": 10002, "vehicle": {"make": "Ford"}}   |
     When I send a POST request to "/api/inspections/query" with the payload:
@@ -27,7 +27,7 @@ Feature: Vehicle Inspection REST API - Native MongoDB Query Execution
   @post @sunny_day
   Scenario: Successfully execute a native MongoDB query with sorting and filter on indexed field
     Given the following vehicle inspections exist:
-      | vehicleInspection                                  |
+      | vehicleinspection                                  |
       | {"testid": 10001, "vehicle": {"model": "Corolla"}} |
       | {"testid": 10002, "vehicle": {"model": "Focus"}}   |
     When I send a POST request to "/api/inspections/query" with the payload:

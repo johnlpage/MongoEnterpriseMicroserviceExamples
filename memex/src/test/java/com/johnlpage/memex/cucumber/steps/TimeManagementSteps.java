@@ -13,12 +13,10 @@ public class TimeManagementSteps {
     @Autowired
     MacrosRegister macroRegister;
 
-    private ZonedDateTime capturedTimestamp;
-
     @Given("I capture the current timestamp to {string} with {string} pattern")
     public void iCaptureTheCurrentTimestamp(String macroName, String datePattern) {
-        this.capturedTimestamp = ZonedDateTime.now();
-        macroRegister.registerMacro(macroName, this.capturedTimestamp.format(DateTimeFormatter.ofPattern(datePattern)));
+        ZonedDateTime capturedTimestamp = ZonedDateTime.now();
+        macroRegister.registerMacro(macroName, capturedTimestamp.format(DateTimeFormatter.ofPattern(datePattern)));
     }
 
     @Given("I wait for {int} second(s)")

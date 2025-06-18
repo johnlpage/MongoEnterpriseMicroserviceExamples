@@ -62,7 +62,7 @@ Feature: Vehicle Inspection REST API - Core CRUD Operations
   @get @by_id @sunny_day
   Scenario: Successfully retrieve a vehicle inspection by ID
     Given the following vehicle inspections exist:
-      | vehicleInspection                                  |
+      | vehicleinspection                                  |
       | {"testid": 10001, "vehicle": {"model": "Corolla"}} |
     When I send a GET request to "/api/inspections/id/10001"
     Then the response status code should be 200
@@ -71,9 +71,7 @@ Feature: Vehicle Inspection REST API - Core CRUD Operations
 
   @get @by_id @rainy_day
   Scenario: Fail to retrieve a vehicle inspection by non-existent ID
-    Given the following vehicle inspections do not exist:
-      | testid |
-      | 10001  |
+    Given the vehicle inspection with id 10001 does not exist
     When I send a GET request to "/api/inspections/id/10001"
     Then the response status code should be 404
     And the response should be empty
@@ -81,7 +79,7 @@ Feature: Vehicle Inspection REST API - Core CRUD Operations
   @get @by_model @sunny_day
   Scenario Outline: Successfully retrieve vehicle inspections by model with pagination
     Given the following vehicle inspections exist:
-      | vehicleInspection                                |
+      | vehicleinspection                                |
       | {"testid": 10002, "vehicle": {"model": "Focus"}} |
       | {"testid": 10004, "vehicle": {"model": "Focus"}} |
       | {"testid": 10006, "vehicle": {"model": "Focus"}} |
@@ -101,8 +99,8 @@ Feature: Vehicle Inspection REST API - Core CRUD Operations
   @get @by_model @sunny_day
   Scenario: Retrieve no vehicle inspections for a non-existent model
     Given the following vehicle inspections do not exist:
-      | vehicle.model    |
-      | NonExistentModel |
+      | vehicleinspection                     |
+      | {"vehicle.model": "NonExistentModel"} |
     When I send a GET request to "/api/inspections/model/NonExistentModel"
     Then the response status code should be 200
     And the response should contain "content" with 0 items

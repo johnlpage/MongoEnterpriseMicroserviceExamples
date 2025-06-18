@@ -63,7 +63,7 @@ Feature: Vehicle Inspection REST API - Data Streaming Capabilities
   @post @load_stream @sunny_day
   Scenario: Successfully delete a vehicle inspection
     Given the following vehicle inspections exist:
-      | vehicleInspection |
+      | vehicleinspection |
       | {"testid": 10007} |
     When I send a POST request to "/api/inspections?updateStrategy=UPDATEWITHHISTORY&futz=true" with the payload:
       """
@@ -102,7 +102,7 @@ Feature: Vehicle Inspection REST API - Data Streaming Capabilities
   @get @stream_json @sunny_day
   Scenario: Successfully stream all vehicle inspections as JSON
     Given the following vehicle inspections exist:
-      | vehicleInspection                                |
+      | vehicleinspection                                |
       | {"testid": 10001, "vehicle": {"make": "Toyota"}} |
       | {"testid": 10002, "vehicle": {"make": "Ford"}}   |
     When I send a GET request to "/api/inspections/json"
@@ -114,7 +114,7 @@ Feature: Vehicle Inspection REST API - Data Streaming Capabilities
   @get @stream_json_native @sunny_day
   Scenario: Successfully stream all vehicle inspections as native JSON
     Given the following vehicle inspections exist:
-      | vehicleInspection                                |
+      | vehicleinspection                                |
       | {"testid": 10001, "vehicle": {"make": "Toyota"}} |
       | {"testid": 10002, "vehicle": {"make": "Ford"}}   |
     When I send a GET request to "/api/inspections/jsonnative"

@@ -14,12 +14,11 @@ on:
   pull_request:
     branches: [ "main" ]
   workflow_dispatch:
-
+      
 jobs:
   build:
-
     runs-on: ubuntu-latest
-
+      
     steps:
     - uses: actions/checkout@v4
     - name: Set up JDK 17
@@ -46,5 +45,3 @@ jobs:
         # Github personal token to add comments to Pull Request
         token: ${{ secrets.GITHUB_TOKEN }}
         title: '# Java Code Coverage Report'
-        
-          

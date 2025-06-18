@@ -18,21 +18,17 @@ import java.util.List;
 import java.util.Map;
 
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.web.server.LocalServerPort;
+import org.springframework.beans.factory.annotation.Value;
 
 public class RestApiSteps {
 
-    @LocalServerPort
-    private int port;
+    @Value("${memex.base-url}")
+    private String baseUrl;
 
     @Autowired
     MacrosRegister macroRegister;
 
     private Response response;
-
-    public String baseUrl() {
-        return "http://localhost:" + port;
-    }
 
     @ParameterType("true|false")
     public Boolean bool(String bool) {
@@ -43,7 +39,7 @@ public class RestApiSteps {
     public void iSendAPOSTRequestTo(String localUrl, String payload) {
         String processedUrl = macroRegister.replaceMacros(localUrl);
         response = given()
-                .baseUri(baseUrl())
+                .baseUri(baseUrl)
                 .contentType(ContentType.JSON)
                 .body(payload)
                 .post(processedUrl);
@@ -53,7 +49,7 @@ public class RestApiSteps {
     public void userSendsGetRequest(String localUrl) {
         String processedUrl = macroRegister.replaceMacros(localUrl);
         response = given()
-                .baseUri(baseUrl())
+                .baseUri(baseUrl)
                 .get(processedUrl);
     }
 
@@ -116,7 +112,7 @@ public class RestApiSteps {
         assertFalse(list.isEmpty(), "Response array should not be empty for this check");
         for (Map<String, Object> item : list) {
             if (key.indexOf('.') > 0) {
-                // If the value is a vehicle field, we need to check the nested structure
+                // If the value is an embedded document field, we need to check the nested structure
                 String[] parts = key.split("\\.");
                 assertThat(item, hasKey(parts[0]));
                 Object nestedValue = item.get(parts[0]);
