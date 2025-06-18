@@ -1,11 +1,8 @@
 package com.johnlpage.memex.repository;
 
-import com.johnlpage.memex.model.VehicleInspection;
-import com.johnlpage.memex.repository.optimized.MongoHistoryRepository;
-import com.johnlpage.memex.repository.optimized.OptimizedMongoDownstreamRepository;
-import com.johnlpage.memex.repository.optimized.OptimizedMongoLoadRepository;
-import com.johnlpage.memex.repository.optimized.OptimizedMongoQueryRepository;
-import java.util.stream.Stream;
+import com.johnlpage.memex.model.Vehicle;
+import java.util.Optional;
+import org.springframework.data.mongodb.repository.Aggregation;
 import org.springframework.data.mongodb.repository.MongoRepository;
 import org.springframework.stereotype.Repository;
 
@@ -13,38 +10,33 @@ import org.springframework.stereotype.Repository;
 versions of MongoDB queries
 */
 @Repository
-public interface VehicleInspectionRepository
-    extends MongoRepository<VehicleInspection, Long>,
-        OptimizedMongoLoadRepository<VehicleInspection>,
-        OptimizedMongoQueryRepository<VehicleInspection>,
-        OptimizedMongoDownstreamRepository<VehicleInspection>,
-        MongoHistoryRepository<VehicleInspection, Long> {
+public interface VehicleRepository extends MongoRepository<Vehicle, Long> {
 
-  /*
-   * EXAMPLE REPOSITORY METHODS
-   *
-   *
-  // Find inspections by engine capacity - auto generated query
-  List<VehicleInspection> findAllByCapacityGreaterThan(Long engineCapacity);
+  // We don't have a separate vehicle collection so any Queries need to be sent to VehicleInspection
 
-  // Custom query to find vehicle inspections by vehicle make and model
-  @Query("{ 'vehicle.make': ?0, 'vehicle.model': ?1 }")
-  List<VehicleInspection> findByVehicleMakeAndModel(String make, String model);
+  // VehicleInspection - Start with matching nothing then use $unionWith to swap collections
+  // Find inside the embedded object then use replaceWith to just keep the vehicle object
+  // Alternatively we code have projected a top level object matching Vehicle
 
-  // Custom aggregation to compute mean mileage of a given model
   @Aggregation(
       pipeline = {
-        "{ '$match': { 'vehicle.model': ?0 } }",
-        "{ '$group': { '_id': null, 'averageMileage': { '$avg': '$vehicle.mileage' } } }"
+        "{$match:{_id:null}}",
+        "{ $unionWith: { coll: 'vehicleinspection', pipeline: [ { $match:  { 'vehicle.vehicleid' : ?0 }}] }}",
+        "{$limit: 1}",
+        "{$replaceWith:'$vehicle'}"
       })
-  List<Document> findAverageMileageByModel(String model);
+  Optional<Vehicle> findByVehicleId(Long id);
 
-  // Simple efficient update without reading or sending whole document (N.B won't do history)
-  @Query("{ 'testid' : ?0 }")
-  @Update("{ 'inc' : { 'testmileage' : ?1 } }")
-  void adjustTestMileage(Long testid, int increment);
-  */
+  // Fetch a Vehicle then add all it's inspections to it. - N.B make sure this is indexed.
 
-  // You have to explicitly call out a streaming version here if you want it.
-  Stream<VehicleInspection> findAllBy();
+  @Aggregation(
+      pipeline = {
+        "{$match:{_id:null}}",
+        "{ $unionWith: { coll: 'vehicleinspection', pipeline: [ { $match:  { 'vehicle.vehicleid' : ?0 }}] }}",
+        "{$limit: 1}",
+        "{$replaceWith:'$vehicle'}",
+        "{$lookup: { from:  'vehicleinspection', localField: 'vehicleid', foreignField: 'vehicle.vehicleid', "
+            + "as: 'inspections' }}"
+      })
+  Optional<Vehicle> findByVehicleIdWithInspections(Long id);
 }

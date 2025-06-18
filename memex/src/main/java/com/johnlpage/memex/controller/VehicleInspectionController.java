@@ -60,7 +60,7 @@ public class VehicleInspectionController {
   public ResponseEntity<Vehicle> vehicleById(@PathVariable Long id) {
     // While you can to straight to the repository, it's  best practise to use a service.
     return vehicleRepository
-        .findByVehicleId(id)
+        .findByVehicleIdWithInspections(id)
         .map(ResponseEntity::ok)
         .orElse(ResponseEntity.notFound().build());
   }
@@ -144,7 +144,7 @@ public class VehicleInspectionController {
    * This is a very "Raw" API interface that lets the caller design their own query and projection
    * etc.
    */
-  @PostMapping(value ="/inspections/query", produces = MediaType.APPLICATION_JSON_VALUE)
+  @PostMapping(value = "/inspections/query", produces = MediaType.APPLICATION_JSON_VALUE)
   public ResponseEntity<String> mongoQuery(@RequestBody String requestBody) {
     List<VehicleInspection> result = queryService.mongoDbNativeQuery(requestBody);
     try {
