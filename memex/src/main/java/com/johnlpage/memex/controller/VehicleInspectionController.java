@@ -3,12 +3,13 @@ package com.johnlpage.memex.controller;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.johnlpage.memex.dto.PageDto;
-import com.johnlpage.memex.util.UpdateStrategy;
 import com.johnlpage.memex.model.Vehicle;
 import com.johnlpage.memex.model.VehicleInspection;
 import com.johnlpage.memex.repository.VehicleInspectionRepository;
+import com.johnlpage.memex.repository.VehicleRepository;
 import com.johnlpage.memex.service.*;
 import com.johnlpage.memex.service.generic.MongoDbJsonStreamingLoaderService;
+import com.johnlpage.memex.util.UpdateStrategy;
 import jakarta.servlet.http.HttpServletRequest;
 import java.io.BufferedOutputStream;
 import java.io.IOException;
@@ -51,6 +52,18 @@ public class VehicleInspectionController {
 
   private final ObjectMapper objectMapper;
   private final VehicleInspectionRepository vehicleInspectionRepository;
+
+  /** Added To Demonstrate, Skipping service layer for simplicity */
+  private final VehicleRepository vehicleRepository;
+
+  @GetMapping("/vehicles/id/{id}")
+  public ResponseEntity<Vehicle> vehicleById(@PathVariable Long id) {
+    // While you can to straight to the repository, it's  best practise to use a service.
+    return vehicleRepository
+        .findByVehicleId(id)
+        .map(ResponseEntity::ok)
+        .orElse(ResponseEntity.notFound().build());
+  }
 
   @PostMapping("/inspection")
   public void oneinspection(@RequestBody VehicleInspection inspection) {
