@@ -3,9 +3,9 @@ package com.johnlpage.memex.repository.optimized;
 import static com.johnlpage.memex.util.AnnotationExtractor.*;
 import static org.springframework.data.mongodb.core.query.Criteria.where;
 
-import com.johnlpage.memex.util.UpdateStrategy;
 import com.johnlpage.memex.service.generic.InvalidDataHandlerService;
 import com.johnlpage.memex.service.generic.PostWriteTriggerService;
+import com.johnlpage.memex.util.UpdateStrategy;
 import com.mongodb.bulk.BulkWriteInsert;
 import com.mongodb.bulk.BulkWriteResult;
 import com.mongodb.bulk.BulkWriteUpsert;
@@ -24,7 +24,6 @@ import org.bson.Document;
 import org.bson.types.ObjectId;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.boot.actuate.metrics.data.MetricsRepositoryMethodInvocationListener;
 import org.springframework.data.mongodb.core.BulkOperations;
 import org.springframework.data.mongodb.core.FindAndReplaceOptions;
 import org.springframework.data.mongodb.core.MongoTemplate;
@@ -81,7 +80,7 @@ public class OptimizedMongoLoadRepositoryImpl<T> implements OptimizedMongoLoadRe
                 .append(PREVIOUS_VALS, condFinal));
   }
 
-  private final MetricsRepositoryMethodInvocationListener metricsRepositoryMethodInvocationListener;
+
   private final MongoTemplate mongoTemplate;
   private final MappingMongoConverter mappingMongoConverter;
   private final MongoClient mongoClient;
