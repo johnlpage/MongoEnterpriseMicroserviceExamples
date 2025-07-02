@@ -1,29 +1,24 @@
 package com.johnlpage.memex.util;
 
-import java.text.ParseException;
-import java.text.SimpleDateFormat;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.ZonedDateTime;
+import java.time.format.DateTimeFormatter;
+import java.time.format.DateTimeParseException;
 import java.util.*;
 
 public class ObjectConverter {
 
-  private static final List<String> DATE_FORMATS = new ArrayList<>();
-  private static final List<SimpleDateFormat> dateFormatters = new ArrayList<>();
+  // DateTimeFormatter is thread-safe!
+  private static final List<DateTimeFormatter> DATE_FORMATTERS = new ArrayList<>();
+
+  // Add esoteric like MM/dd/yyyy in here if needed
 
   static {
-    // Add various date formats you want to support
-    DATE_FORMATS.add("yyyy-MM-dd"); // Basic date format
-    DATE_FORMATS.add("yyyy-MM-dd'T'HH:mm:ss"); // ISO 8601 with seconds
-    // DATE_FORMATS.add("MM/dd/yyyy");                 // US date format
-    //  DATE_FORMATS.add("dd/MM/yyyy");                 // European date format
-    DATE_FORMATS.add("yyyy-MM-dd'T'HH:mm:ss.SSSX"); // ISO 8601 with milliseconds and timezone
-    DATE_FORMATS.add("yyyy-MM-dd'T'HH:mm:ssX"); // ISO 8601 with seconds and timezone
-    // Add more formats as needed
-
-    for (String format : DATE_FORMATS) {
-      SimpleDateFormat formatter = new SimpleDateFormat(format);
-      formatter.setTimeZone(TimeZone.getTimeZone("UTC"));
-      dateFormatters.add(formatter);
-    }
+    DATE_FORMATTERS.add(DateTimeFormatter.ofPattern("yyyy-MM-dd"));
+    DATE_FORMATTERS.add(DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss"));
+    DATE_FORMATTERS.add(DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss.SSSX"));
+    DATE_FORMATTERS.add(DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ssX"));
   }
 
   public static Object convertObject(Object input) {
@@ -31,14 +26,28 @@ public class ObjectConverter {
       return ((Number) input).doubleValue();
     }
     if (input instanceof String str) {
-      // Optimisation given the formats we support
       if (!str.isEmpty() && str.length() >= 8 && Character.isDigit(str.charAt(0))) {
-        for (SimpleDateFormat sdf : dateFormatters) {
+        for (DateTimeFormatter formatter : DATE_FORMATTERS) {
           try {
-            return sdf.parse(str);
-          } catch (ParseException e) {
-            // Continue to the next format
-          } // DATE_FORMATS.add("dd/MM/yyyy");                 // European date format
+            // Try parsing as different date/time types
+            if (str.contains("T")) {
+              if (str.contains("Z") || str.contains("+") || str.contains("-")) {
+                return Date.from(ZonedDateTime.parse(str, formatter).toInstant());
+              } else {
+                return Date.from(
+                    LocalDateTime.parse(str, formatter)
+                        .atZone(java.time.ZoneOffset.UTC)
+                        .toInstant());
+              }
+            } else {
+              return Date.from(
+                  LocalDate.parse(str, formatter)
+                      .atStartOfDay(java.time.ZoneOffset.UTC)
+                      .toInstant());
+            }
+          } catch (DateTimeParseException e) {
+            // Continue to next formatter
+          }
         }
       }
       return input;
@@ -57,7 +66,6 @@ public class ObjectConverter {
       }
       return list;
     }
-    // For other unhandled types, return as is
     return input;
   }
 }
