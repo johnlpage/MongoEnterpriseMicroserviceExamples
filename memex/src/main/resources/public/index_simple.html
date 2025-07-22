@@ -95,20 +95,10 @@
                 </div>
 
                 <div class="scrollable border m-1 p-1">
-                    <h5>Details
-                        <button @click="showAlt = !showAlt"
-                                class="btn btn-sm btn-outline-secondary ms-2">
-                            JSON/Form
-                        </button>
-                    </h5>
-                    <div v-if="!showAlt">
-        <pre>
+                    <h5>Details</h5>
+                    <pre>
 {{ selectedDoc }}
-        </pre>
-                    </div>
-                    <div v-else>
-                        <form-viewer :data="selectedDoc"></form-viewer>
-                    </div>
+                        </pre>
                 </div>
 
 

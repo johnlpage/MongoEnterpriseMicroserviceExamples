@@ -28,3 +28,57 @@
     height: 98vh;
     /* Makes the right column fill the screen vertically */
 }
+
+.form-viewer {
+    margin: 32px;
+    max-width: 600px;
+}
+
+.object-block, .array-block {
+    border: 1px solid #ccc;
+    border-radius: 6px;
+    padding: 12px;
+    margin-bottom: 12px;
+    background: #f9f9f9;
+}
+
+.field-row {
+    display: flex;
+    align-items: center;
+    margin-bottom: 8px;
+}
+
+.field-label {
+    font-weight: bold;
+    margin-right: 0.5em;
+    min-width: 80px;
+    color: #222;
+}
+
+.field-value {
+    background: #fff;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    padding: 3px 8px;
+    display: inline-block;
+    word-break: break-word;
+    flex: 1;
+    font-family: inherit;
+}
+
+.level-1 {
+    margin-left: 16px;
+}
+
+.level-2 {
+    margin-left: 32px;
+}
+
+.level-3 {
+    margin-left: 48px;
+}
+
+.scroll-array {
+    max-height: 200px; /* Adjust as you wish */
+    overflow-y: auto;
+}

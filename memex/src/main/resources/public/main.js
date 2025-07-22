@@ -1,4 +1,87 @@
 /* THIS IS ONLY INTENDED TO DEMONSTRATE THE BACKEND NOT TO BE A REFERENCE FRONTEND  */
+const {createApp, defineComponent, h} = Vue;
+
+
+const FormViewer = defineComponent({
+    name: 'FormViewer',
+    props: {
+        data: {type: [Object, Array, String, Number, Boolean, null], required: true},
+        level: {type: Number, default: 0},
+        fieldName: {type: String, default: ''}
+    },
+    setup(props) {
+        function getLevelClass() {
+            return 'level-' + props.level;
+        }
+
+        const isObj = val => val && typeof val === 'object' && !Array.isArray(val);
+
+        return () => {
+            // Primitive or null
+            if (props.data === null || ['string', 'number', 'boolean'].includes(typeof props.data)) {
+                return h('div', {class: ['field-row', getLevelClass()]}, [
+                    props.fieldName
+                        ? h('label', {class: 'field-label'}, props.fieldName + ':')
+                        : null,
+                    h('span', {
+                        class: 'field-value',
+                        style: {background: '#f4f8ff'}
+                    }, String(props.data))
+                ]);
+            }
+
+            // Array
+            if (Array.isArray(props.data)) {
+                // Array of primitives
+                if (!props.data.length || typeof props.data[0] !== 'object') {
+                    return h('div', {class: ['array-block', 'scroll-array', getLevelClass()]}, [
+                        props.fieldName
+                            ? h('label', {class: 'field-label'}, props.fieldName)
+                            : null,
+                        ...props.data.map((item) =>
+                            h('div', {class: 'field-row', style: 'margin-bottom:4px'}, [
+                                h('span', {class: 'field-value', style: {background: '#f4f8ff'}}, String(item))
+                            ])
+                        ),
+                        props.data.length === 0 && h('span', {style: 'color:#888'}, 'Empty array')
+                    ]);
+                } else {
+                    // Array of objects or nested arrays
+                    return h('div', {class: ['array-block', 'scroll-array', getLevelClass()]}, [
+                        props.fieldName
+                            ? h('label', {class: 'field-label'}, props.fieldName)
+                            : null,
+                        ...props.data.map((item) =>
+                            h(FormViewer, {data: item, level: props.level + 1})
+                        ),
+                        props.data.length === 0 && h('span', {style: 'color:#888'}, 'Empty array')
+                    ]);
+                }
+            }
+
+            // Object
+            if (isObj(props.data)) {
+                return h('div', {class: ['object-block', getLevelClass()]}, [
+                    props.fieldName
+                        ? h('label', {class: 'field-label'}, props.fieldName)
+                        : null,
+                    ...Object.keys(props.data).map(key =>
+                        h(FormViewer, {
+                            data: props.data[key],
+                            fieldName: key,
+                            level: props.level + 1,
+                            key
+                        })
+                    ),
+                    !Object.keys(props.data).length && h('div', {style: 'color:#888'}, 'Empty object')
+                ]);
+            }
+
+            // fallback display
+            return h('span', String(props.data));
+        };
+    }
+});
 
 async function fetchCollectionInfo() {
     try {
@@ -195,10 +278,12 @@ function isNumberOrDate(value) {
 
 function onLoad() {
     const app = Vue.createApp({
+        components: {FormViewer},
         data() {
             return {
                 choices: {}, queryableFields: {}, // Stores the list of items
-                gridFields: {}, labels: {}, queryResults: [], selectedDoc: {}, isQuerying: false, fulltext: "test"
+                gridFields: {}, labels: {}, queryResults: [], selectedDoc: {}, isQuerying: false, fulltext: "test",
+                showAlt: false
             };
         }, computed: {
             mongoQuery: {

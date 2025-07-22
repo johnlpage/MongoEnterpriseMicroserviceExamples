@@ -8,6 +8,7 @@
         <version>3.4.6</version>
         <relativePath/> <!-- lookup parent from repository -->
     </parent>
+
     <groupId>com.johnlpage</groupId>
     <artifactId>memex</artifactId>
     <version>1.0</version>
