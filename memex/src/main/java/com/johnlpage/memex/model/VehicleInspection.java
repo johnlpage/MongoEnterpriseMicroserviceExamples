@@ -3,6 +3,7 @@ package com.johnlpage.memex.model;
 import com.fasterxml.jackson.annotation.*;
 import com.johnlpage.memex.util.DeleteFlag;
 import com.johnlpage.memex.util.ObjectConverter;
+import jakarta.validation.constraints.*;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
@@ -12,7 +13,6 @@ import org.springframework.data.annotation.Transient;
 import org.springframework.data.annotation.Version;
 import org.springframework.data.mongodb.core.mapping.Document;
 import org.springframework.data.mongodb.core.mapping.Field;
-import jakarta.validation.constraints.*;
 
 /* Replace @Data with this to make an Immutable model
  * which is a little more efficient but no setters just a builder
@@ -39,12 +39,13 @@ public class VehicleInspection {
   String testclass;
   String testtype;
   String testresult;
+  @Min(1)
   Long testmileage;
   String postcode;
   Vehicle vehicle;
   String files;
 
-  @Min(1)
+
   Long capacity;
 
   Date firstusedate;
