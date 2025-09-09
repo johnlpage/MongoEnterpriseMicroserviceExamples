@@ -80,7 +80,6 @@ public class OptimizedMongoLoadRepositoryImpl<T> implements OptimizedMongoLoadRe
                 .append(PREVIOUS_VALS, condFinal));
   }
 
-
   private final MongoTemplate mongoTemplate;
   private final MappingMongoConverter mappingMongoConverter;
   private final MongoClient mongoClient;
@@ -381,9 +380,9 @@ public class OptimizedMongoLoadRepositoryImpl<T> implements OptimizedMongoLoadRe
     updateSteps.add(cleanUp);
 
     // Uncomment to see The Pipeline Query, do so with a very simple document
-    for (Document s : updateSteps) {
+    /*for (Document s : updateSteps) {
       LOG.info(s.toJson());
-    }
+    }*/
 
     // Because these expressive pipeline updates are using pipelines they are sometimes
     // Referred to as Aggregation Updates, that's the name of the Spring Data MongoDB class
