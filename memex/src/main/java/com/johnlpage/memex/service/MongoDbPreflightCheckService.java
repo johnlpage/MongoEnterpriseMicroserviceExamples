@@ -1,5 +1,6 @@
 package com.johnlpage.memex.service;
 
+import com.johnlpage.memex.config.MongoVersionBean;
 import com.mongodb.client.MongoCollection;
 import com.mongodb.client.MongoDatabase;
 import java.util.*;
@@ -180,9 +181,13 @@ public class MongoDbPreflightCheckService {
   }
 
   @Bean
-  public ApplicationRunner mongoPreflightCheck() {
+  public ApplicationRunner mongoPreflightCheck(MongoVersionBean mongoVersionBean) {
     return args -> {
       LOG.info("*** PREFLIGHT CHECK STARTED ***");
+      LOG.info(
+          "MongoDB Version: {}.{}",
+          mongoVersionBean.getMajorVersion(),
+          mongoVersionBean.getMinorversion());
       if (createRequiredIndexes) {
         LOG.warn(
             "!!! MEMEX IS CONFIGURED TO AUTOMATICALLY CREATE MISSING INDEXES - THIS IS NOT RECOMMENDED IN "

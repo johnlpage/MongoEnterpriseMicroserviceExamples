@@ -1,5 +1,7 @@
 package com.johnlpage.memex.config;
 
+import com.mongodb.client.MongoClient;
+import org.bson.Document;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.InitializingBean;
@@ -33,6 +35,16 @@ public class MongoConfig implements InitializingBean {
     LOG.info("MongoDB Native Transactions Enabled");
 
     return new MongoTransactionManager(mongoDatabaseFactory);
+  }
+
+  @Bean
+  public MongoVersionBean mongoVersionBean(MongoClient mongoClient) {
+    // TODO - Detect if Atlas Search available
+    Document buildInfo = mongoClient.getDatabase("admin").runCommand(new Document("buildInfo", 1));
+
+    String version = buildInfo.getString("version");
+
+    return new MongoVersionBean(version);
   }
 
   @Override

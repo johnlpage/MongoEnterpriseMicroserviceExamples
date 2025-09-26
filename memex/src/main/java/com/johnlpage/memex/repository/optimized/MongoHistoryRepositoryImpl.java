@@ -2,12 +2,14 @@ package com.johnlpage.memex.repository.optimized;
 
 import static org.springframework.data.mongodb.core.aggregation.LookupOperation.*;
 
+import com.johnlpage.memex.config.MongoVersionBean;
 import com.johnlpage.memex.service.generic.HistoryTriggerService;
 import com.johnlpage.memex.util.AnnotationExtractor;
 import com.johnlpage.memex.util.CustomAggregationOperation;
 import java.util.*;
 import java.util.stream.Stream;
 import org.bson.Document;
+import org.bson.conversions.Bson;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.data.domain.Sort;
@@ -19,9 +21,11 @@ public class MongoHistoryRepositoryImpl<T, I> implements MongoHistoryRepository<
   private static final Logger LOG = LoggerFactory.getLogger(MongoHistoryRepositoryImpl.class);
   private static final int MAX_UNROLL_DEPTH = 10;
   private final MongoTemplate mongoTemplate;
+  private final MongoVersionBean mongoVersion;
 
-  public MongoHistoryRepositoryImpl(MongoTemplate mongoTemplate) {
+  public MongoHistoryRepositoryImpl(MongoTemplate mongoTemplate, MongoVersionBean mongoVersion) {
     this.mongoTemplate = mongoTemplate;
+    this.mongoVersion = mongoVersion;
   }
 
   public Stream<T> GetRecordByIdAsOfDate(I recordId, Date asOf, Class<T> clazz) {
@@ -242,11 +246,34 @@ public class MongoHistoryRepositoryImpl<T, I> implements MongoHistoryRepository<
         new Document(
             "$arrayToObject", List.of(List.of(new Document("k", key).append("v", "$$this.v"))));
 
+    Document existingValue;
     // Get any existing Field content from the accumulating value
+    if (mongoVersion.getMajorVersion() >= 8) {
+      existingValue =
+          new Document("$getField", new Document("input", "$$value").append("field", path));
+    } else {
+      // fieldArray: { $objectToArray: "$a" }
+      Bson fieldArray = new Document("$objectToArray", "$a");
 
-    Document existingValue =
-        new Document("$getField", new Document("input", "$$value").append("field", path));
+      // cond: { $eq: ["$$field.k", "$$f"] }
+      Bson cond = new Document("$eq", java.util.Arrays.asList("$$field.k", "$$f"));
 
+      // $filter object
+      Bson filterExpr =
+          new Document(
+              "$filter",
+              new Document("input", fieldArray)
+                  .append("as", "field")
+                  .append("limit", 1)
+                  .append("cond", cond));
+
+      // $first: { ... filterExpr ... }
+      Bson fieldObj = new Document("$first", filterExpr);
+
+      // existingValue: { $getField: { input: fieldObj, field: "v" } }
+      existingValue =
+          new Document("$getField", new Document().append("input", fieldObj).append("field", "v"));
+    }
     // Merge this value with any parent object if we have one
 
     Document mergeWithParent =
