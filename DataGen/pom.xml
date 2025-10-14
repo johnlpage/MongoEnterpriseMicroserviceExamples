@@ -5,7 +5,7 @@
     <groupId>com.johnlpage.datagen</groupId>
     <artifactId>DataGen</artifactId>
     <version>1.0</version>
-    
+
     <dependencies>
         <!-- Dependency for Apache Commons CSV -->
         <dependency>
@@ -23,9 +23,9 @@
 
 
         <dependency>
-            <groupId>net.openhft</groupId>
-            <artifactId>zero-allocation-hashing</artifactId>
-            <version>0.27ea0</version>
+            <groupId>com.google.guava</groupId>
+            <artifactId>guava</artifactId>
+            <version>32.1.2-jre</version>
         </dependency>
 
     </dependencies>

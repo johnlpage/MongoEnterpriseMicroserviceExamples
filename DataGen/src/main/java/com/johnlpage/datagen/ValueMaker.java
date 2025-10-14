@@ -9,7 +9,8 @@ import java.time.temporal.ChronoUnit;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Random;
-import net.openhft.hashing.LongHashFunction;
+import com.google.common.hash.Hashing;
+import java.nio.charset.StandardCharsets;
 
 /** This class is used to generate values rather than use explicit ones */
 public class ValueMaker {
@@ -41,8 +42,7 @@ public class ValueMaker {
     try {
       argString = input.substring(input.indexOf("(") + 1, input.lastIndexOf(")"));
       args = argString.split(",");
-    }
-    catch(Exception e) {
+    } catch (Exception e) {
       return input;
     }
 
@@ -74,8 +74,7 @@ public class ValueMaker {
 
       // JSON parsing is expensive so cache the results in a Map against a hash of the input
 
-      // Get the hash as a long value
-      long hash = LongHashFunction.xx().hashChars(argString);
+      long hash = Hashing.murmur3_128().hashString(argString, StandardCharsets.UTF_8).asLong();
       ObjectNode json = jsonCache.get(hash);
       if (json == null) {
         json = (ObjectNode) new ObjectMapper().readTree(argString);
