@@ -1,9 +1,12 @@
 package com.johnlpage.memex.service;
 
 import com.johnlpage.memex.config.MongoVersionBean;
+import com.johnlpage.memex.util.MongoSchemaGenerator;
 import com.mongodb.client.MongoCollection;
 import com.mongodb.client.MongoDatabase;
 import java.util.*;
+
+import org.apache.kafka.common.protocol.types.Field;
 import org.bson.Document;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -32,6 +35,7 @@ public class MongoDbPreflightCheckService {
   {
       "collections" : [
         { "name" : "vehicleinspection" ,
+          "serverSchemaEnforcement" : "com.johnlpage.memex.model.VehicleInspection",
           "indexes": [ { "vehicle.model" : 1 }],
           "searchIndexes" : [ { "name": "default", "definition" : { "mappings" : { "dynamic" : true, fields: {}} }}]
         },
@@ -68,6 +72,8 @@ public class MongoDbPreflightCheckService {
 
     for (Document requiredCollection : requiredCollections) {
       String collectionName = requiredCollection.getString("name");
+      String className = requiredCollection.getString("serverSchemaEnforcement");
+
       if (!existingCollections.contains(collectionName)) {
         if (createCollections) {
           LOG.warn("Collection '{}' does not exist, creating it.", collectionName);
@@ -76,6 +82,28 @@ public class MongoDbPreflightCheckService {
           LOG.error("Collection '{}' does not exist, cancelling startup", collectionName);
           int exitCode = SpringApplication.exit(context, () -> 0);
           System.exit(exitCode);
+        }
+      }
+
+      if (className != null) {
+        try {
+          Class<?> clazz = Class.forName(className);
+          Document schema = MongoSchemaGenerator.generateSchema(clazz);
+          LOG.info("Schema: {}", schema.toJson());
+
+          // Apply validator via collMod
+          Document collModCmd =
+              new Document("collMod", collectionName)
+                  .append("validator", schema)
+                  .append(
+                      "validationLevel", "moderate") // doesn't retroactively reject existing docs
+                  .append("validationAction", "error"); // reject bad inserts/updates
+
+          database.runCommand(collModCmd);
+          LOG.info("Enforcing Schema based on {}", className);
+
+        } catch (ClassNotFoundException e) {
+          LOG.error("Could not load class {}: {}", className, e.getMessage());
         }
       }
     }
@@ -87,6 +115,7 @@ public class MongoDbPreflightCheckService {
     for (Document requiredCollection : requiredInfo) {
 
       String collectionName = requiredCollection.getString("name");
+
       MongoCollection<Document> collection = mongoTemplate.getCollection(collectionName);
 
       List<Document> requiredIndexes =
