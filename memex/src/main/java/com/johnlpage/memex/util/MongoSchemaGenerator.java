@@ -29,7 +29,7 @@ public class MongoSchemaGenerator {
     List<String> required = new ArrayList<>();
     Map<String, Document> properties = new LinkedHashMap<>();
     // Used in code that detects what has changed and allows efficient retriueval
-    properties.put("__previousvalues", new Document("bsonType", "object"));
+    properties.put("__previousValues", new Document("bsonType", "object"));
 
     for (java.lang.reflect.Field reflectionField : clazz.getDeclaredFields()) {
       // Skip the ones we are not storing in the DB

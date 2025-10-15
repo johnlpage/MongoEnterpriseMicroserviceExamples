@@ -372,7 +372,7 @@ public class OptimizedMongoLoadRepositoryImpl<T> implements OptimizedMongoLoadRe
       Document updatedIfChanged =
           new Document("$cond", Arrays.asList("$" + CHANGED, nextVersion, "$" + versionFieldName));
       Document versionFieldValue =
-          new Document("$cond", Arrays.asList("$" + IS_INSERT, 1, updatedIfChanged));
+          new Document("$cond", Arrays.asList("$" + IS_INSERT, typedOne, updatedIfChanged));
       updateSteps.add(new Document("$set", new Document(versionFieldName, versionFieldValue)));
     }
 
