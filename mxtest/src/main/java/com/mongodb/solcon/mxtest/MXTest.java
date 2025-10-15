@@ -1,5 +1,7 @@
 package com.mongodb.solcon.mxtest;
 
+import com.google.gson.*;
+
 import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
@@ -7,8 +9,6 @@ import java.net.http.HttpResponse;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.*;
-
-import com.google.gson.*;
 
 public class MXTest {
   public static void main(String[] args) throws Exception {
@@ -64,7 +64,6 @@ public class MXTest {
       String[] fields = fieldList.split(",");
       Map<String, List<String[]>> pathMap = new LinkedHashMap<>();
 
-      // Group subpaths by top-level field
       for (String field : fields) {
         String[] parts = field.trim().split("\\.");
         pathMap
@@ -72,28 +71,48 @@ public class MXTest {
             .add(parts.length > 1 ? Arrays.copyOfRange(parts, 1, parts.length) : new String[0]);
       }
 
-      JsonObject filtered = new JsonObject();
-      for (Map.Entry<String, List<String[]>> entry : pathMap.entrySet()) {
-        String rootField = entry.getKey();
-        if (!root.isJsonObject()) continue;
-        JsonElement value = root.getAsJsonObject().get(rootField);
-        if (value == null) continue;
+      Gson gson = new GsonBuilder().setPrettyPrinting().create();
 
-        if (entry.getValue().stream().allMatch(parts -> parts.length == 0)) {
-          filtered.add(rootField, value);
-        } else {
-          if (value.isJsonObject()) {
-            filtered.add(rootField, pickFields(value.getAsJsonObject(), entry.getValue()));
-          } else if (value.isJsonArray()) {
-            filtered.add(rootField, filterArray(value.getAsJsonArray(), entry.getValue()));
+      if (root.isJsonObject()) {
+        JsonObject filtered = filterObject(root.getAsJsonObject(), pathMap);
+        return gson.toJson(filtered);
+      } else if (root.isJsonArray()) {
+        StringBuilder sb = new StringBuilder();
+        for (JsonElement element : root.getAsJsonArray()) {
+          if (element.isJsonObject()) {
+            JsonObject filtered = filterObject(element.getAsJsonObject(), pathMap);
+            sb.append(gson.toJson(filtered)).append(System.lineSeparator());
+          } else {
+            sb.append(gson.toJson(element)).append(System.lineSeparator());
           }
         }
+        return sb.toString();
+      } else {
+        return gson.toJson(root);
       }
-
-      return new GsonBuilder().setPrettyPrinting().create().toJson(filtered);
     } catch (Exception e) {
       return body;
     }
+  }
+
+  private static JsonObject filterObject(JsonObject rootObj, Map<String, List<String[]>> pathMap) {
+    JsonObject filtered = new JsonObject();
+    for (Map.Entry<String, List<String[]>> entry : pathMap.entrySet()) {
+      String rootField = entry.getKey();
+      JsonElement value = rootObj.get(rootField);
+      if (value == null) continue;
+
+      if (entry.getValue().stream().allMatch(parts -> parts.length == 0)) {
+        filtered.add(rootField, value);
+      } else {
+        if (value.isJsonObject()) {
+          filtered.add(rootField, pickFields(value.getAsJsonObject(), entry.getValue()));
+        } else if (value.isJsonArray()) {
+          filtered.add(rootField, filterArray(value.getAsJsonArray(), entry.getValue()));
+        }
+      }
+    }
+    return filtered;
   }
 
   private static JsonObject pickFields(JsonObject obj, List<String[]> subpaths) {
