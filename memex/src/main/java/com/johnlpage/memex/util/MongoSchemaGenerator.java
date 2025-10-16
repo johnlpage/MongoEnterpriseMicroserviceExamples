@@ -10,6 +10,7 @@ import java.util.UUID;
 
 // Boot 3.x Validation imports
 import jakarta.validation.constraints.*;
+import org.bson.types.ObjectId;
 
 public class MongoSchemaGenerator {
 
@@ -126,6 +127,7 @@ public class MongoSchemaGenerator {
     if (type == Double.class || type == double.class) return "double";
     if (type == Boolean.class || type == boolean.class) return "bool";
     if (Date.class.isAssignableFrom(type)) return "date";
+    if (ObjectId.class.isAssignableFrom(type)) return "objectId";
     if (UUID.class.isAssignableFrom(type)) return "string";
     return null;
   }
