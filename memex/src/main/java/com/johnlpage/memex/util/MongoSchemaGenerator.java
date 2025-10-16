@@ -1,16 +1,12 @@
 package com.johnlpage.memex.util;
 
+import jakarta.validation.constraints.*;
 import org.bson.Document;
+import org.bson.types.ObjectId;
 
 import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.Type;
 import java.util.*;
-import java.util.Date;
-import java.util.UUID;
-
-// Boot 3.x Validation imports
-import jakarta.validation.constraints.*;
-import org.bson.types.ObjectId;
 
 public class MongoSchemaGenerator {
 
@@ -25,6 +21,13 @@ public class MongoSchemaGenerator {
       // Prevent infinite loops on circular references
       return new Document("bsonType", "object");
     }
+
+    // Check if this is an unsupported BSON type before processing
+    if (isMongoDBType(clazz) && mapJavaToBson(clazz) == null) {
+      throw new IllegalArgumentException(
+          "Cannot generate schema for unsupported BSON type: " + clazz.getName());
+    }
+
     visited.add(clazz);
 
     List<String> required = new ArrayList<>();
@@ -61,7 +64,7 @@ public class MongoSchemaGenerator {
             isSimpleType(itemType) ? simpleBsonType(itemType) : buildSchema(itemType, visited);
         propSchema.put("items", itemsSchema);
       } else if (Map.class.isAssignableFrom(fieldType)
-          || org.bson.Document.class.isAssignableFrom(fieldType)) {
+          || Document.class.isAssignableFrom(fieldType)) {
         // Arbitrary object
         propSchema = new Document("bsonType", "object");
         // No properties defined → allowed extra keys
@@ -106,10 +109,6 @@ public class MongoSchemaGenerator {
     return fieldAnnotation != null ? fieldAnnotation.value() : reflectionField.getName();
   }
 
-  private static boolean isSimpleType(Class<?> type) {
-    return mapJavaToBson(type) != null;
-  }
-
   private static Document generateSimpleTypeSchema(java.lang.reflect.Field field) {
     Document schema = simpleBsonType(field.getType());
     applyValidationAnnotations(field, schema);
@@ -121,15 +120,96 @@ public class MongoSchemaGenerator {
   }
 
   private static String mapJavaToBson(Class<?> type) {
+    // Primitives
     if (type == String.class) return "string";
     if (type == Integer.class || type == int.class) return "int";
     if (type == Long.class || type == long.class) return "long";
     if (type == Double.class || type == double.class) return "double";
     if (type == Boolean.class || type == boolean.class) return "bool";
     if (Date.class.isAssignableFrom(type)) return "date";
-    if (ObjectId.class.isAssignableFrom(type)) return "objectId";
     if (UUID.class.isAssignableFrom(type)) return "string";
+
+    // Native BSON types (preferred for performance)
+    if (ObjectId.class.isAssignableFrom(type)) return "objectId";
+    if (org.bson.types.Binary.class.isAssignableFrom(type)) return "binData";
+    if (org.bson.types.Decimal128.class.isAssignableFrom(type)) return "decimal";
+    if (org.bson.types.BSONTimestamp.class.isAssignableFrom(type)) return "timestamp";
+
+    // Java types with auto-conversion (convenience over performance)
+    if (type == java.math.BigDecimal.class) return "decimal";
+
+    // Explicitly unsupported
+    if (type == java.math.BigInteger.class) {
+      throw new IllegalArgumentException(
+          "BigInteger is not directly supported. Use Long for values up to 2^63-1, "
+              + "or store as String/Decimal128 for larger values.");
+    }
+
     return null;
+  }
+
+  private static boolean isSimpleType(Class<?> type) {
+    // First check if we have explicit mapping
+    if (mapJavaToBson(type) != null) {
+      return true;
+    }
+
+    // Not simple if we should block recursion
+    if (shouldBlockRecursion(type)) {
+      throw new IllegalArgumentException(createErrorMessage(type));
+    }
+
+    return false;
+  }
+
+  private static boolean shouldBlockRecursion(Class<?> type) {
+    if (type.getPackage() == null) return false;
+
+    String pkg = type.getPackage().getName();
+
+    return pkg.startsWith("java.math")
+        || pkg.startsWith("java.time")
+        || pkg.startsWith("java.sql")
+        || pkg.startsWith("java.awt")
+        || pkg.startsWith("javax.swing")
+        || pkg.startsWith("org.bson")
+        || pkg.startsWith("com.mongodb");
+  }
+
+  private static String createErrorMessage(Class<?> type) {
+    String pkg = type.getPackage().getName();
+
+    if (pkg.startsWith("java.math")) {
+      return "Unsupported type: "
+          + type.getName()
+          + ". Use Decimal128 for high-precision decimals or convert to String/Double.";
+    }
+
+    if (pkg.startsWith("java.time")) {
+      return "Unsupported type: "
+          + type.getName()
+          + ". Convert to java.util.Date or store as ISO-8601 String or epoch Long.";
+    }
+
+    if (pkg.startsWith("java.sql")) {
+      return "Unsupported type: "
+          + type.getName()
+          + ". Convert to java.util.Date or appropriate BSON type.";
+    }
+
+    if (pkg.startsWith("org.bson") || pkg.startsWith("com.mongodb")) {
+      return "Unsupported BSON type: "
+          + type.getName()
+          + ". Add explicit mapping in mapJavaToBson().";
+    }
+
+    return "Type " + type.getName() + " cannot be used for schema generation.";
+  }
+
+  private static boolean isMongoDBType(Class<?> type) {
+    if (type.getPackage() == null) return false;
+    String packageName = type.getPackage().getName();
+    return packageName.startsWith("org.bson") || packageName.startsWith("com.mongodb");
   }
 
   private static void applyValidationAnnotations(java.lang.reflect.Field field, Document schema) {
