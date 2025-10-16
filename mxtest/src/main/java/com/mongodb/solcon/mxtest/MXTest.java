@@ -13,22 +13,29 @@ import java.util.*;
 public class MXTest {
   public static void main(String[] args) throws Exception {
     if (args.length < 2) {
-      System.err.println("Usage: GET|POST <URL> [file|fields]");
+      System.err.println("Usage: GET|POST|DELETE <URL> [@file|string|fields]");
       System.exit(1);
     }
 
     HttpClient client = HttpClient.newHttpClient();
-    boolean isPost = "POST".equalsIgnoreCase(args[0]);
+    String method = args[0].toUpperCase();
 
     HttpRequest request;
-    if (isPost) {
-      byte[] body = Files.readAllBytes(Paths.get(args[2]));
+    if ("POST".equals(method)) {
+      if (args.length < 3) {
+        System.err.println("POST requires a body: @file or inline string");
+        System.exit(1);
+      }
+      byte[] body = getBodyContent(args[2]);
       request =
           HttpRequest.newBuilder()
               .uri(new URI(args[1]))
               .POST(HttpRequest.BodyPublishers.ofByteArray(body))
               .build();
+    } else if ("DELETE".equals(method)) {
+      request = HttpRequest.newBuilder().uri(new URI(args[1])).DELETE().build();
     } else {
+      // Default to GET
       request = HttpRequest.newBuilder().uri(new URI(args[1])).GET().build();
     }
 
@@ -41,11 +48,28 @@ public class MXTest {
       }
       System.exit(1);
     } else {
-      if (!isPost && args.length >= 3) {
+      if ("GET".equals(method) && args.length >= 3) {
         System.out.println(filterJson(response.body(), args[2]));
       } else {
         System.out.println(formatJsonIfPossible(response.body()));
       }
+    }
+  }
+
+  /**
+   * Gets body content from either a file (prefixed with @) or inline string
+   *
+   * @param input either "@filename" or raw string content
+   * @return byte array of content
+   */
+  private static byte[] getBodyContent(String input) throws Exception {
+    if (input.startsWith("@")) {
+      // File path - remove @ prefix and read file
+      String filePath = input.substring(1);
+      return Files.readAllBytes(Paths.get(filePath));
+    } else {
+      // Inline string content
+      return input.getBytes(java.nio.charset.StandardCharsets.UTF_8);
     }
   }
 
