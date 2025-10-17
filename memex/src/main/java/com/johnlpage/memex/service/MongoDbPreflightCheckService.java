@@ -40,6 +40,7 @@ public class MongoDbPreflightCheckService {
           "searchIndexes" : [ { "name": "default", "definition" : { "mappings" : { "dynamic" : true, fields: {}} }}]
         },
         { "name" : "vehicleinspection_history" ,
+         "serverSchemaEnforcement" : "com.johnlpage.memex.model.DocumentHistory",
           "indexes" : [ { "recordId" : 1, "timestamp" : 1 }]
         }
       ]

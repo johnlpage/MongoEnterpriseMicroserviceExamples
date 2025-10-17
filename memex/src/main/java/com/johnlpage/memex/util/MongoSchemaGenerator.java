@@ -46,8 +46,10 @@ public class MongoSchemaGenerator {
       String fieldName = getMongoFieldName(reflectionField);
       Class<?> fieldType = reflectionField.getType();
       Document propSchema;
-
-      if (isSimpleType(fieldType)) {
+      if (fieldType == Object.class) {
+        // Bare Object - no validation, allow any BSON type
+        propSchema = new Document();
+      } else if (isSimpleType(fieldType)) {
         propSchema = generateSimpleTypeSchema(reflectionField);
       } else if (Collection.class.isAssignableFrom(fieldType)) {
         propSchema = new Document("bsonType", "array");
