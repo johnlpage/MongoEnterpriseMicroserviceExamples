@@ -11,6 +11,9 @@ import java.nio.file.Paths;
 import java.util.*;
 
 public class MXTest {
+  // Shared Gson instance with pretty printing enabled
+  private static final Gson PRETTY_GSON = new GsonBuilder().setPrettyPrinting().create();
+
   public static void main(String[] args) throws Exception {
     if (args.length < 2) {
       System.err.println("Usage: GET|POST|DELETE <URL> [@file|string|fields]");
@@ -74,48 +77,106 @@ public class MXTest {
   }
 
   private static String formatJsonIfPossible(String body) {
+    if (body == null || body.trim().isEmpty()) {
+      return body;
+    }
+
+    // Try to parse as regular JSON first
     try {
       JsonElement json = JsonParser.parseString(body);
-      return new GsonBuilder().setPrettyPrinting().create().toJson(json);
+      return PRETTY_GSON.toJson(json);
     } catch (JsonSyntaxException e) {
-      return body;
+      // If that fails, try to handle as NDJSON (newline-delimited JSON)
+      return formatNdjson(body);
     }
   }
 
+  private static String formatNdjson(String body) {
+    String[] lines = body.split("\\r?\\n");
+    StringBuilder result = new StringBuilder();
+
+    for (String line : lines) {
+      if (line.trim().isEmpty()) {
+        continue;
+      }
+      try {
+        JsonElement json = JsonParser.parseString(line);
+        result.append(PRETTY_GSON.toJson(json));
+        result.append(System.lineSeparator());
+        result.append(System.lineSeparator()); // Extra line between objects
+      } catch (JsonSyntaxException e) {
+        result.append(line);
+        result.append(System.lineSeparator());
+      }
+    }
+
+    return result.toString();
+  }
+
   private static String filterJson(String body, String fieldList) {
-    try {
-      JsonElement root = JsonParser.parseString(body);
-      String[] fields = fieldList.split(",");
-      Map<String, List<String[]>> pathMap = new LinkedHashMap<>();
-
-      for (String field : fields) {
-        String[] parts = field.trim().split("\\.");
-        pathMap
-            .computeIfAbsent(parts[0], k -> new ArrayList<>())
-            .add(parts.length > 1 ? Arrays.copyOfRange(parts, 1, parts.length) : new String[0]);
-      }
-
-      Gson gson = new GsonBuilder().setPrettyPrinting().create();
-
-      if (root.isJsonObject()) {
-        JsonObject filtered = filterObject(root.getAsJsonObject(), pathMap);
-        return gson.toJson(filtered);
-      } else if (root.isJsonArray()) {
-        StringBuilder sb = new StringBuilder();
-        for (JsonElement element : root.getAsJsonArray()) {
-          if (element.isJsonObject()) {
-            JsonObject filtered = filterObject(element.getAsJsonObject(), pathMap);
-            sb.append(gson.toJson(filtered)).append(System.lineSeparator());
-          } else {
-            sb.append(gson.toJson(element)).append(System.lineSeparator());
-          }
-        }
-        return sb.toString();
-      } else {
-        return gson.toJson(root);
-      }
-    } catch (Exception e) {
+    if (body == null || body.trim().isEmpty()) {
       return body;
+    }
+
+    try {
+      // Try to parse as a single JSON object or array
+      JsonElement root = JsonParser.parseString(body);
+      return filterJsonElement(root, fieldList);
+    } catch (JsonSyntaxException e) {
+      // If that fails, try to handle as NDJSON (newline-delimited JSON)
+      return filterNdjson(body, fieldList);
+    }
+  }
+
+  private static String filterNdjson(String body, String fieldList) {
+    String[] lines = body.split("\\r?\\n");
+    StringBuilder result = new StringBuilder();
+
+    for (String line : lines) {
+      if (line.trim().isEmpty()) {
+        continue;
+      }
+      try {
+        JsonElement element = JsonParser.parseString(line);
+        String filtered = filterJsonElement(element, fieldList);
+        result.append(filtered);
+        // Don't add extra newline since filterJsonElement already includes one
+      } catch (JsonSyntaxException e) {
+        result.append(line);
+        result.append(System.lineSeparator());
+      }
+    }
+
+    return result.toString();
+  }
+
+  private static String filterJsonElement(JsonElement root, String fieldList) {
+    String[] fields = fieldList.split(",");
+    Map<String, List<String[]>> pathMap = new LinkedHashMap<>();
+
+    for (String field : fields) {
+      String[] parts = field.trim().split("\\.");
+      pathMap
+          .computeIfAbsent(parts[0], k -> new ArrayList<>())
+          .add(parts.length > 1 ? Arrays.copyOfRange(parts, 1, parts.length) : new String[0]);
+    }
+
+    if (root.isJsonObject()) {
+      JsonObject filtered = filterObject(root.getAsJsonObject(), pathMap);
+      return PRETTY_GSON.toJson(filtered) + System.lineSeparator();
+    } else if (root.isJsonArray()) {
+      JsonArray filteredArray = new JsonArray();
+      for (JsonElement element : root.getAsJsonArray()) {
+        if (element.isJsonObject()) {
+          JsonObject filtered = filterObject(element.getAsJsonObject(), pathMap);
+          filteredArray.add(filtered);
+        } else {
+          filteredArray.add(element);
+        }
+      }
+      return PRETTY_GSON.toJson(filteredArray) + System.lineSeparator();
+    } else {
+      return PRETTY_GSON.toJson(root) + System.lineSeparator();
     }
   }
 
