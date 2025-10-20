@@ -1,0 +1,73 @@
+plugins {
+    id 'java'
+}
+
+group = 'com.mongodb.solcon.mxtest'
+version = '1.0'
+
+java {
+    toolchain {
+        languageVersion = JavaLanguageVersion.of(17)
+    }
+}
+
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+    implementation 'com.google.code.gson:gson:2.10.1'
+}
+
+// --- Uber JAR task without Shadow ---
+task uberJar(type: Jar) {
+    archiveBaseName.set('mxtest')
+    archiveVersion.set('1.0')
+    archiveClassifier.set('') // no classifier
+    destinationDirectory = file("$projectDir/target") // Maven-style dir
+
+    // Compiled classes/resources
+    from sourceSets.main.output
+
+    // Runtime dependencies as exploded contents
+    dependsOn configurations.runtimeClasspath
+    from {
+        configurations.runtimeClasspath.collect {
+            it.isDirectory() ? it : zipTree(it)
+        }
+    }
+
+    // Exclude unwanted META-INF stuff
+    exclude(
+            'module-info.class',
+            'META-INF/versions/**/module-info.class',
+            'META-INF/LICENSE*',
+            'META-INF/NOTICE*',
+            'META-INF/MANIFEST.MF',
+            'META-INF/*.SF',
+            'META-INF/*.DSA',
+            'META-INF/*.RSA'
+    )
+
+    // Merge service loader files
+    eachFile { fileCopyDetails ->
+        if (fileCopyDetails.path.startsWith('META-INF/services/')) {
+            duplicatesStrategy = DuplicatesStrategy.INCLUDE
+        }
+    }
+
+    // Manifest
+    manifest {
+        attributes(
+                'Main-Class': 'com.mongodb.solcon.mxtest.MXTest'
+        )
+    }
+
+    // Default duplicate strategy for other files
+    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+}
+
+// Run uberJar when building
+tasks.build {
+    dependsOn uberJar
+}

@@ -1,0 +1,56 @@
+plugins {
+    id 'java'
+}
+
+group = 'com.johnlpage.datagen'
+version = '1.0'
+
+java {
+    toolchain {
+        languageVersion = JavaLanguageVersion.of(17)
+    }
+}
+
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+    implementation 'org.apache.commons:commons-csv:1.9.0'
+    implementation 'com.fasterxml.jackson.core:jackson-databind:2.14.0'
+    implementation 'com.google.guava:guava:32.1.2-jre'
+}
+
+// --- Uber JAR task without Shadow ---
+task uberJar(type: Jar) {
+    archiveBaseName.set('DataGen')
+    archiveVersion.set('1.0')
+    archiveClassifier.set('') // no classifier
+
+    // Write directly into target/ instead of build/libs
+    destinationDirectory = file("$projectDir/target")
+
+    // Include compiled classes/resources
+    from sourceSets.main.output
+
+    // Include runtime dependencies exploded into the jar
+    dependsOn configurations.runtimeClasspath
+    from {
+        configurations.runtimeClasspath.collect {
+            it.isDirectory() ? it : zipTree(it)
+        }
+    }
+
+    manifest {
+        attributes(
+                'Main-Class': 'com.johnlpage.datagen.DataGen'
+        )
+    }
+
+    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+}
+
+// Build should produce uberJar
+tasks.build {
+    dependsOn uberJar
+}
