@@ -106,7 +106,7 @@ public class MongoDbPreflightCheckService {
 
           database.runCommand(collModCmd);
           LOG.info("Enforcing Schema based on {}", className);
-          LOG.info(
+          LOG.debug(
               "Collection '{}' schema enforced",
               schema.toJson(JsonWriterSettings.builder().indent(true).build()));
 

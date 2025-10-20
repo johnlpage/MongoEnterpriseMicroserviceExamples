@@ -249,11 +249,12 @@ public class MongoHistoryRepositoryImpl<T, I> implements MongoHistoryRepository<
     Document existingValue;
     // Get any existing Field content from the accumulating value
     if (mongoVersion.getMajorVersion() >= 8) {
+      // This is now in 7.2 as well- if you were on 7.2+ and want extra speed change this
       existingValue =
           new Document("$getField", new Document("input", "$$value").append("field", path));
     } else {
-      // fieldArray: { $objectToArray: "$a" }
-      Bson fieldArray = new Document("$objectToArray", "$a");
+      // fieldArray: { $objectToArray: "$$value" }
+      Bson fieldArray = new Document("$objectToArray", "$$value");
 
       // cond: { $eq: ["$$field.k", "$$f"] }
       Bson cond = new Document("$eq", java.util.Arrays.asList("$$field.k", path));
