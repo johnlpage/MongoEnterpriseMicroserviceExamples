@@ -256,7 +256,7 @@ public class MongoHistoryRepositoryImpl<T, I> implements MongoHistoryRepository<
       Bson fieldArray = new Document("$objectToArray", "$a");
 
       // cond: { $eq: ["$$field.k", "$$f"] }
-      Bson cond = new Document("$eq", java.util.Arrays.asList("$$field.k", "$$f"));
+      Bson cond = new Document("$eq", java.util.Arrays.asList("$$field.k", path));
 
       // $filter object
       Bson filterExpr =

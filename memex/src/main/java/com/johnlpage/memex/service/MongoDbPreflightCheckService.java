@@ -8,6 +8,7 @@ import java.util.*;
 
 import org.apache.kafka.common.protocol.types.Field;
 import org.bson.Document;
+import org.bson.json.JsonWriterSettings;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
@@ -59,6 +60,9 @@ public class MongoDbPreflightCheckService {
   @Value("${memex.preflight.createSearchIndexes:true}")
   private boolean createSearchIndexes;
 
+  @Value("${memex.mongodb.hasSearch:true}")
+  private boolean hasSearch;
+
   public MongoDbPreflightCheckService(ApplicationContext context, MongoTemplate mongoTemplate) {
     this.context = context;
     this.mongoTemplate = mongoTemplate;
@@ -102,6 +106,9 @@ public class MongoDbPreflightCheckService {
 
           database.runCommand(collModCmd);
           LOG.info("Enforcing Schema based on {}", className);
+          LOG.info(
+              "Collection '{}' schema enforced",
+              schema.toJson(JsonWriterSettings.builder().indent(true).build()));
 
         } catch (ClassNotFoundException e) {
           LOG.error("Could not load class {}: {}", className, e.getMessage());
@@ -150,6 +157,9 @@ public class MongoDbPreflightCheckService {
   }
 
   void ensureRequiredSearchIndexesExist(List<Document> requiredInfo) {
+    if (!hasSearch) {
+      return;
+    }
     for (Document requiredCollection : requiredInfo) {
       String collectionName = requiredCollection.getString("name");
 
