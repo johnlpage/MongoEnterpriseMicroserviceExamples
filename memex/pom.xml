@@ -176,8 +176,7 @@
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-failsafe-plugin</artifactId>
-                <!-- TODO: Update to latest version once the bug in 3.5.3 is fixed: https://github.com/apache/maven-surefire/issues/834 -->
-                <version>3.5.2</version>
+                <version>3.5.4</version>
                 <executions>
                     <execution>
                         <goals>
