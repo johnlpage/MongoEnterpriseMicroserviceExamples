@@ -4,11 +4,12 @@ import com.johnlpage.memex.config.MongoVersionBean;
 import com.johnlpage.memex.util.MongoSchemaGenerator;
 import com.mongodb.client.MongoCollection;
 import com.mongodb.client.MongoDatabase;
+import com.mongodb.client.model.CreateCollectionOptions;
+import com.mongodb.client.model.ValidationAction;
+import com.mongodb.client.model.ValidationLevel;
+import com.mongodb.client.model.ValidationOptions;
 import java.util.*;
-
-import org.apache.kafka.common.protocol.types.Field;
 import org.bson.Document;
-import org.bson.json.JsonWriterSettings;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
@@ -23,7 +24,7 @@ import org.springframework.stereotype.Service;
 /**
  * This is an example of a class you can use to ensure the system is ready to start correctly. It
  * shows you how to check or indexes etc. And optionally create them - although spring has similar
- * lifecycle methods they aren't comprehensive enough. It uses ApplicationRunner to ensure this is
+ * lifecycle methods, they aren't comprehensive enough. It uses ApplicationRunner to ensure this is
  * run on startup.
  */
 @Service
@@ -60,15 +61,24 @@ public class MongoDbPreflightCheckService {
   @Value("${memex.preflight.createSearchIndexes:true}")
   private boolean createSearchIndexes;
 
+  @Value("${memex.preflight.enforceSchema:true}")
+  private boolean enforceSchema;
+
   @Value("${memex.mongodb.hasSearch:true}")
   private boolean hasSearch;
+
+  @Value("${memex.preflight.schemaOnCreate:true}")
+  private boolean schemaOnCreate;
+
+  @Value("${memex.preflight.dropAllCollections:false}")
+  private boolean dropAllCollections;
 
   public MongoDbPreflightCheckService(ApplicationContext context, MongoTemplate mongoTemplate) {
     this.context = context;
     this.mongoTemplate = mongoTemplate;
   }
 
-  /** Ensure all Collections exist, create them or quit depending on flag. */
+  /** Ensure all Collections exist, create them or quit depending on flags. */
   List<Document> ensureCollectionsExist(Document schemaAndIndexes) {
     MongoDatabase database = mongoTemplate.getDb();
 
@@ -78,11 +88,53 @@ public class MongoDbPreflightCheckService {
     for (Document requiredCollection : requiredCollections) {
       String collectionName = requiredCollection.getString("name");
       String className = requiredCollection.getString("serverSchemaEnforcement");
+      Document validator = null;
+      if (className != null) {
+        try {
+          Class<?> clazz = Class.forName(className);
+          validator = MongoSchemaGenerator.generateSchema(clazz);
+          LOG.info("Scheme for {} = '{}' ", collectionName, validator.toJson());
+
+        } catch (Exception e) {
+          LOG.error("Could not process class {}: {}", className, e.getMessage());
+        }
+      }
+
+      // Rarely used but useful if you have no easy way to drop the DB
+      if (dropAllCollections && existingCollections.contains(collectionName)) {
+        LOG.warn(
+            "WARNING: FORCE DROPPING COLLECTION {} !!! - disable in app config if you don't want to");
+        mongoTemplate.dropCollection(collectionName);
+        existingCollections.remove(collectionName);
+      }
 
       if (!existingCollections.contains(collectionName)) {
         if (createCollections) {
-          LOG.warn("Collection '{}' does not exist, creating it.", collectionName);
-          database.createCollection(collectionName);
+
+          if (schemaOnCreate) {
+            /*
+            This Code is here if you cannot apply validation using collMod you can do so  on
+            create - but to change it you would need to drop and recreate the collection, which
+            may be OK in Development
+            */
+
+            ValidationOptions validationOptions =
+                new ValidationOptions()
+                    .validator(validator)
+                    .validationLevel(ValidationLevel.MODERATE) // or STRICT, OFF
+                    .validationAction(ValidationAction.ERROR); // or WARN
+            CreateCollectionOptions options =
+                new CreateCollectionOptions().validationOptions(validationOptions);
+            database.createCollection(collectionName, options);
+
+            LOG.warn(
+                "Collection '{}' does not exist, creating it with schema validation.",
+                collectionName);
+          } else {
+            LOG.warn("Collection '{}' does not exist, creating it.", collectionName);
+            database.createCollection(collectionName);
+          }
+
         } else {
           LOG.error("Collection '{}' does not exist, cancelling startup", collectionName);
           int exitCode = SpringApplication.exit(context, () -> 0);
@@ -90,28 +142,22 @@ public class MongoDbPreflightCheckService {
         }
       }
 
-      if (className != null) {
+      if (validator != null && enforceSchema && !schemaOnCreate) {
         try {
-          Class<?> clazz = Class.forName(className);
-          Document schema = MongoSchemaGenerator.generateSchema(clazz);
-          LOG.info("Schema: {}", schema.toJson());
-
           // Apply validator via collMod
           Document collModCmd =
               new Document("collMod", collectionName)
-                  .append("validator", schema)
+                  .append("validator", validator)
                   .append(
                       "validationLevel", "moderate") // doesn't retroactively reject existing docs
                   .append("validationAction", "error"); // reject bad inserts/updates
 
           database.runCommand(collModCmd);
-          LOG.info("Enforcing Schema based on {}", className);
-          LOG.debug(
-              "Collection '{}' schema enforced",
-              schema.toJson(JsonWriterSettings.builder().indent(true).build()));
+          LOG.info("Enforcing Schema Validation with collMod based on {}", className);
 
-        } catch (ClassNotFoundException e) {
-          LOG.error("Could not load class {}: {}", className, e.getMessage());
+        } catch (Exception e) {
+          LOG.error(
+              "Error enforcing schema validation for class {}: {}", className, e.getMessage());
         }
       }
     }
@@ -160,6 +206,7 @@ public class MongoDbPreflightCheckService {
     if (!hasSearch) {
       return;
     }
+
     for (Document requiredCollection : requiredInfo) {
       String collectionName = requiredCollection.getString("name");
 
@@ -169,17 +216,24 @@ public class MongoDbPreflightCheckService {
       if (requiredSearchIndexes != null) {
 
         // Get a list of the indexes that are defined and their statuses
+        AggregationResults<Document> results;
         AggregationOperation listIndexes = Aggregation.stage("{\"$listSearchIndexes\" : {}}");
-        AggregationResults<Document> results =
-            mongoTemplate.aggregate(
-                Aggregation.newAggregation(listIndexes), collectionName, Document.class);
+        try {
+          results =
+              mongoTemplate.aggregate(
+                  Aggregation.newAggregation(listIndexes), collectionName, Document.class);
+        } catch (Exception e) {
+          LOG.error(
+              "ERROR:  memex.mongodb.hasSearch=true but Search not available: {}", e.getMessage());
+          return;
+        }
         Map<String, Document> resultsearchIndexMap = new HashMap<>();
         for (Document existingSearchIndex : results) {
           String key = existingSearchIndex.getString("name");
           resultsearchIndexMap.put(key, existingSearchIndex);
         }
 
-        // Iterate over the indexes we requires
+        // Iterate over the indexes we require
         for (Document requiredSearchIndex : requiredSearchIndexes) {
           String requiredName = requiredSearchIndex.getString("name");
           Document requiredDefinition = requiredSearchIndex.get("definition", Document.class);
@@ -230,10 +284,15 @@ public class MongoDbPreflightCheckService {
           mongoVersionBean.getMinorversion());
       if (createRequiredIndexes) {
         LOG.warn(
-            "!!! MEMEX IS CONFIGURED TO AUTOMATICALLY CREATE MISSING INDEXES - THIS IS NOT RECOMMENDED IN "
+            "WARNING: MEMEX IS CONFIGURED TO AUTOMATICALLY CREATE MISSING INDEXES - THIS IS NOT RECOMMENDED IN "
                 + "PRODUCTION !");
       }
-
+      LOG.info("createRequiredIndexes: {}", createRequiredIndexes);
+      LOG.info("createCollections: {}", createCollections);
+      LOG.info("createSearchIndexes: {}", createSearchIndexes);
+      LOG.info("enforceSchema: {}", enforceSchema);
+      LOG.info("hasSearch: {}", hasSearch);
+      LOG.info("schemaOnCreate: {}", schemaOnCreate);
       Document schemaAndIndexes = Document.parse(SCHEMA_AND_INDEXES);
       List<Document> requiredInfo = ensureCollectionsExist(schemaAndIndexes);
       ensureRequiredIndexesExist(requiredInfo);
