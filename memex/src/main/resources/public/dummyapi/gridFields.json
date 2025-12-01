@@ -6,5 +6,5 @@
   "Colour": "vehicle.colour",
   "Mileage": "testmileage",
   "Result": "testresult",
-  "Registered": "firstusedate"
+  "FirstUsed": "firstusedate"
 }

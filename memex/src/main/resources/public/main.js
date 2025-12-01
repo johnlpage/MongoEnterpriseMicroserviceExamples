@@ -87,7 +87,7 @@ async function fetchCollectionInfo() {
     try {
         const collectionInfo = {};
         // Replace with your actual API endpoint
-        let queryableFields = await fetch("/dummyapi/queryableFields.json");
+        let queryableFields = await fetch("/dummyapi/queryableFields.json" + "?t=" + Date.now());
         const qFields = await queryableFields.json();
 
         collectionInfo.queryableFields = {}
@@ -103,7 +103,7 @@ async function fetchCollectionInfo() {
             }
         }
 
-        let gridFields = await fetch("/dummyapi/gridFields.json");
+        let gridFields = await fetch("/dummyapi/gridFields.json" + "?t=" + Date.now());
         collectionInfo.gridFields = await gridFields.json();
         return collectionInfo;
     } catch (error) {
