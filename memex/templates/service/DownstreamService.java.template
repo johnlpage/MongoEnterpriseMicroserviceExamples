@@ -1,0 +1,27 @@
+package __package__.service;
+
+import __package__.model.__className__;
+import __package__.repository.__className__Repository;
+import java.util.stream.Stream;
+import org.bson.json.JsonObject;
+import org.springframework.stereotype.Service;
+
+// This is intended for downstream service that want to get reported on or perhaps
+// augmented data
+
+@Service
+public class __className__DownstreamService {
+    private final __className__Repository repository;
+
+    public __className__DownstreamService(__className__Repository repository) {
+        this.repository = repository;
+    }
+
+    public Stream<JsonObject> nativeJsonExtractStream(String formatRequired) {
+        return repository.nativeJsonExtract(formatRequired, __className__.class);
+    }
+
+    public Stream<__className__> jsonExtractStream() {
+        return repository.findAllBy();
+    }
+}

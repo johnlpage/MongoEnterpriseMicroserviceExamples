@@ -1,0 +1,40 @@
+package __package__.service;
+
+import __package__.model.__className__;
+import __package__.repository.__className__Repository;
+import __package__.service.generic.PreWriteTriggerService;
+import org.springframework.stereotype.Service;
+
+@Service
+public class __className__PreWriteTriggerService
+    extends PreWriteTriggerService<__className__> {
+
+    public __className__PreWriteTriggerService(__className__Repository repository) {
+        // Initialize any required dependencies
+    }
+
+    /*
+     * This code will be very specific to your data and how you want to test it.
+     * May not be required.
+     */
+
+    /** This Code is for mutable models */
+    @Override
+    public void modifyMutableDataPreWrite(__className__ document) {
+        // TODO: Implement your pre-write modifications for mutable models
+        // Example:
+        // - Validate and transform data
+        // - Set default values
+        // - Mark records for soft delete
+    }
+
+    /* This Code is used for immutable models */
+    /*
+    @Override
+    public __className__ newImmutableDataPreWrite(__className__ document) {
+        // TODO: Implement your pre-write modifications for immutable models
+        // Return a new instance with modifications
+        return document;
+    }
+    */
+}

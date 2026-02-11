@@ -1,0 +1,50 @@
+package __package__.repository;
+
+import __package__.model.__className__;
+import __package__.repository.optimized.MongoHistoryRepository;
+import __package__.repository.optimized.OptimizedMongoDownstreamRepository;
+import __package__.repository.optimized.OptimizedMongoLoadRepository;
+import __package__.repository.optimized.OptimizedMongoQueryRepository;
+import java.util.stream.Stream;
+import org.springframework.data.mongodb.repository.MongoRepository;
+import org.springframework.stereotype.Repository;
+__idImport__
+
+/*
+ * Repository for __className__ entity
+ * Defines simple operations by name of function or by JavaScript versions of MongoDB queries
+ */
+@Repository
+public interface __className__Repository
+    extends MongoRepository<__className__, __idType__>,
+        OptimizedMongoLoadRepository<__className__>,
+        OptimizedMongoQueryRepository<__className__>,
+        OptimizedMongoDownstreamRepository<__className__>,
+        MongoHistoryRepository<__className__, __idType__> {
+
+    /*
+     * EXAMPLE REPOSITORY METHODS
+     *
+     * // Find by field using auto-generated query
+     * List<__className__> findAllBySomeFieldGreaterThan(Long value);
+     *
+     * // Custom query for fields that are explicit
+     * @Query("{ 'someField': ?0 }")
+     * List<__className__> findBySomeField(String value);
+     *
+     * // Custom aggregation
+     * @Aggregation(pipeline = {
+     *     "{ '$match': { 'someField': ?0 } }",
+     *     "{ '$group': { '_id': null, 'average': { '$avg': '$numericField' } } }"
+     * })
+     * List<Document> findAverageBySomeField(String value);
+     *
+     * // Simple efficient update without reading whole document
+     * @Query("{ 'id' : ?0 }")
+     * @Update("{ '$inc' : { 'counter' : ?1 } }")
+     * void incrementCounter(__idType__ id, int increment);
+     */
+
+    // Streaming version for large result sets
+    Stream<__className__> findAllBy();
+}

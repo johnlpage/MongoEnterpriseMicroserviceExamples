@@ -1,0 +1,24 @@
+package __package__.service;
+
+import __package__.model.__className__;
+import __package__.repository.__className__Repository;
+import java.util.Date;
+import java.util.stream.Stream;
+import org.springframework.stereotype.Service;
+__idImport__
+
+// This is intended for downstream service that want to get reported on or perhaps
+// augmented data
+
+@Service
+public class __className__HistoryService {
+    private final __className__Repository repository;
+
+    public __className__HistoryService(__className__Repository repository) {
+        this.repository = repository;
+    }
+
+    public Stream<__className__> asOfDate(__idType__ id, Date asOfDate) {
+        return repository.GetRecordByIdAsOfDate(id, asOfDate, __className__.class);
+    }
+}
