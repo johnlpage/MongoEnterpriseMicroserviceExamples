@@ -306,4 +306,26 @@ _VehicleInspectionKafkaConsumer_ ,
 you can configure access to your kafka broker(s) in `resources/application.properties`.
 This loads in batches but sends the current batch if nothing has been received in 100 milliseconds.
 
+# Auto Code Generation
 
+Using Maven (not yet gradle) You can Automatically generate the base set of classes for an Entity including all the new
+derived classes by running the maven goal. This adds a Generic flexible model.
+
+```shell
+ mvn generate-sources -Pgenerate-entity -Dentity=MyEntity -DidType=Long 
+```
+
+Youc an delete it with
+
+```shell
+ mvn generate-sources -Pgenerate-entity -Dentity=MyEntity -DidType=Long -Ddelete
+```
+
+# Model Generation
+
+You can also Generate a data specific model from a JSON file using the maven goal below. customId shodu lmap to the id
+field in the JSON
+
+```shell
+ mvn generate-sources -Pgenerate-models-from-json   -DjsonFile=path/to/sample.json   -DbasePackage=com.johnlpage.memex.model       -DcollectionName=myCollectio    -DidFieldName=myCustomId
+```
