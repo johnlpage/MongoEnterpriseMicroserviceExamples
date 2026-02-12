@@ -329,3 +329,6 @@ field in the JSON
 ```shell
  mvn generate-sources -Pgenerate-models-from-json   -DjsonFile=path/to/sample.json   -DbasePackage=com.johnlpage.memex.model       -DcollectionName=myCollectio    -DidFieldName=myCustomId
 ```
+
+# Testing
+

@@ -35,6 +35,7 @@
         <java.version>17</java.version>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <cucumber.version>7.22.2</cucumber.version>
+        <testcontainers.version>1.21.4</testcontainers.version>
         <rest-assured.version>5.5.5</rest-assured.version>
         <amazonaws.version>2.29.43</amazonaws.version>
         <maven.compiler.source>17</maven.compiler.source>
@@ -43,6 +44,16 @@
 
     <dependencyManagement>
         <dependencies>
+            <!-- Add this BEFORE other BOMs -->
+            <dependency>
+                <groupId>org.testcontainers</groupId>
+                <artifactId>testcontainers-bom</artifactId>
+                <version>${testcontainers.version}</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
+
+
             <dependency>
                 <groupId>io.cucumber</groupId>
                 <artifactId>cucumber-bom</artifactId>
@@ -160,6 +171,7 @@
         <dependency>
             <groupId>org.testcontainers</groupId>
             <artifactId>junit-jupiter</artifactId>
+
             <scope>test</scope>
         </dependency>
         <dependency>
@@ -170,6 +182,7 @@
         <dependency>
             <groupId>org.testcontainers</groupId>
             <artifactId>mongodb</artifactId>
+
             <scope>test</scope>
         </dependency>
 
