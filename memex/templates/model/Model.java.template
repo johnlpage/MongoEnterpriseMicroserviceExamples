@@ -1,0 +1,55 @@
+package __package__.model;
+
+
+import com.fasterxml.jackson.annotation.JsonAnyGetter;
+import com.fasterxml.jackson.annotation.JsonAnySetter;
+import com.johnlpage.memex.util.DeleteFlag;
+import com.johnlpage.memex.util.ObjectConverter;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+import lombok.AllArgsConstructor;
+import org.springframework.data.annotation.Id;
+import org.springframework.data.annotation.Transient;
+import org.springframework.data.annotation.Version;
+import org.springframework.data.mongodb.core.mapping.Document;
+import org.springframework.data.mongodb.core.mapping.Field;
+
+import java.util.HashMap;
+import java.util.Map;
+
+__idImport__
+
+@Data
+@NoArgsConstructor
+@AllArgsConstructor
+@Document(collection = "__collectionName__")
+public class __className__ {
+
+    @Id
+    private __idType__ __idFieldName__;
+
+    @Field("version_field")
+    @Version
+    Long version;
+
+
+    /* Use this to flag from the JSON we want to remove the record */
+    @Transient
+    @DeleteFlag
+    Boolean deleted;
+
+    /**
+     * Use this to capture any fields not captured explicitly As MongoDB's flexibility makes this easy
+     */
+    private Map<String, Object> payload = new HashMap<>();
+
+    @JsonAnySetter
+    public void set(String key, Object value) {
+        payload.put(key, ObjectConverter.convertObject(value));
+    }
+
+    @JsonAnyGetter
+    public Map<String, Object> getPayload() {
+        return payload;
+    }
+}
