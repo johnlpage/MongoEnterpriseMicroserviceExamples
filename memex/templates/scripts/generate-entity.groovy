@@ -46,7 +46,7 @@ if (!idTypeMap.containsKey(idType)) {
 def idConfig = idTypeMap[idType]
 
 // Derive values from class name
-def collectionName = className.replaceAll('([a-z])([A-Z])', '$1_$2').toLowerCase() + 's'
+def collectionName = className.replaceAll('([a-z])([A-Z])', '$1_$2').toLowerCase();
 def idFieldName = className[0].toLowerCase() + className[1..-1] + 'Id'
 // API path: VehicleInspection -> vehicleinspections, Order -> orders
 def apiPath = className.toLowerCase()
@@ -103,6 +103,11 @@ def generatedFiles = [
                 name    : 'QueryService',
                 template: "${templateBase}/service/QueryService.java.template",
                 output  : "src/main/java/${packagePath}/service/${className}QueryService.java"
+        ],
+        [
+                name    : 'PreflightConfig',
+                template: "${templateBase}/service/PreflightConfig.java.template",
+                output  : "src/main/java/${packagePath}/service/${className}PreflightConfig.java"
         ],
         // Controller
         [
