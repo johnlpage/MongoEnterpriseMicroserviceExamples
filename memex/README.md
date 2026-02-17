@@ -408,7 +408,9 @@ goal below. customId shodu lmap to the id
 field in the JSON
 
 ```shell
- mvn generate-sources -Pgenerate-models-from-json   -DjsonFile=path/to/sample.json   -DbasePackage=com.johnlpage.memex.model       -DcollectionName=myCollectio    -DidFieldName=myCustomId
+
+ mvn generate-sources -Pgenerate-models-from-json   -DjsonFile=../companies250k.json  -DbasePackage=com.johnlpage.memex  -Dentity=Company  -DidFieldName=companyNumber
+
 ```
 
 # Testing

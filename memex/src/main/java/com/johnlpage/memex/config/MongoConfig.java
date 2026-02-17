@@ -5,30 +5,31 @@ import com.mongodb.client.MongoClient;
 import org.bson.Document;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.InitializingBean;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.context.annotation.Lazy;
 import org.springframework.data.mongodb.MongoDatabaseFactory;
 import org.springframework.data.mongodb.MongoTransactionManager;
-import org.springframework.data.mongodb.core.convert.DefaultMongoTypeMapper;
-import org.springframework.data.mongodb.core.convert.MappingMongoConverter;
+import org.springframework.data.mongodb.core.convert.MongoCustomConversions;
 import org.springframework.transaction.annotation.EnableTransactionManagement;
 
 @Configuration
 @EnableTransactionManagement(proxyTargetClass = true)
-public class MongoConfig implements InitializingBean {
+public class MongoConfig {
     private static final Logger LOG = LoggerFactory.getLogger(MongoConfig.class);
-    final MongoDatabaseFactory mongoDatabaseFactory;
-    @Lazy
-    private final MappingMongoConverter mappingMongoConverter;
+
+    private final MongoDatabaseFactory mongoDatabaseFactory;
 
     @Autowired
-    public MongoConfig(
-            MongoDatabaseFactory mongoDatabaseFactory, MappingMongoConverter mappingMongoConverter) {
+    public MongoConfig(MongoDatabaseFactory mongoDatabaseFactory) {
         this.mongoDatabaseFactory = mongoDatabaseFactory;
-        this.mappingMongoConverter = mappingMongoConverter;
+    }
+
+    @Bean
+    public MongoCustomConversions customConversions() {
+        return MongoCustomConversions.create(adapter ->
+                adapter.useNativeDriverJavaTimeCodecs()
+        );
     }
 
     /**
@@ -37,25 +38,13 @@ public class MongoConfig implements InitializingBean {
     @Bean
     public MongoTransactionManager transactionManager() {
         LOG.info("MongoDB Native Transactions Enabled");
-
         return new MongoTransactionManager(mongoDatabaseFactory);
     }
 
     @Bean
     public MongoVersionBean mongoVersionBean(MongoClient mongoClient) {
-        // TODO - Detect if Atlas Search available
         Document buildInfo = mongoClient.getDatabase("admin").runCommand(new Document("buildInfo", 1));
-
         String version = buildInfo.getString("version");
-
         return new MongoVersionBean(version);
-    }
-
-    @Override
-    public void afterPropertiesSet() {
-        // We are disabling the _class field here as it has a significant impact on query performance
-        // When it gets included in queries but is not in the index. You only need it when you have
-        // polymorphism for a collection.
-        mappingMongoConverter.setTypeMapper(new DefaultMongoTypeMapper(null));
     }
 }

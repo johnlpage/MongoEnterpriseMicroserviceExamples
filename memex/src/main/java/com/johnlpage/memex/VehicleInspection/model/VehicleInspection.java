@@ -1,20 +1,22 @@
 package com.johnlpage.memex.VehicleInspection.model;
 
-import com.fasterxml.jackson.annotation.*;
+import com.fasterxml.jackson.annotation.JsonAnyGetter;
+import com.fasterxml.jackson.annotation.JsonAnySetter;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import com.fasterxml.jackson.annotation.JsonInclude;
 import com.johnlpage.memex.util.DeleteFlag;
 import com.johnlpage.memex.util.ObjectConverter;
-import jakarta.validation.constraints.*;
-
-import java.util.Date;
-import java.util.HashMap;
-import java.util.Map;
-
+import jakarta.validation.constraints.Min;
 import lombok.Data;
 import org.springframework.data.annotation.Id;
 import org.springframework.data.annotation.Transient;
 import org.springframework.data.annotation.Version;
 import org.springframework.data.mongodb.core.mapping.Document;
 import org.springframework.data.mongodb.core.mapping.Field;
+
+import java.util.Date;
+import java.util.HashMap;
+import java.util.Map;
 
 /* Replace @Data with this to make an Immutable model
  * which is a little more efficient but no setters just a builder
@@ -58,17 +60,30 @@ public class VehicleInspection {
     Boolean deleted;
 
     /**
-     * Use this to capture any fields not captured explicitly As MongoDB's flexibility makes this easy
+     * Captures any fields not explicitly mapped to class fields.
+     * Supports schema flexibility and evolution.
+     * Only persisted/serialized when non-empty.
      */
-    private Map<String, Object> payload = new HashMap<>();
+    @Field(write = Field.Write.NON_NULL)
+    private Map<String, Object> payload;
 
     @JsonAnySetter
     public void set(String key, Object value) {
+        if (payload == null) {
+            payload = new HashMap<String, Object>();
+        }
         payload.put(key, ObjectConverter.convertObject(value));
     }
 
     @JsonAnyGetter
     public Map<String, Object> getPayload() {
         return payload;
+    }
+
+    /**
+     * Helper method to safely add to payload from your own code
+     */
+    public void addToPayload(String key, Object value) {
+        set(key, value);
     }
 }
