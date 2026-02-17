@@ -27,8 +27,7 @@ public class MongoConfig {
 
     @Bean
     public MongoCustomConversions customConversions() {
-        return MongoCustomConversions.create(adapter ->
-                adapter.useNativeDriverJavaTimeCodecs()
+        return MongoCustomConversions.create(MongoCustomConversions.MongoConverterConfigurationAdapter::useNativeDriverJavaTimeCodecs
         );
     }
 

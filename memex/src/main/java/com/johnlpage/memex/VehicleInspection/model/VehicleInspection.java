@@ -70,7 +70,7 @@ public class VehicleInspection {
     @JsonAnySetter
     public void set(String key, Object value) {
         if (payload == null) {
-            payload = new HashMap<String, Object>();
+            payload = new HashMap<>();
         }
         payload.put(key, ObjectConverter.convertObject(value));
     }

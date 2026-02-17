@@ -261,8 +261,7 @@ public class MongoSchemaGenerator {
 
     private static Class<?> getCollectionElementType(java.lang.reflect.Field field) {
         Type genericType = field.getGenericType();
-        if (genericType instanceof ParameterizedType) {
-            ParameterizedType pt = (ParameterizedType) genericType;
+        if (genericType instanceof ParameterizedType pt) {
             Type[] actualTypes = pt.getActualTypeArguments();
             if (actualTypes.length > 0 && actualTypes[0] instanceof Class) {
                 return (Class<?>) actualTypes[0];
