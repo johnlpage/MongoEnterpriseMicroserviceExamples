@@ -2,7 +2,7 @@
 
 def className = System.getProperty('entity')
 def idType = System.getProperty('idType') ?: 'String'
-def idFieldName = System.getProperty('idFieldName');
+def idFieldName = System.getProperty('idFieldName')
 def resourceName = System.getProperty('plural')  // New optional parameter
 def deleteMode = System.getProperty('delete') != null
 
@@ -54,7 +54,7 @@ if (!idTypeMap.containsKey(idType)) {
 def idConfig = idTypeMap[idType]
 
 // Derive values from class name
-def collectionName = className.replaceAll('([a-z])([A-Z])', '$1_$2').toLowerCase();
+def collectionName = className.replaceAll('([a-z])([A-Z])', '$1_$2').toLowerCase()
 idFieldName = idFieldName ?: className[0].toLowerCase() + className[1..-1] + 'Id'
 // API path: Use explicit resource name if provided, otherwise default to lowercase entity
 def apiPath = resourceName ?: className.toLowerCase() + "s"

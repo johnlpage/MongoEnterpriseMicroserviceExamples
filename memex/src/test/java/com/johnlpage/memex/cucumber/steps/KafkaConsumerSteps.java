@@ -1,12 +1,10 @@
 package com.johnlpage.memex.cucumber.steps;
 
-import static org.junit.jupiter.api.Assertions.*;
-
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.johnlpage.memex.cucumber.service.VehicleInspectionIdRangeValidator;
 import com.johnlpage.memex.VehicleInspection.model.VehicleInspection;
+import com.johnlpage.memex.cucumber.service.VehicleInspectionIdRangeValidator;
 import io.cucumber.java.en.Then;
 import io.cucumber.java.en.When;
 import jakarta.annotation.PostConstruct;
@@ -22,6 +20,8 @@ import org.springframework.web.client.RestClient;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+
+import static org.junit.jupiter.api.Assertions.*;
 
 public class KafkaConsumerSteps {
 
@@ -76,7 +76,7 @@ public class KafkaConsumerSteps {
                 .contentType(MediaType.APPLICATION_JSON)
                 .body(mongoQueryJson)
                 .retrieve()
-                .toEntity(new ParameterizedTypeReference<List<VehicleInspection>>() {
+                .toEntity(new ParameterizedTypeReference<>() {
                 });
 
         assertTrue(responseEntity.getStatusCode().is2xxSuccessful());
@@ -85,7 +85,7 @@ public class KafkaConsumerSteps {
         assertNotNull(inspections);
         assertEquals(count, inspections.size());
         inspections.forEach((inspection) -> {
-            JsonNode actualJson = null;
+            JsonNode actualJson;
             try {
                 actualJson = objectMapper.readTree(objectMapper.writeValueAsString(inspection));
             } catch (JsonProcessingException e) {

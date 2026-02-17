@@ -35,18 +35,18 @@ public class VehicleInspectionPreflightConfig implements CollectionPreflightConf
     @Override
     public List<Document> getSearchIndexes() {
 
-        String SEARCH_INDEXES = """  
-                { "searchIndexes": [  
-                    {  
-                        "name": "default",  
-                        "definition": {  
-                            "mappings": {  
-                                "dynamic": true,  
-                                "fields": {}  
-                            }  
-                        }  
-                    }  
-                ]}  
+        String SEARCH_INDEXES = """
+                { "searchIndexes": [
+                    {
+                        "name": "default",
+                        "definition": {
+                            "mappings": {
+                                "dynamic": true,
+                                "fields": {}
+                            }
+                        }
+                    }
+                ]}
                 """;
 
         return Document.parse(SEARCH_INDEXES).getList("searchIndexes", Document.class);
