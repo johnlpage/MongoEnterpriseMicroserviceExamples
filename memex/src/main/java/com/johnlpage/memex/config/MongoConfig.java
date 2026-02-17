@@ -1,5 +1,6 @@
 package com.johnlpage.memex.config;
 
+import com.johnlpage.memex.util.MongoVersionBean;
 import com.mongodb.client.MongoClient;
 import org.bson.Document;
 import org.slf4j.Logger;
@@ -18,40 +19,43 @@ import org.springframework.transaction.annotation.EnableTransactionManagement;
 @Configuration
 @EnableTransactionManagement(proxyTargetClass = true)
 public class MongoConfig implements InitializingBean {
-  private static final Logger LOG = LoggerFactory.getLogger(MongoConfig.class);
-  final MongoDatabaseFactory mongoDatabaseFactory;
-  @Lazy private final MappingMongoConverter mappingMongoConverter;
+    private static final Logger LOG = LoggerFactory.getLogger(MongoConfig.class);
+    final MongoDatabaseFactory mongoDatabaseFactory;
+    @Lazy
+    private final MappingMongoConverter mappingMongoConverter;
 
-  @Autowired
-  public MongoConfig(
-      MongoDatabaseFactory mongoDatabaseFactory, MappingMongoConverter mappingMongoConverter) {
-    this.mongoDatabaseFactory = mongoDatabaseFactory;
-    this.mappingMongoConverter = mappingMongoConverter;
-  }
+    @Autowired
+    public MongoConfig(
+            MongoDatabaseFactory mongoDatabaseFactory, MappingMongoConverter mappingMongoConverter) {
+        this.mongoDatabaseFactory = mongoDatabaseFactory;
+        this.mappingMongoConverter = mappingMongoConverter;
+    }
 
-  /** This is important to ensure you are using Native database transactions. */
-  @Bean
-  public MongoTransactionManager transactionManager() {
-    LOG.info("MongoDB Native Transactions Enabled");
+    /**
+     * This is important to ensure you are using Native database transactions.
+     */
+    @Bean
+    public MongoTransactionManager transactionManager() {
+        LOG.info("MongoDB Native Transactions Enabled");
 
-    return new MongoTransactionManager(mongoDatabaseFactory);
-  }
+        return new MongoTransactionManager(mongoDatabaseFactory);
+    }
 
-  @Bean
-  public MongoVersionBean mongoVersionBean(MongoClient mongoClient) {
-    // TODO - Detect if Atlas Search available
-    Document buildInfo = mongoClient.getDatabase("admin").runCommand(new Document("buildInfo", 1));
+    @Bean
+    public MongoVersionBean mongoVersionBean(MongoClient mongoClient) {
+        // TODO - Detect if Atlas Search available
+        Document buildInfo = mongoClient.getDatabase("admin").runCommand(new Document("buildInfo", 1));
 
-    String version = buildInfo.getString("version");
+        String version = buildInfo.getString("version");
 
-    return new MongoVersionBean(version);
-  }
+        return new MongoVersionBean(version);
+    }
 
-  @Override
-  public void afterPropertiesSet() {
-    // We are disabling the _class field here as it has a significant impact on query performance
-    // When it gets included in queries but is not in the index. You only need it when you have
-    // polymorphism for a collection.
-    mappingMongoConverter.setTypeMapper(new DefaultMongoTypeMapper(null));
-  }
+    @Override
+    public void afterPropertiesSet() {
+        // We are disabling the _class field here as it has a significant impact on query performance
+        // When it gets included in queries but is not in the index. You only need it when you have
+        // polymorphism for a collection.
+        mappingMongoConverter.setTypeMapper(new DefaultMongoTypeMapper(null));
+    }
 }

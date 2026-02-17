@@ -3,7 +3,7 @@ package com.johnlpage.memex.cucumber.steps;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.johnlpage.memex.cucumber.service.VehicleInspectionIdRangeValidator;
-import com.johnlpage.memex.model.VehicleInspection;
+import com.johnlpage.memex.VehicleInspection.model.VehicleInspection;
 import io.cucumber.datatable.DataTable;
 import io.cucumber.java.en.Given;
 import lombok.extern.slf4j.Slf4j;
@@ -26,12 +26,11 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 @Slf4j
 public class InspectionsPreConditionSteps {
 
-    @Value("${memex.base-url}")
-    private String apiBaseUrl;
-
     private final RestClient restClient;
     private final ObjectMapper objectMapper;
     private final VehicleInspectionIdRangeValidator idRangeValidator;
+    @Value("${memex.base-url}")
+    private String apiBaseUrl;
 
     @Autowired
     public InspectionsPreConditionSteps(RestClient.Builder restClientBuilder, ObjectMapper objectMapper,

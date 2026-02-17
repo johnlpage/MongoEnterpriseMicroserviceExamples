@@ -6,7 +6,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.johnlpage.memex.cucumber.service.VehicleInspectionIdRangeValidator;
-import com.johnlpage.memex.model.VehicleInspection;
+import com.johnlpage.memex.VehicleInspection.model.VehicleInspection;
 import io.cucumber.java.en.Then;
 import io.cucumber.java.en.When;
 import jakarta.annotation.PostConstruct;
@@ -35,17 +35,15 @@ public class KafkaConsumerSteps {
     private RestClient.Builder restClientBuilder;
 
     private RestClient restClient;
+    @Autowired
+    private ObjectMapper objectMapper;
+    @Autowired
+    private VehicleInspectionIdRangeValidator idRangeValidator;
 
     @PostConstruct
     public void init() {
         this.restClient = restClientBuilder.baseUrl(apiBaseUrl).build();
     }
-
-    @Autowired
-    private ObjectMapper objectMapper;
-
-    @Autowired
-    private VehicleInspectionIdRangeValidator idRangeValidator;
 
     @When("I send {int} vehicle inspections starting with id {long} to kafka {string} topic with:")
     public void sendVehicleInspectionsToKafka(int count, long startId, String topicName, String jsonTemplate) throws JsonProcessingException {

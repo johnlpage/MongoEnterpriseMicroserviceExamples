@@ -2,21 +2,29 @@
 
 def className = System.getProperty('entity')
 def idType = System.getProperty('idType') ?: 'String'
+def idFieldName = System.getProperty('idFieldName');
+def resourceName = System.getProperty('plural')  // New optional parameter
 def deleteMode = System.getProperty('delete') != null
 
 if (!className) {
     println ""
-    println "Usage: mvn generate-sources -Pgenerate-entity -Dentity=Company [-DidType=String] [-Ddelete]"
+    println "Usage: mvn generate-sources -Pgenerate-entity -Dentity=Company [-DidType=String] [-Dresource=companies] [-Ddelete]"
     println ""
     println "Options:"
     println "  -Dentity=<ClassName>  Required. e.g., Company, ProductCategory"
     println "  -DidType=<Type>       Optional. Default: String"
     println "                        Supported: String, ObjectId, Long, UUID"
+    println "  -Dplural=<path>       Optional. Explicit plural API resource path."
+    println "                        Default: lowercase entity name + s (e.g., Company -> /api/companys)"
+    println "                        Example: -Dresource=companies -> /api/companies"
+    println "  -DidFieldName=<Type>  Optional. Default: lowercase entity name + Id (Company -> companyId)"
     println "  -Ddelete              Delete previously generated files instead of creating"
     println ""
     println "Examples:"
     println "  mvn generate-sources -Pgenerate-entity -Dentity=Company"
+    println "  mvn generate-sources -Pgenerate-entity -Dentity=Company -Dresource=companies -DifFieldName=companyNumber"
     println "  mvn generate-sources -Pgenerate-entity -Dentity=Company -DidType=ObjectId"
+    println "  mvn generate-sources -Pgenerate-entity -Dentity=ProductCategory -Dresource=product-categories"
     println "  mvn generate-sources -Pgenerate-entity -Dentity=Order -DidType=Long"
     println "  mvn generate-sources -Pgenerate-entity -Dentity=Order -Ddelete"
     println ""
@@ -47,9 +55,10 @@ def idConfig = idTypeMap[idType]
 
 // Derive values from class name
 def collectionName = className.replaceAll('([a-z])([A-Z])', '$1_$2').toLowerCase();
-def idFieldName = className[0].toLowerCase() + className[1..-1] + 'Id'
-// API path: VehicleInspection -> vehicleinspections, Order -> orders
-def apiPath = className.toLowerCase()
+idFieldName = idFieldName ?: className[0].toLowerCase() + className[1..-1] + 'Id'
+// API path: Use explicit resource name if provided, otherwise default to lowercase entity
+def apiPath = resourceName ?: className.toLowerCase() + "s"
+def singularApiPath = className.toLowerCase()
 
 // ===========================================================================
 // DEFINE ALL GENERATED FILES
@@ -60,60 +69,60 @@ def generatedFiles = [
         [
                 name    : 'Model',
                 template: "${templateBase}/model/Model.java.template",
-                output  : "src/main/java/${packagePath}/model/${className}.java"
+                output  : "src/main/java/${packagePath}/${className}/model/${className}.java"
         ],
         // Repository
         [
                 name    : 'Repository',
                 template: "${templateBase}/repository/Repository.java.template",
-                output  : "src/main/java/${packagePath}/repository/${className}Repository.java"
+                output  : "src/main/java/${packagePath}/${className}/repository/${className}Repository.java"
         ],
         // Services
         [
                 name    : 'DownstreamService',
                 template: "${templateBase}/service/DownstreamService.java.template",
-                output  : "src/main/java/${packagePath}/service/${className}DownstreamService.java"
+                output  : "src/main/java/${packagePath}/${className}/service/${className}DownstreamService.java"
         ],
         [
                 name    : 'HistoryService',
                 template: "${templateBase}/service/HistoryService.java.template",
-                output  : "src/main/java/${packagePath}/service/${className}HistoryService.java"
+                output  : "src/main/java/${packagePath}/${className}/service/${className}HistoryService.java"
         ],
         [
                 name    : 'HistoryTriggerService',
                 template: "${templateBase}/service/HistoryTriggerService.java.template",
-                output  : "src/main/java/${packagePath}/service/${className}HistoryTriggerService.java"
+                output  : "src/main/java/${packagePath}/${className}/service/${className}HistoryTriggerService.java"
         ],
         [
                 name    : 'InvalidDataHandlerService',
                 template: "${templateBase}/service/InvalidDataHandlerService.java.template",
-                output  : "src/main/java/${packagePath}/service/${className}InvalidDataHandlerService.java"
+                output  : "src/main/java/${packagePath}/${className}/service/${className}InvalidDataHandlerService.java"
         ],
         [
                 name    : 'JsonLoaderService',
                 template: "${templateBase}/service/JsonLoaderService.java.template",
-                output  : "src/main/java/${packagePath}/service/${className}JsonLoaderService.java"
+                output  : "src/main/java/${packagePath}/${className}/service/${className}JsonLoaderService.java"
         ],
         [
                 name    : 'PreWriteTriggerService',
                 template: "${templateBase}/service/PreWriteTriggerService.java.template",
-                output  : "src/main/java/${packagePath}/service/${className}PreWriteTriggerService.java"
+                output  : "src/main/java/${packagePath}/${className}/service/${className}PreWriteTriggerService.java"
         ],
         [
                 name    : 'QueryService',
                 template: "${templateBase}/service/QueryService.java.template",
-                output  : "src/main/java/${packagePath}/service/${className}QueryService.java"
+                output  : "src/main/java/${packagePath}/${className}/service/${className}QueryService.java"
         ],
         [
                 name    : 'PreflightConfig',
                 template: "${templateBase}/service/PreflightConfig.java.template",
-                output  : "src/main/java/${packagePath}/service/${className}PreflightConfig.java"
+                output  : "src/main/java/${packagePath}/${className}/service/${className}PreflightConfig.java"
         ],
         // Controller
         [
                 name    : 'Controller',
                 template: "${templateBase}/controller/Controller.java.template",
-                output  : "src/main/java/${packagePath}/controller/${className}Controller.java"
+                output  : "src/main/java/${packagePath}/${className}/controller/${className}Controller.java"
         ]
 ]
 
@@ -122,13 +131,14 @@ def generatedFiles = [
 // ===========================================================================
 
 def replacements = [
-        '__className__'     : className,
-        '__collectionName__': collectionName,
-        '__idFieldName__'   : idFieldName,
-        '__apiPath__'       : apiPath,
-        '__package__'       : basePackage,
-        '__idType__'        : idType,
-        '__idImport__'      : idConfig.import
+        '__className__'      : className,
+        '__collectionName__' : collectionName,
+        '__idFieldName__'    : idFieldName,
+        '__apiPath__'        : apiPath,
+        '__singularApiPath__': singularApiPath,
+        '__package__'        : basePackage,
+        '__idType__'         : idType,
+        '__idImport__'       : idConfig.import
 ]
 
 // ===========================================================================
@@ -171,7 +181,7 @@ println "========================================="
 println "  ID Type:      ${idType}"
 println "  ID Field:     ${idFieldName}"
 println "  Collection:   ${collectionName}"
-println "  API Path:     /api/${apiPath}"
+println "  API Path:     /api/${apiPath}" + (resourceName ? " (explicit)" : " (derived)")
 println "========================================="
 
 def generatedCount = 0
@@ -218,10 +228,10 @@ println "Generated: ${generatedCount}, Skipped: ${skippedCount}"
 println "========================================="
 println ""
 println "API Endpoints created:"
-println "  POST   /api/${apiPath}              - Create single record"
-println "  POST   /api/${apiPath}/bulk         - Bulk load from JSON stream"
+println "  POST   /api/${singularApiPath}              - Create single record"
+println "  POST   /api/${apiPath}        - Bulk load from JSON stream"
 println "  GET    /api/${apiPath}/id/{id}      - Get by ID"
-println "  GET    /api/${apiPath}/search       - Search with pagination"
+println "  GET    /api/${apiPath}/byExample    - Example query with pagination"
 println "  POST   /api/${apiPath}/query        - Native MongoDB query"
 println "  POST   /api/${apiPath}/search/atlas - Atlas Search query"
 println "  GET    /api/${apiPath}/json         - Stream all as JSON"

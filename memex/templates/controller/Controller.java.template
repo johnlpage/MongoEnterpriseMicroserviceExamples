@@ -37,7 +37,7 @@ __idImport__
 
 @RequiredArgsConstructor
 @RestController
-@RequestMapping("/api/__apiPath__")
+@RequestMapping("/api")
 public class __className__Controller {
 
     private static final Logger LOG = LoggerFactory.getLogger(__className__Controller.class);
@@ -56,7 +56,7 @@ public class __className__Controller {
     /**
      * Create or update a single record
      */
-    @PostMapping
+    @PostMapping("/__singularApiPath__")
     public void createOne(@RequestBody __className__ record) {
         LOG.info("Saving __className__: {}", record);
         repository.save(record);
@@ -66,7 +66,7 @@ public class __className__Controller {
      * Bulk load from JSON stream.
      * This could read from a file, Kafka queue, or any stream of JSON data.
      */
-    @PostMapping("/bulk")
+    @PostMapping("/__apiPath__")
     public ResponseEntity<MongoDbJsonStreamingLoaderService.JsonStreamingLoadResponse> loadFromStream(
             HttpServletRequest request,
             @RequestParam(name = "futz", required = false, defaultValue = "false") Boolean futz,
@@ -99,7 +99,7 @@ public class __className__Controller {
     /**
      * Get by ID
      */
-    @GetMapping("/id/{id}")
+    @GetMapping("/__apiPath__/id/{id}")
     public ResponseEntity<__className__> getById(@PathVariable __idType__ id) {
         return queryService
             .getById(id)
@@ -111,7 +111,7 @@ public class __className__Controller {
      * Get by example with pagination.
      * TODO: Customize this endpoint for your specific query needs
      */
-    @GetMapping("/search")
+    @GetMapping("/__apiPath__/byExample")
     public ResponseEntity<PageDto<__className__>> getByExample(
             @RequestParam(name = "page", required = false, defaultValue = "0") int page,
             @RequestParam(name = "size", required = false, defaultValue = "10") int size) {
@@ -129,7 +129,7 @@ public class __className__Controller {
      * Raw MongoDB query interface.
      * Lets the caller design their own query and projection.
      */
-    @PostMapping(value = "/query", produces = MediaType.APPLICATION_JSON_VALUE)
+    @PostMapping(value = "/__apiPath__/query", produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<String> mongoQuery(@RequestBody String requestBody) {
         List<__className__> result = queryService.mongoDbNativeQuery(requestBody);
         try {
@@ -143,7 +143,7 @@ public class __className__Controller {
     /**
      * Atlas Search query interface
      */
-    @PostMapping("/search/atlas")
+    @PostMapping("/__apiPath__/search/atlas")
     public ResponseEntity<String> atlasSearchQuery(@RequestBody String requestBody) {
         List<__className__> result = queryService.atlasSearchQuery(requestBody);
         try {
@@ -158,7 +158,7 @@ public class __className__Controller {
      * Stream all records as JSON.
      * Uses object mapping (Document -> Object -> JSON)
      */
-    @GetMapping(value = "/json", produces = MediaType.APPLICATION_JSON_VALUE)
+    @GetMapping(value = "/__apiPath__/json", produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<StreamingResponseBody> streamJson() {
         return ResponseEntity.ok()
             .contentType(MediaType.APPLICATION_JSON)
@@ -172,7 +172,7 @@ public class __className__Controller {
      * Uses RawBsonDocument for better performance (about half the CPU).
      * TODO: Customize the projection format for your model
      */
-    @GetMapping(value = "/json/native", produces = MediaType.APPLICATION_JSON_VALUE)
+    @GetMapping(value = "/__apiPath__/json/native", produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<StreamingResponseBody> streamJsonNative() {
 
         // TODO: Customize this projection for your model fields
