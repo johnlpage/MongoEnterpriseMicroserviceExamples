@@ -1,8 +1,8 @@
-package __package__.service;
+package __package__.__className__.service;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import __package__.model.__className__;
-import __package__.service.generic.HistoryTriggerService;
+import __package__.__className__.model.__className__;
+import __package__.generics.service.HistoryTriggerService;
 import org.springframework.data.mongodb.core.MongoTemplate;
 import org.springframework.stereotype.Service;
 

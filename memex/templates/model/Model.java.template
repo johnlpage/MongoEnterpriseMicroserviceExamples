@@ -1,4 +1,4 @@
-package __package__.model;
+package __package__.__className__.model;
 
 
 import com.fasterxml.jackson.annotation.JsonAnyGetter;

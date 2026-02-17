@@ -1,7 +1,7 @@
-package __package__.service;
+package __package__.__className__.service;
 
-import __package__.model.__className__;
-import __package__.service.generic.InvalidDataHandlerService;
+import __package__.__className__.model.__className__;
+import __package__.generics.service.InvalidDataHandlerService;
 import jakarta.validation.ConstraintViolation;
 import java.util.Set;
 import org.slf4j.Logger;

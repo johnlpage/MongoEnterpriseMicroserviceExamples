@@ -1,8 +1,8 @@
-package __package__.service;
+package __package__.__className__.service;
 
-import __package__.model.__className__;
-import __package__.repository.__className__Repository;
-import __package__.service.generic.PreWriteTriggerService;
+import __package__.__className__.model.__className__;
+import __package__.__className__.repository.__className__Repository;
+import __package__.generics.service.PreWriteTriggerService;
 import org.springframework.stereotype.Service;
 
 @Service

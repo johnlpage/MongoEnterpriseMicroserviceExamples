@@ -1,6 +1,7 @@
-package __package__.service;
+package __package__.__className__.service;
 
-import com.johnlpage.memex.model.__className__;
+import __package__.__className__.model.__className__;
+import  __package__.generics.service.CollectionPreflightConfig;
 import com.mongodb.client.model.IndexModel;
 import com.mongodb.client.model.Indexes;
 import org.bson.Document;

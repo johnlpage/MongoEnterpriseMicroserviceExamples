@@ -1,10 +1,10 @@
-package __package__.repository;
+package __package__.__className__.repository;
 
-import __package__.model.__className__;
-import __package__.repository.optimized.MongoHistoryRepository;
-import __package__.repository.optimized.OptimizedMongoDownstreamRepository;
-import __package__.repository.optimized.OptimizedMongoLoadRepository;
-import __package__.repository.optimized.OptimizedMongoQueryRepository;
+import __package__.__className__.model.__className__;
+import __package__.generics.repository.MongoHistoryRepository;
+import __package__.generics.repository.OptimizedMongoDownstreamRepository;
+import __package__.generics.repository.OptimizedMongoLoadRepository;
+import __package__.generics.repository.OptimizedMongoQueryRepository;
 import java.util.stream.Stream;
 import org.springframework.data.mongodb.repository.MongoRepository;
 import org.springframework.stereotype.Repository;

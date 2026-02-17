@@ -1,10 +1,10 @@
-package __package__.service;
+package __package__.__className__.service;
 
 import com.fasterxml.jackson.core.JsonFactory;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import __package__.model.__className__;
-import __package__.repository.optimized.OptimizedMongoLoadRepository;
-import __package__.service.generic.MongoDbJsonStreamingLoaderService;
+import __package__.__className__.model.__className__;
+import __package__.generics.repository.OptimizedMongoLoadRepository;
+import __package__.generics.service.MongoDbJsonStreamingLoaderService;
 import org.springframework.stereotype.Service;
 
 // This is just Layering Glue, Business logic goes here not direct database access
