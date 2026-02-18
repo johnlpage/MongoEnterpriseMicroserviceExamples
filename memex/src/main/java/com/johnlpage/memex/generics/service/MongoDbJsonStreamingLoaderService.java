@@ -5,10 +5,18 @@ import com.fasterxml.jackson.core.JsonParser;
 import com.fasterxml.jackson.core.JsonToken;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.johnlpage.memex.util.UpdateStrategy;
 import com.johnlpage.memex.generics.repository.OptimizedMongoLoadRepository;
+import com.johnlpage.memex.util.UpdateStrategy;
 import com.mongodb.bulk.BulkWriteResult;
 import jakarta.annotation.Nullable;
+import lombok.AllArgsConstructor;
+import lombok.Data;
+import lombok.RequiredArgsConstructor;
+import org.apache.catalina.connector.ClientAbortException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.stereotype.Service;
 
 import java.io.BufferedInputStream;
 import java.io.EOFException;
@@ -18,24 +26,17 @@ import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicInteger;
 
-import lombok.AllArgsConstructor;
-import lombok.Data;
-import lombok.RequiredArgsConstructor;
-import org.apache.catalina.connector.ClientAbortException;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import org.springframework.stereotype.Service;
-
 @Service
 @RequiredArgsConstructor
 public abstract class MongoDbJsonStreamingLoaderService<T> {
 
     private static final Logger LOG =
             LoggerFactory.getLogger(MongoDbJsonStreamingLoaderService.class);
-    private static final int BATCH_SIZE = 200;
     private final OptimizedMongoLoadRepository<T> repository;
     private final ObjectMapper objectMapper;
     private final JsonFactory jsonFactory;
+    @Value("${mongo.jsonloader.batch-size:500}")
+    private int batchSize;
 
     /**
      * Parses a JSON stream object by object, assumes it's not an Array.
@@ -79,7 +80,7 @@ public abstract class MongoDbJsonStreamingLoaderService<T> {
                     count++;
 
                     toSave.add(document);
-                    if (toSave.size() >= BATCH_SIZE) {
+                    if (toSave.size() >= batchSize) {
                         List<T> copyOfToSave = List.copyOf(toSave);
                         toSave.clear();
                         futures.add(
