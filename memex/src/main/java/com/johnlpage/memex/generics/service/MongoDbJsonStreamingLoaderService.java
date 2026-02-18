@@ -35,7 +35,7 @@ public abstract class MongoDbJsonStreamingLoaderService<T> {
     private final OptimizedMongoLoadRepository<T> repository;
     private final ObjectMapper objectMapper;
     private final JsonFactory jsonFactory;
-    @Value("${mongo.jsonloader.batch-size:500}")
+    @Value("${mongo.jsonloader.batch-size:200}")
     private int batchSize;
 
     /**
