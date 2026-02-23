@@ -211,7 +211,7 @@ public class __className__Controller {
     /**
      * Get historical data as of a specific date
      */
-    @GetMapping(value = "/asOf", produces = MediaType.APPLICATION_JSON_VALUE)
+    @GetMapping(value = "/__apiPath__/asOf", produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<StreamingResponseBody> dataAtDate(
             @RequestParam(name = "asOfDate") @DateTimeFormat(pattern = "yyyyMMddHHmmss") Date asOfDate,
             @RequestParam(name = "id") __idType__ id) {
