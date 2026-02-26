@@ -1,6 +1,6 @@
 # MongoDB Enterprise Microservice Examples (Memex)
 
-## Mews
+## Memex
 
 ***More Documentation in the README in the memex Subdirectory***
 
