@@ -9,6 +9,7 @@ import com.johnlpage.memex.VehicleInspection.model.VehicleInspection;
 import com.johnlpage.memex.VehicleInspection.repository.VehicleInspectionRepository;
 import com.johnlpage.memex.VehicleInspection.repository.VehicleRepository;
 import com.johnlpage.memex.generics.service.MongoDbJsonStreamingLoaderService;
+import com.johnlpage.memex.generics.service.DataLoadException;
 import com.johnlpage.memex.util.UpdateStrategy;
 import jakarta.servlet.http.HttpServletRequest;
 
@@ -72,7 +73,12 @@ public class VehicleInspectionController {
     @PostMapping("/inspection")
     public void oneinspection(@RequestBody VehicleInspection inspection) {
         LOG.warn("Saving vehicle inspection: {}", inspection);
-        vehicleInspectionRepository.save(inspection);
+        try {
+            vehicleInspectionRepository.save(inspection);
+        }
+        catch (Exception e) {
+            LOG.error(e.getMessage());
+        }
     }
 
     /**
@@ -100,14 +106,17 @@ public class VehicleInspectionController {
                                     : null);
 
             return new ResponseEntity<>(returnValue, HttpStatus.OK);
-        } catch (Exception e) {
+        } catch (DataLoadException e) {
             returnValue =
                     new MongoDbJsonStreamingLoaderService.JsonStreamingLoadResponse(
-                            0, 0, 0, false, e.getMessage());
+                            e.getUpdates(), e.getDeletes(), e.getInserts(), false, e.getMessage());
 
             // Log the exception if necessary and return HTTP 500 Internal Server Error
-            return new ResponseEntity<>(returnValue, HttpStatus.INTERNAL_SERVER_ERROR);
+            return new ResponseEntity<>(returnValue, HttpStatus.MULTI_STATUS);
+        } catch (Exception e) {
+            LOG.error(e.getMessage());
         }
+        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
     }
 
     /**

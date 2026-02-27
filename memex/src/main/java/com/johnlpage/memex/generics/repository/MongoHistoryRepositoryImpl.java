@@ -18,7 +18,7 @@ import java.util.stream.Stream;
 
 import static org.springframework.data.mongodb.core.aggregation.LookupOperation.newLookup;
 
-public class MongoHistoryRepositoryImpl<T, I> implements MongoHistoryRepository<T, I> {
+public class MongoHistoryRepositoryImpl<T, I> implements MongoHistoryRepository<T, I>  {
     private static final Logger LOG = LoggerFactory.getLogger(MongoHistoryRepositoryImpl.class);
     private static final int MAX_UNROLL_DEPTH = 10;
     private final MongoTemplate mongoTemplate;

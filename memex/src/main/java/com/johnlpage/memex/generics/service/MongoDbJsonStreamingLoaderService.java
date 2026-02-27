@@ -12,19 +12,17 @@ import jakarta.annotation.Nullable;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.RequiredArgsConstructor;
-import org.apache.catalina.connector.ClientAbortException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import java.io.BufferedInputStream;
-import java.io.EOFException;
 import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicLong;
 
 @Service
 @RequiredArgsConstructor
@@ -47,12 +45,12 @@ public abstract class MongoDbJsonStreamingLoaderService<T> {
             Class<T> type,
             InvalidDataHandlerService<T> invalidDataHandlerService,
             UpdateStrategy updateStrategy,
-            PreWriteTriggerService<T> pretrigger,
-            PostWriteTriggerService<T> posttrigger) {
+            PreWriteTriggerService<T> preTrigger,
+            PostWriteTriggerService<T> postTrigger) throws DataLoadException {
 
-        AtomicInteger updates = new AtomicInteger(0);
-        AtomicInteger deletes = new AtomicInteger(0);
-        AtomicInteger inserts = new AtomicInteger(0);
+        AtomicLong updates = new AtomicLong(0);
+        AtomicLong deletes = new AtomicLong(0);
+        AtomicLong inserts = new AtomicLong(0);
         List<T> toSave = new ArrayList<>();
         List<CompletableFuture<BulkWriteResult>> futures = new ArrayList<>();
 
@@ -70,9 +68,9 @@ public abstract class MongoDbJsonStreamingLoaderService<T> {
 
                     T document = objectMapper.treeToValue(node, type);
 
-                    if (pretrigger != null) {
+                    if (preTrigger != null) {
                         // For a mutable model
-                        pretrigger.modifyMutableDataPreWrite(document);
+                        preTrigger.modifyMutableDataPreWrite(document);
                         // for an immutable model
                         // document = pretrigger.newImmutableDataPreWritedocument);
                     }
@@ -86,7 +84,7 @@ public abstract class MongoDbJsonStreamingLoaderService<T> {
                         futures.add(
                                 repository
                                         .asyncWriteMany(
-                                                copyOfToSave, type, invalidDataHandlerService, updateStrategy, posttrigger)
+                                                copyOfToSave, type, invalidDataHandlerService, updateStrategy, postTrigger)
                                         .thenApply(
                                                 bulkWriteResult -> {
                                                     updates.addAndGet(bulkWriteResult.getModifiedCount());
@@ -103,7 +101,7 @@ public abstract class MongoDbJsonStreamingLoaderService<T> {
                 futures.add(
                         repository
                                 .asyncWriteMany(
-                                        toSave, type, invalidDataHandlerService, updateStrategy, posttrigger)
+                                        toSave, type, invalidDataHandlerService, updateStrategy, postTrigger)
                                 .thenApply(
                                         bulkWriteResult -> {
                                             updates.addAndGet(bulkWriteResult.getModifiedCount());
@@ -122,22 +120,23 @@ public abstract class MongoDbJsonStreamingLoaderService<T> {
             LOG.info("Processed {} docs. Time taken: {}ms.", count, endTime - startTime);
             LOG.info("Modified: {} Added: {} Removed: {}", updates, inserts, deletes);
             return new JsonStreamingLoadResponse(updates.get(), deletes.get(), inserts.get(), true, "");
-        } catch (EOFException | ClientAbortException eofe) {
-            LOG.error("Load Terminated as sender disconnected: {}", eofe.getMessage());
-            return null;
         } catch (Exception e) {
             LOG.error("Error during data load process: {}", e.getMessage());
-            return new JsonStreamingLoadResponse(
-                    updates.get(), deletes.get(), inserts.get(), false, e.getMessage());
+            throw new DataLoadException(
+                    updates.get(),
+                    deletes.get(),
+                    inserts.get(),
+                    "Error during data load process: " + e.getMessage(),
+                    e );
         }
     }
 
     @Data
     @AllArgsConstructor
     public static class JsonStreamingLoadResponse {
-        int updates;
-        int deletes;
-        int inserts;
+        long updates;
+        long deletes;
+        long inserts;
         boolean success;
         String message;
     }

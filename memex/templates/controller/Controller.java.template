@@ -87,13 +87,17 @@ public class __className__Controller {
                         : null);
 
             return new ResponseEntity<>(returnValue, HttpStatus.OK);
-        } catch (Exception e) {
-            returnValue =
-                new MongoDbJsonStreamingLoaderService.JsonStreamingLoadResponse(
-                    0, 0, 0, false, e.getMessage());
+        } catch (DataLoadException e) {
+                      returnValue =
+                              new MongoDbJsonStreamingLoaderService.JsonStreamingLoadResponse(
+                                      e.getUpdates(), e.getDeletes(), e.getInserts(), false, e.getMessage());
 
-            return new ResponseEntity<>(returnValue, HttpStatus.INTERNAL_SERVER_ERROR);
-        }
+                      // Log the exception if necessary and return HTTP 500 Internal Server Error
+                      return new ResponseEntity<>(returnValue, HttpStatus.MULTI_STATUS);
+                  } catch (Exception e) {
+                      LOG.error(e.getMessage());
+              }
+        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
     }
 
     /**
