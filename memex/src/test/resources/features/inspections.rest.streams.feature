@@ -95,7 +95,7 @@ Feature: Vehicle Inspection REST API - Data Streaming Capabilities
           "testdate": "2023-10-27T11:00:00Z"
       ]
       """
-    Then the response status code should be 200
+    Then the response status code should be 207
     And the response should contain "success": false
     And the response should contain "Unexpected character"
 
