@@ -8,6 +8,7 @@ import __package__.__className__.repository.__className__Repository;
 import __package__.__className__.service.*;
 import __package__.generics.service.MongoDbJsonStreamingLoaderService;
 import __package__.util.UpdateStrategy;
+import __package__.generics.service.DataLoadException;
 import jakarta.servlet.http.HttpServletRequest;
 import java.io.BufferedOutputStream;
 import java.io.IOException;
@@ -147,7 +148,7 @@ public class __className__Controller {
     /**
      * Atlas Search query interface
      */
-    @PostMapping("/__apiPath__/search)
+    @PostMapping("/__apiPath__/search")
     public ResponseEntity<String> atlasSearchQuery(@RequestBody String requestBody) {
         List<__className__> result = queryService.atlasSearchQuery(requestBody);
         try {
