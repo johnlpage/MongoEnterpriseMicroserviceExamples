@@ -146,32 +146,102 @@ def parseJsonFile = { File file, JsonSlurper slurper, int maxDocs ->
         }
     }
 
+    if (firstChar == null) {
+        throw new RuntimeException("JSON file is empty")
+    }
+
     if (firstChar == (char) '[') {
-        // JSON array format
         println "Detected: JSON array format"
-        def parsed = slurper.parse(file)
-        if (parsed instanceof List) {
-            documents = ((List) parsed).take(maxDocs)
-        } else {
-            documents = [parsed]
-        }
     } else if (firstChar == (char) '{') {
-        // Newline-delimited JSON (NDJSON) format
-        println "Detected: Newline-delimited JSON (NDJSON) format"
-        file.eachLine('UTF-8') { line ->
-            if (documents.size() < maxDocs) {
-                String trimmed = line.trim()
-                if (trimmed && trimmed.startsWith('{')) {
-                    try {
-                        documents.add(slurper.parseText(trimmed))
-                    } catch (Exception e) {
-                        println "  Warning: Failed to parse line: ${e.message.take(50)}"
-                    }
-                }
-            }
-        }
+        println "Detected: JSON object(s) format"
     } else {
-        throw new RuntimeException("Unrecognized JSON format. File should start with '[' (array) or '{' (NDJSON)")
+        throw new RuntimeException(
+                "Unrecognized JSON format. File should start with '[' or '{'")
+    }
+
+    /**
+     * Extract complete JSON objects by tracking brace depth.
+     * Handles:
+     *   - Strings with escaped quotes, braces, and newlines
+     *   - Nested objects and arrays
+     *   - Pretty-printed / multiline JSON
+     *   - NDJSON
+     *   - JSON arrays of objects
+     */
+    file.withReader('UTF-8') { reader ->
+        StringBuilder current = new StringBuilder()
+        int depth = 0
+        boolean inString = false
+        boolean escaped = false
+        boolean foundFirstBrace = false
+
+        int ch
+        while ((ch = reader.read()) != -1 && documents.size() < maxDocs) {
+            char c = (char) ch
+
+            // Handle string escaping
+            if (escaped) {
+                current.append(c)
+                escaped = false
+                continue
+            }
+
+            if (c == (char) '\\' && inString) {
+                current.append(c)
+                escaped = true
+                continue
+            }
+
+            if (c == (char) '"') {
+                inString = !inString
+                if (foundFirstBrace) {
+                    current.append(c)
+                }
+                continue
+            }
+
+            // Skip everything outside strings and outside objects
+            if (inString) {
+                current.append(c)
+                continue
+            }
+
+            // We're outside a string
+            if (c == (char) '{') {
+                if (depth == 0) {
+                    // Starting a new top-level object
+                    foundFirstBrace = true
+                    current.setLength(0)
+                }
+                current.append(c)
+                depth++
+            } else if (c == (char) '}') {
+                depth--
+                current.append(c)
+
+                if (depth == 0 && foundFirstBrace) {
+                    // Completed a top-level object
+                    String jsonStr = current.toString().trim()
+                    if (jsonStr) {
+                        try {
+                            documents.add(slurper.parseText(jsonStr))
+                        } catch (Exception e) {
+                            println "  Warning: Failed to parse object: ${e.message.take(80)}"
+                        }
+                    }
+                    current.setLength(0)
+                    foundFirstBrace = false
+                }
+            } else if (foundFirstBrace) {
+                current.append(c)
+            }
+            // Characters outside an object (commas between array elements,
+            // brackets, whitespace) are silently skipped
+        }
+    }
+
+    if (documents.isEmpty()) {
+        throw new RuntimeException("No valid JSON objects found in file")
     }
 
     println "Parsed ${documents.size()} document(s)"
@@ -259,7 +329,7 @@ def toFieldName = { String name, String idFldName ->
     def first = parts[0].toLowerCase()
     def rest = parts.drop(1).collect { it.capitalize() }.join('')
     return first + rest*/
-    return name;
+    return name
 }
 
 /**
