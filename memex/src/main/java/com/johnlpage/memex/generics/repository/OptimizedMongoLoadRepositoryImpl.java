@@ -151,13 +151,11 @@ public class OptimizedMongoLoadRepositoryImpl<T> implements OptimizedMongoLoadRe
                     addVersionField(item);
                     ops.insert(item); // This will throw exceptions on duplicates
                 } else if (updateStrategy == UpdateStrategy.UPDATE) {
-
-                    // useSimpleUpdate(item, ops, query); // Unwinds and uses $set - smaller oplog, less
-                    // network
+                    // useSimpleUpdate(item, ops, query);
+                    // Unwinds and uses $set - smaller oplog, less network
                     // Left in for comparison after we moved to always smart updates
                     useSmartUpdate(item, ops, query, updateBatchId, false);
                 } else if (updateStrategy == UpdateStrategy.UPDATEWITHHISTORY) {
-                    // TODO - Version field
                     useSmartUpdate(item, ops, query, updateBatchId, true);
                 } else {
                     // Basic full overwrite can be a little less CPU, but more network/disk
@@ -166,8 +164,9 @@ public class OptimizedMongoLoadRepositoryImpl<T> implements OptimizedMongoLoadRe
                     // If a @Version annotation is in the model, then make sure we set it to 1
                     // This means that save() will work with it properly
                     // When we replace we always set version back to 1, this means that a replace
-                    // with the same upstream is a no-op, you really shoudlnt be using save() to update
-                    // somethign you replace from upstream
+                    // with the same upstream is a no-op.
+                    // If someone uses save() to modify then tries to overwrite from
+                    // upstream with Replace that should fail as would cause data loss.
 
                     addVersionField(item);
                     ops.replaceOne(query, item, FindAndReplaceOptions.options().upsert());

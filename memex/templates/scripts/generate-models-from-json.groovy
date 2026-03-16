@@ -574,9 +574,9 @@ def generateClassContent = { Map classInfo, String pkgName, String collectionNam
         sb.append("     * Optimistic locking version field.\n")
         sb.append("     * Automatically incremented by Spring Data MongoDB on each save.\n")
         sb.append("     */\n")
-        sb.append("    @Field(\"version_field\")")
+        sb.append("    @Field(\"lock_version\")")
         sb.append("    @Version\n")
-        sb.append("    private Long version;\n\n")
+        sb.append("    private Long lockVersion;\n\n")
     }
 
     // Regular fields (skip _id as we handle it separately for root)

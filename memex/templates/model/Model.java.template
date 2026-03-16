@@ -28,9 +28,9 @@ public class __className__ {
     @Id
     private __idType__ __idFieldName__;
 
-    @Field("version_field")
+    @Field("lock_version")
     @Version
-    Long version;
+    Long lockVersion;
 
 
     /* Use this to flag from the JSON we want to remove the record */

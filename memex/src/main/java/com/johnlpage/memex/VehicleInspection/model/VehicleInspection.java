@@ -36,9 +36,9 @@ public class VehicleInspection {
     @Id
     Long testid;
 
-    @Field("version_field")
+    @Field("lock_version")
     @Version
-    Long version;
+    Long lockVersion;
 
     Date testdate;
     String testclass;
