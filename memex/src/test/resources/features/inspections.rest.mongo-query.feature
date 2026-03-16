@@ -46,13 +46,27 @@ Feature: Vehicle Inspection REST API - Native MongoDB Query Execution
     And each item in the response array should contain "vehicle.model": "Corolla"
 
   @post @rainy_day
-  Scenario: Fail to execute a native MongoDB query due to invalid syntax
+  Scenario: Fail to execute a native MongoDB query due to invalid query syntax
     When I send a POST request to "/api/inspections/query" with the payload:
-      """{
+      """
+      {
         "filter": {
           "$invalid_operator": "value"
         }
       }
       """
     Then the response status code should be 500
-    And the response should contain "Internal Server Error"
+    And the response should contain "unknown top level operator"
+
+  @post @rainy_day
+  Scenario: Fail to execute a native MongoDB query due to invalid JSON
+    When I send a POST request to "/api/inspections/query" with the payload:
+      """
+
+       "filter": {
+          "vehicle.model": "Corolla"
+         }
+      }
+      """
+    Then the response status code should be 500
+    And the response should contain "readStartDocument"

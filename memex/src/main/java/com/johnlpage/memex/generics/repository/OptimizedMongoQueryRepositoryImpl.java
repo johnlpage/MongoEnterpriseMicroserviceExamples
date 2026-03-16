@@ -97,6 +97,7 @@ public class OptimizedMongoQueryRepositoryImpl<T> implements OptimizedMongoQuery
     }
 
     public int costMongoDbNativeQuery(String jsonString, Class<T> clazz) {
+
         Document queryRequest = Document.parse(jsonString);
         Document filter = queryRequest.get("filter", new Document());
         Document projection = queryRequest.get("projection", new Document());

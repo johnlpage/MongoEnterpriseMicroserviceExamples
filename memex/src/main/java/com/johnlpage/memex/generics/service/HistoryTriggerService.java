@@ -23,6 +23,9 @@ import org.springframework.data.mongodb.core.query.Query;
 import org.springframework.stereotype.Service;
 
 /* This trigger writes out a change history for documents modified in OptimizedMonogoLoadRepository*/
+//TODO - Change this to diff all arrays with prior version and store only elements that
+//Have Changed, for elements that are the same store the BSON MinKey byte
+//This will need new aggreagtion based mering code to match
 
 @Service
 public abstract class HistoryTriggerService<T> extends PostWriteTriggerService<T> {

@@ -63,7 +63,7 @@ public class VehicleInspectionController {
 
     @GetMapping("/vehicles/id/{id}")
     public ResponseEntity<Vehicle> vehicleById(@PathVariable Long id) {
-        // While you can to straight to the repository, it's  best practise to use a service.
+        // Vehicles are embedde din inspections but can still have their own repository
         return vehicleRepository
                 .findByVehicleIdWithInspections(id)
                 .map(ResponseEntity::ok)
@@ -161,25 +161,27 @@ public class VehicleInspectionController {
      */
     @PostMapping(value = "/inspections/query", produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<String> mongoQuery(@RequestBody String requestBody) {
-        List<VehicleInspection> result = queryService.mongoDbNativeQuery(requestBody);
+
         try {
+            List<VehicleInspection> result = queryService.mongoDbNativeQuery(requestBody);
             // Convert list to JSON string
             String jsonResult = objectMapper.writeValueAsString(result);
             return ResponseEntity.ok(jsonResult);
-        } catch (JsonProcessingException e) {
-            return ResponseEntity.status(500).body("Error converting vehicles to JSON");
+        } catch (Exception e) {
+            return ResponseEntity.status(500).body("Error " + e.getMessage());
         }
     }
 
     @PostMapping("/inspections/search")
     public ResponseEntity<String> atlasSearchQuery(@RequestBody String requestBody) {
-        List<VehicleInspection> result = queryService.atlasSearchQuery(requestBody);
+
         try {
+            List<VehicleInspection> result = queryService.atlasSearchQuery(requestBody);
             // Convert list to JSON string
             String jsonResult = objectMapper.writeValueAsString(result);
             return ResponseEntity.ok(jsonResult);
-        } catch (JsonProcessingException e) {
-            return ResponseEntity.status(500).body("Error converting vehicles to JSON");
+        } catch (Exception e) {
+            return ResponseEntity.status(500).body("Error "+e.getMessage()) ;
         }
     }
 

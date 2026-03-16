@@ -6,13 +6,19 @@ import com.johnlpage.memex.generics.repository.OptimizedMongoDownstreamRepositor
 import com.johnlpage.memex.generics.repository.OptimizedMongoLoadRepository;
 import com.johnlpage.memex.generics.repository.OptimizedMongoQueryRepository;
 
+import java.util.List;
 import java.util.stream.Stream;
 
+import org.bson.Document;
+import org.springframework.data.mongodb.repository.Aggregation;
 import org.springframework.data.mongodb.repository.MongoRepository;
+import org.springframework.data.mongodb.repository.Query;
+import org.springframework.data.mongodb.repository.Update;
 import org.springframework.stereotype.Repository;
 
-/* The repository lets you define simple operations by name of function or by Javascript
-versions of MongoDB queries
+/* The repository Shows examples of the different ways you can define Queries.
+   Annotation based (@Quer, @Aggregation), Derived query Methods and
+   Custom methods using a variety of types/
 */
 @Repository
 public interface VehicleInspectionRepository
@@ -22,31 +28,32 @@ public interface VehicleInspectionRepository
         OptimizedMongoDownstreamRepository<VehicleInspection>,
         MongoHistoryRepository<VehicleInspection, Long> {
 
-  /*
-   * EXAMPLE REPOSITORY METHODS
-   *
-   *
-  // Find inspections by engine capacity - auto generated query
-  List<VehicleInspection> findAllByCapacityGreaterThan(Long engineCapacity);
 
-  // Custom query to find vehicle inspections by vehicle make and model
-  @Query("{ 'vehicle.make': ?0, 'vehicle.model': ?1 }")
-  List<VehicleInspection> findByVehicleMakeAndModel(String make, String model);
+    // Find inspections by engine capacity - Automatically derived query
+    List<VehicleInspection> findByCapacityGreaterThan(Long engineCapacity);
 
-  // Custom aggregation to compute mean mileage of a given model
-  @Aggregation(
-      pipeline = {
-        "{ '$match': { 'vehicle.model': ?0 } }",
-        "{ '$group': { '_id': null, 'averageMileage': { '$avg': '$vehicle.mileage' } } }"
-      })
-  List<Document> findAverageMileageByModel(String model);
+    // Derived Query with Boolean and
+    List<VehicleInspection> findByVehicleColourAndVehicleModel(String colour, String model);
 
-  // Simple efficient update without reading or sending whole document (N.B won't do history)
-  @Query("{ 'testid' : ?0 }")
-  @Update("{ 'inc' : { 'testmileage' : ?1 } }")
-  void adjustTestMileage(Long testid, int increment);
-  */
+    // Annotation-based aggregation (Group By in this case) returning a Docuement as a generic type
+    @Aggregation(
+            pipeline = {
+                    "{ '$match': { 'vehicle.model': ?0 } }",
+                    "{ '$group': { '_id': null, 'averageMileage': { '$avg': '$vehicle.mileage' } } }"
+            })
+    List<Document> findAverageMileageByModel(String model);
 
-    // You have to explicitly call out a streaming version here if you want it.
+
+    // Simple efficient annotation update without reading or sending the whole document (N.B won't do history)
+    @Query("{ 'testid' : ?0 }")
+    @Update("{ 'inc' : { 'testmileage' : ?1 } }")
+    void adjustTestMileage(Long testid, int increment);
+
+    // An Annotation using MongoDB Query Language - opens up more query operators
+    @Query("{ 'vehicle.make': ?0, 'vehicle.model': ?1 }")
+    List<VehicleInspection> findByVehicleMakeAndModel(String make, String model);
+
+
+    // Fetch whole collection as a stream.
     Stream<VehicleInspection> findAllBy();
 }

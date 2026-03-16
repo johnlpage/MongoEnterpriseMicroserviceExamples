@@ -392,7 +392,7 @@ classes for an Entity including all the new
 derived classes by running the maven goal. This adds a Generic flexible model.
 
 ```shell
- mvn generate-sources -Pgenerate-entity -Dentity=Company -Dplural=companies -DidFieldName=companyNumber -DidFieldType=String
+ mvn generate-sources -Pgenerate-entity -Dentity=MyEntity -Dplural=entities -DidFieldName=entityId -DidFieldType=Long
 ```
 
 You can delete it with
@@ -409,7 +409,7 @@ field in the JSON
 
 ```shell
 
- mvn generate-sources -Pgenerate-models-from-json   -DjsonFile=../companies250k.json  -DbasePackage=com.johnlpage.memex  -Dentity=Company  -DidFieldName=companyNumber
+ mvn generate-sources -Pgenerate-models-from-json   -DjsonFile=../DataGen/mot.json  -DbasePackage=com.johnlpage.memex  -Dentity=MyEntity  -DidFieldName=myentityId
 
 ```
 
