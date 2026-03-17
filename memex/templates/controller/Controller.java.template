@@ -114,16 +114,14 @@ public class __className__Controller {
 
     /**
      * Get by example with pagination.
-     * TODO: Customize this endpoint for your specific query needs
+     * Don't forget to add indexes as required.
      */
-    @GetMapping("/__apiPath__/byExample")
+
+    @PostMapping("/__apiPath__/byExample")
     public ResponseEntity<PageDto<__className__>> getByExample(
+            @RequestBody __className__ example,
             @RequestParam(name = "page", required = false, defaultValue = "0") int page,
             @RequestParam(name = "size", required = false, defaultValue = "10") int size) {
-
-        // TODO: Build your example/probe object based on request parameters
-        __className__ example = new __className__();
-        // example.setSomeField(someValue);
 
         Slice<__className__> returnPage = queryService.getByExample(example, page, size);
         PageDto<__className__> entity = new PageDto<>(returnPage);

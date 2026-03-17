@@ -10,6 +10,8 @@ import java.util.List;
 import java.util.stream.Stream;
 
 import org.bson.Document;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Slice;
 import org.springframework.data.mongodb.repository.Aggregation;
 import org.springframework.data.mongodb.repository.MongoRepository;
 import org.springframework.data.mongodb.repository.Query;
@@ -35,6 +37,9 @@ public interface VehicleInspectionRepository
     // Derived Query with Boolean and
     List<VehicleInspection> findByVehicleColourAndVehicleModel(String colour, String model);
 
+    // Version that gets a page using Slice as Page is a lot slower due to counting
+    Slice<VehicleInspection> findByVehicleModel(String model, PageRequest page);
+
     // Annotation-based aggregation (Group By in this case) returning a Docuement as a generic type
     @Aggregation(
             pipeline = {
@@ -56,4 +61,6 @@ public interface VehicleInspectionRepository
 
     // Fetch whole collection as a stream.
     Stream<VehicleInspection> findAllBy();
+
+
 }

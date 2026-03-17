@@ -392,24 +392,23 @@ classes for an Entity including all the new
 derived classes by running the maven goal. This adds a Generic flexible model.
 
 ```shell
- mvn generate-sources -Pgenerate-entity -Dentity=MyEntity -Dplural=entities -DidFieldName=entityId -DidFieldType=Long
+ mvn generate-sources -Pgenerate-entity -Dentity=Customer -Dplural=customers -DidFieldName=customerId -DidFieldType=Long
 ```
 
 You can delete it with
 
 ```shell
- mvn generate-sources -Pgenerate-entity -Dentity=MyEntity -DidType=Long -Ddelete
+ mvn generate-sources -Pgenerate-entity -Dentity=Customer -DidType=Long -Ddelete
 ```
 
 # Model Generation
 
 You can also Generate a data specific model from a JSON file using the maven
-goal below. customId shodu lmap to the id
-field in the JSON
+goal below. customId should be the name of the id field in the JSON and entity
 
 ```shell
 
- mvn generate-sources -Pgenerate-models-from-json   -DjsonFile=../DataGen/mot.json  -DbasePackage=com.johnlpage.memex  -Dentity=MyEntity  -DidFieldName=myentityId
+ mvn generate-sources -Pgenerate-models-from-json   -DjsonFile=../DataGen/mot.json  -DbasePackage=com.johnlpage.memex  -Dentity=Customer  -DidFieldName=customerId
 
 ```
 

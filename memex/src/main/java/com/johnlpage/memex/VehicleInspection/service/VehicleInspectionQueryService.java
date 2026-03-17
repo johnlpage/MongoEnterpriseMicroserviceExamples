@@ -48,8 +48,13 @@ public class VehicleInspectionQueryService {
     }
 
     public Slice<VehicleInspection> getByExample(VehicleInspection probe, int page, int size) {
+        //This line means null values in example do not need ot be null in database
         ExampleMatcher matcher = ExampleMatcher.matching().withIgnoreNullValues();
         Example<VehicleInspection> example = Example.of(probe, matcher);
         return repository.findAll(example, PageRequest.of(page, size));
+    }
+
+    public Slice<VehicleInspection> getByVehicleModel(String model, int page, int size) {
+        return repository.findByVehicleModel(model,PageRequest.of(page,size));
     }
 }

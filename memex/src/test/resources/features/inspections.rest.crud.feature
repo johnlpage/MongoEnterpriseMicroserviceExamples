@@ -76,6 +76,24 @@ Feature: Vehicle Inspection REST API - Core CRUD Operations
     Then the response status code should be 404
     And the response should be empty
 
+  @post @by_example @sunny_day
+  Scenario: Successfully fetch a page of result by example
+    Given the following vehicle inspections exist:
+      | vehicleinspection                                  |
+      | {"testid": 10001, "vehicle": {"model": "Corolla"}} |
+    When I send a POST request to "/api/inspections/byExample?page=0&size=10" with the payload:
+      """
+      {
+        "vehicle": {
+          "model": "Corolla"
+        }
+      }
+      """
+    Then the response status code should be 200
+    And the response should contain "content" with 1 items
+    And the response should contain "pageNumber": 0
+    And the response should contain "pageSize": 10
+
   @get @by_model @sunny_day
   Scenario Outline: Successfully retrieve vehicle inspections by model with pagination
     Given the following vehicle inspections exist:
@@ -95,6 +113,17 @@ Feature: Vehicle Inspection REST API - Core CRUD Operations
       | Focus | 0    | 3    | 3              |
       | Focus | 1    | 3    | 1              |
       | Focus | 0    | 10   | 4              |
+
+  @get @by_model @sunny_day
+  Scenario: Retrieve no vehicle inspections for a non-existent model
+    Given the following vehicle inspections do not exist:
+      | vehicleinspection                     |
+      | {"vehicle.model": "NonExistentModel"} |
+    When I send a GET request to "/api/inspections/model/NonExistentModel"
+    Then the response status code should be 200
+    And the response should contain "content" with 0 items
+    And the response should contain "pageNumber": 0
+    And the response should contain "pageSize": 10
 
   @get @by_model @sunny_day
   Scenario: Retrieve no vehicle inspections for a non-existent model

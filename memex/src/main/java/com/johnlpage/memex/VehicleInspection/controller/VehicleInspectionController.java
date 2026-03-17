@@ -131,6 +131,7 @@ public class VehicleInspectionController {
                 .orElse(ResponseEntity.notFound().build());
     }
 
+
     /**
      * JPA Get By Example Query - Needs an Index to be efficient It still finds ALL the results each
      * time and returns a subset
@@ -141,15 +142,23 @@ public class VehicleInspectionController {
             @RequestParam(name = "page", required = false, defaultValue = "0") int page,
             @RequestParam(name = "size", required = false, defaultValue = "10") int size) {
 
-        // This is where we are hard coding a query for this endpoint.
-        // By creating an example of the class, clumsy but works.
-        VehicleInspection example = new VehicleInspection();
-        Vehicle v = new Vehicle();
-        v.setModel(model);
-        example.setVehicle(v);
-
         // Use the line below for immutable model
         // VehicleInspection probe = VehicleInspection.builder().model(model).build();
+        Slice<VehicleInspection> returnPage = queryService.getByVehicleModel(model, page, size);
+        PageDto<VehicleInspection> entity = new PageDto<>(returnPage);
+        return ResponseEntity.ok(entity);
+    }
+
+    /**
+     * JPA Get By Example Query , pass in some fields get matching in pages
+     * Post as we are sending a body
+     */
+
+    @PostMapping("/inspections/byExample")
+    public ResponseEntity<PageDto<VehicleInspection>> getInspectionByExample(
+            @RequestBody VehicleInspection example,
+            @RequestParam(name = "page", required = false, defaultValue = "0") int page,
+            @RequestParam(name = "size", required = false, defaultValue = "10") int size) {
         Slice<VehicleInspection> returnPage = queryService.getByExample(example, page, size);
         PageDto<VehicleInspection> entity = new PageDto<>(returnPage);
         return ResponseEntity.ok(entity);
