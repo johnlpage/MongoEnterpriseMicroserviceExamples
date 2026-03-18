@@ -54,17 +54,10 @@ public class __className__Controller {
     private final ObjectMapper objectMapper;
     private final __className__Repository repository;
 
-    /**
-     * Create or update a single record
-     */
-    @PostMapping("/__singularApiPath__")
-    public void createOne(@RequestBody __className__ record) {
-        LOG.info("Saving __className__: {}", record);
-        repository.save(record);
-    }
+
 
     /**
-     * Bulk load from JSON stream.
+     * Bulk load from JSON stream. Could take a single item too
      * This could read from a file, Kafka queue, or any stream of JSON data.
      */
     @PostMapping("/__apiPath__")

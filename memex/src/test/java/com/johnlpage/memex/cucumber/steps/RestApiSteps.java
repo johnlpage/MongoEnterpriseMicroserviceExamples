@@ -89,6 +89,17 @@ public class RestApiSteps {
         response.then().body(containsString(expectedSubstring));
     }
 
+    @Then("the response should contain {string}: [{string}, {string}, {string}]")
+    public void the_response_should_contain(String field, String val1, String val2, String val3) {
+        List<String> expectedValues = List.of(val1, val2, val3);
+
+        // Extract actual values from your response
+        List<String> actualValues = response.jsonPath().getList(field);
+
+        assertEquals(expectedValues, actualValues);
+    }
+
+
     @Then("the response should contain {string} with {int} items")
     public void responseShouldContainContentWithItems(String key, int expectedCount) {
         assertNotNull(response.getBody(), "Response body should not be null");

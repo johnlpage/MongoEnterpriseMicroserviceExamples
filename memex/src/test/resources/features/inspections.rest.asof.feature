@@ -7,11 +7,11 @@ Feature: Vehicle Inspection REST API - Point-in-Time History (As Of)
   Scenario: Successfully retrieve vehicle inspection history as of a specific date
     Given the following vehicle inspections exist:
       | vehicleinspection                                                |
-      | {"testid": 10001, "vehicle": {"make": "Ford", "model": "Focus"}} |
+      | {"testid": 10001, "vehicle": {"make": "Ford", "model": "Focus"},"faileditems": ["Handbrake", "Lights","Wipers"]} |
     And I wait for 1 second
     And I capture the current timestamp to "<timestamp>" with "yyyyMMddHHmmss" pattern
     And I wait for 1 second
-    And I send a POST request to "/api/inspections?updateStrategy=UPDATEWITHHISTORY&futz=true" with the payload:
+    And I send a POST request to "/api/inspections?updateStrategy=UPDATEWITHHISTORY" with the payload:
       """
       [
         {
@@ -23,7 +23,7 @@ Feature: Vehicle Inspection REST API - Point-in-Time History (As Of)
           "testmileage": 60000,
           "postcode": "SW1A 0AB",
           "fuel": "Diesel",
-          "capacity": 80,
+          "capacity": 90,
           "firstusedate": "2019-03-20T00:00:00Z",
           "faileditems": ["Brakes", "Lights"],
           "vehicle": {
@@ -41,4 +41,6 @@ Feature: Vehicle Inspection REST API - Point-in-Time History (As Of)
     And the "Transfer-Encoding" header should be "chunked"
     And the "Content-Type" header should be "application/json"
     And the response should contain "testid": 10001
-    And the response should contain "combined.vehicle.model": "Focus"
+    And the response should contain "vehicle.model": "Focus"
+    And the response should contain "faileditems": ["Handbrake", "Lights", "Wipers"]
+

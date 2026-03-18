@@ -333,8 +333,61 @@ public class OptimizedMongoLoadRepositoryImpl<T> implements OptimizedMongoLoadRe
                 // If changed record the old value otherwise record nothing
                 Document coerceEmptyToNull =
                         new Document("$ifNull", Arrays.asList("$" + entry.getKey(), null));
+
+                /*EXPERIMENTAL */
+                // Check if the NEW value being set is an array - if so, do element-wise diff
+
+                Document previousValueExpr;
+                if (entry.getValue() instanceof List) {
+                    // Build an element-wise comparison:
+                    // For each index in the OLD array, if the element equals the corresponding
+                    // new element, store MinKey; otherwise store the old element.
+                    // Also handles the case where array lengths differ.
+                    //
+                    // We use $map over the old array with index, comparing each element
+                    // to the new array at the same index.
+
+                    // $range(0, $size(oldArray))
+                    Document oldArrayRef = new Document("$ifNull",
+                            Arrays.asList("$" + entry.getKey(), new ArrayList<>()));
+                    Document oldSize = new Document("$size", oldArrayRef);
+
+                    // The new value as a literal (in case it contains $ strings)
+                    Object newValueLiteral = entry.getValue();
+
+                    // $map over indices of the old array
+                    // For each index i:
+                    //   if oldArray[i] == newArray[i] -> MinKey
+                    //   else -> oldArray[i]
+                    Document oldElem = new Document("$arrayElemAt",
+                            Arrays.asList(oldArrayRef, "$$idx"));
+                    Document newElem = new Document("$arrayElemAt",
+                            Arrays.asList(new Document("$literal", newValueLiteral), "$$idx"));
+
+                    Document elemEqual = new Document("$eq", Arrays.asList(oldElem, newElem));
+                    // MinKey as a constant - use $literal with a MinKey BSON value
+                    org.bson.types.MinKey minKey = new org.bson.types.MinKey();
+                    Document conditionalElem = new Document("$cond",
+                            Arrays.asList(elemEqual, minKey, oldElem));
+
+                    Document mappedArray = new Document("$map", new Document()
+                            .append("input", new Document("$range",
+                                    Arrays.asList(0, oldSize)))
+                            .append("as", "idx")
+                            .append("in", conditionalElem));
+
+                    previousValueExpr = mappedArray;
+                } else {
+                    previousValueExpr = coerceEmptyToNull;
+                }
+                /*EXPERIMENTAL */
+
+                /* WAS
                 Document conditionalOnChange =
-                        new Document("$cond", Arrays.asList(valueChanged, coerceEmptyToNull, "$$REMOVE"));
+                        new Document("$cond", Arrays.asList(valueChanged, coerceEmptyToNull, "$$REMOVE"));*/
+
+                Document conditionalOnChange =
+                        new Document("$cond", Arrays.asList(valueChanged, previousValueExpr, "$$REMOVE"));
 
                 previousValues.append(PREVIOUS_VALS + "." + entry.getKey(), conditionalOnChange);
             }
