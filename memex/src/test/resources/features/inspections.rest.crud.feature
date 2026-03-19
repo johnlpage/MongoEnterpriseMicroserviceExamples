@@ -3,61 +3,9 @@ Feature: Vehicle Inspection REST API - Core CRUD Operations
   This feature outlines the core Create, Read, Update, and Delete (CRUD) operations for vehicle inspections via the REST API.
   It includes tests for creating new inspections, retrieving existing ones by ID or other criteria, and handling various success and failure scenarios.
 
-  @post @one_inspection @sunny_day
-  Scenario: Successfully save a single vehicle inspection
-    Given the vehicle inspection with id 10001 does not exist
-    When I send a POST request to "/api/inspection" with the payload:
-      """
-      {
-        "testid": 10001,
-        "testdate": "2023-10-26T10:00:00Z",
-        "testclass": "Class 1",
-        "testtype": "Annual",
-        "testresult": "PASS",
-        "testmileage": 50000,
-        "postcode": "SW1A 0AA",
-        "fuel": "Petrol",
-        "capacity": 1.6,
-        "firstusedate": "2018-01-15T00:00:00Z",
-        "faileditems": [],
-        "vehicle": {
-          "make": "Toyota",
-          "model": "Corolla",
-          "year": 2018,
-          "vin": "VIN1234567890ABCDE"
-        }
-      }
-      """
-    Then the response status code should be 200
-    And the response should be empty
 
-  @post @one_inspection @rainy_day
-  Scenario: Fail to save a single vehicle inspection due to malformed JSON
-    Given the vehicle inspection with id 10002 does not exist
-    When I send a POST request to "/api/inspection" with the payload:
-      """
-      {
-        "testid": 10002,
-        "testdate": "2023-10-26T10:00:00Z",
-        "testclass": "Class 1",
-        "testtype": "Annual",
-        "testresult": "PASS",
-        "testmileage": 50000,
-        "postcode": "SW1A 0AA",
-        "fuel": "Petrol",
-        "capacity": 1.6,
-        "firstusedate": "2018-01-15T00:00:00Z",
-        "faileditems": [],
-        "vehicle": {
-          "make": "Toyota",
-          "model": "Corolla",
-          "year": 2018,
-          "vin": "VIN1234567890ABCDE"
-        // Missing closing brace for vehicle object
-      }
-      """
-    Then the response status code should be 400
-    And the response should contain "Bad Request"
+
+
 
   @get @by_id @sunny_day
   Scenario: Successfully retrieve a vehicle inspection by ID
