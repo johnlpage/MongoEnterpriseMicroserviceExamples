@@ -70,16 +70,6 @@ public class VehicleInspectionController {
                 .orElse(ResponseEntity.notFound().build());
     }
 
-    @PostMapping("/inspection")
-    public void oneinspection(@RequestBody VehicleInspection inspection) {
-        LOG.warn("Saving vehicle inspection: {}", inspection);
-        try {
-            vehicleInspectionRepository.save(inspection);
-        }
-        catch (Exception e) {
-            LOG.error(e.getMessage());
-        }
-    }
 
     /**
      * This could be something that reads a file, or even from a Kafka Queue as long as it gets a
