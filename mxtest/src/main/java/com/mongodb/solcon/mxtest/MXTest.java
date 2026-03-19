@@ -30,11 +30,17 @@ public class MXTest {
         System.exit(1);
       }
       byte[] body = getBodyContent(args[2]);
-      request =
-          HttpRequest.newBuilder()
-              .uri(new URI(args[1]))
-              .POST(HttpRequest.BodyPublishers.ofByteArray(body))
-              .build();
+      HttpRequest.Builder builder =
+              HttpRequest.newBuilder()
+                      .uri(new URI(args[1]))
+                      .POST(HttpRequest.BodyPublishers.ofByteArray(body));
+
+      // For explicit inline strings (not @file), auto-detect JSON
+      if (!args[2].startsWith("@") && isJson(args[2])) {
+        builder.header("Content-Type", "application/json");
+      }
+
+      request = builder.build();
     } else if ("DELETE".equals(method)) {
       request = HttpRequest.newBuilder().uri(new URI(args[1])).DELETE().build();
     } else {
@@ -56,6 +62,24 @@ public class MXTest {
       } else {
         System.out.println(formatJsonIfPossible(response.body()));
       }
+    }
+  }
+
+  /**
+   * Checks if a string is valid JSON by attempting to parse it with Gson.
+   *
+   * @param text the string to check
+   * @return true if the string is valid JSON
+   */
+  private static boolean isJson(String text) {
+    if (text == null || text.trim().isEmpty()) {
+      return false;
+    }
+    try {
+      JsonParser.parseString(text);
+      return true;
+    } catch (JsonSyntaxException e) {
+      return false;
     }
   }
 
@@ -157,8 +181,8 @@ public class MXTest {
     for (String field : fields) {
       String[] parts = field.trim().split("\\.");
       pathMap
-          .computeIfAbsent(parts[0], k -> new ArrayList<>())
-          .add(parts.length > 1 ? Arrays.copyOfRange(parts, 1, parts.length) : new String[0]);
+              .computeIfAbsent(parts[0], k -> new ArrayList<>())
+              .add(parts.length > 1 ? Arrays.copyOfRange(parts, 1, parts.length) : new String[0]);
     }
 
     if (root.isJsonObject()) {
@@ -213,16 +237,16 @@ public class MXTest {
       } else {
         if (subValue.isJsonObject()) {
           result.add(
-              fieldName,
-              pickFields(
-                  subValue.getAsJsonObject(),
-                  Collections.singletonList(Arrays.copyOfRange(parts, 1, parts.length))));
+                  fieldName,
+                  pickFields(
+                          subValue.getAsJsonObject(),
+                          Collections.singletonList(Arrays.copyOfRange(parts, 1, parts.length))));
         } else if (subValue.isJsonArray()) {
           result.add(
-              fieldName,
-              filterArray(
-                  subValue.getAsJsonArray(),
-                  Collections.singletonList(Arrays.copyOfRange(parts, 1, parts.length))));
+                  fieldName,
+                  filterArray(
+                          subValue.getAsJsonArray(),
+                          Collections.singletonList(Arrays.copyOfRange(parts, 1, parts.length))));
         }
       }
     }
