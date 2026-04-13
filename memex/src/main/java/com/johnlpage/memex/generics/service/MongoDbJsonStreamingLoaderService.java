@@ -9,8 +9,6 @@ import com.johnlpage.memex.generics.repository.OptimizedMongoLoadRepository;
 import com.johnlpage.memex.util.UpdateStrategy;
 import com.mongodb.bulk.BulkWriteResult;
 import jakarta.annotation.Nullable;
-import lombok.AllArgsConstructor;
-import lombok.Data;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -131,13 +129,11 @@ public abstract class MongoDbJsonStreamingLoaderService<T> {
         }
     }
 
-    @Data
-    @AllArgsConstructor
-    public static class JsonStreamingLoadResponse {
-        long updates;
-        long deletes;
-        long inserts;
-        boolean success;
-        String message;
-    }
+    public record JsonStreamingLoadResponse(
+        long updates,
+        long deletes,
+        long inserts,
+        boolean success,
+        String message
+    ) {}
 }

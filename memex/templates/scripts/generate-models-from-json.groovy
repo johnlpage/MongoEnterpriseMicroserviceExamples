@@ -457,7 +457,9 @@ processClass = { Map classes, String className, Map fields, boolean isRoot, Stri
             isRoot           : isRoot,
             fields           : [],
             imports          : new HashSet([
-                    'lombok.Data',
+                    'lombok.Getter',
+                    'lombok.Setter',
+                    'lombok.EqualsAndHashCode',
                     'org.springframework.data.mongodb.core.mapping.Field',
                     'com.fasterxml.jackson.annotation.JsonAnySetter',
                     'com.fasterxml.jackson.annotation.JsonAnyGetter',
@@ -556,7 +558,9 @@ def generateClassContent = { Map classInfo, String pkgName, String collectionNam
     sb.append(" */\n")
 
     // Annotations
-    sb.append("@Data\n")
+    sb.append("@Getter\n");
+    sb.append("@Setter\n");
+    sb.append("@EqualsAndHashCode(onlyExplicitlyIncluded = true)\n");
     if (classInfo.isRoot) {
         sb.append("@Document(collection = \"${collectionName}\")\n")
     }
@@ -567,6 +571,7 @@ def generateClassContent = { Map classInfo, String pkgName, String collectionNam
     if (classInfo.isRoot) {
         // Add ID field first
         sb.append("    @Id\n")
+        sb.append("    @EqualsAndHashCode.Include\n")
         sb.append("    private String ${classInfo.idFieldName};\n\n")
 
         // Add version field
