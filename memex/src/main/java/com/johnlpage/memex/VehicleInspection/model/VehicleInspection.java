@@ -7,7 +7,9 @@ import com.fasterxml.jackson.annotation.JsonInclude;
 import com.johnlpage.memex.util.DeleteFlag;
 import com.johnlpage.memex.util.ObjectConverter;
 import jakarta.validation.constraints.Min;
-import lombok.Data;
+import lombok.EqualsAndHashCode;
+import lombok.Getter;
+import lombok.Setter;
 import org.springframework.data.annotation.Id;
 import org.springframework.data.annotation.Transient;
 import org.springframework.data.annotation.Version;
@@ -18,7 +20,7 @@ import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
 
-/* Replace @Data with this to make an Immutable model
+/* Replace @Getter/@Setter with this to make an Immutable model
  * which is a little more efficient but no setters just a builder
  * This also impact the controller and fuzzer and JsonLoaderService -
  * changes there are commented
@@ -28,12 +30,15 @@ import java.util.Map;
  *  @Value
  */
 
-@Data
+@Getter
+@Setter
+@EqualsAndHashCode(onlyExplicitlyIncluded = true)
 @JsonIgnoreProperties(ignoreUnknown = true)
 @JsonInclude(JsonInclude.Include.NON_NULL)
 @Document(collection = "vehicleinspection")
 public class VehicleInspection {
     @Id
+    @EqualsAndHashCode.Include
     Long testid;
 
     @Field("lock_version")

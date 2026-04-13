@@ -5,7 +5,9 @@ import com.fasterxml.jackson.annotation.JsonAnyGetter;
 import com.fasterxml.jackson.annotation.JsonAnySetter;
 import com.johnlpage.memex.util.DeleteFlag;
 import com.johnlpage.memex.util.ObjectConverter;
-import lombok.Data;
+import lombok.EqualsAndHashCode;
+import lombok.Getter;
+import lombok.Setter;
 import lombok.NoArgsConstructor;
 import lombok.AllArgsConstructor;
 import org.springframework.data.annotation.Id;
@@ -19,13 +21,16 @@ import java.util.Map;
 
 __idImport__
 
-@Data
+@Getter
+@Setter
+@EqualsAndHashCode(onlyExplicitlyIncluded = true)
 @NoArgsConstructor
 @AllArgsConstructor
 @Document(collection = "__collectionName__")
 public class __className__ {
 
     @Id
+    @EqualsAndHashCode.Include
     private __idType__ __idFieldName__;
 
     @Field("lock_version")

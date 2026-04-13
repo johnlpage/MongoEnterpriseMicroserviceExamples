@@ -5,13 +5,18 @@ import com.fasterxml.jackson.annotation.JsonInclude;
 
 import java.util.List;
 
-import lombok.Data;
+import lombok.EqualsAndHashCode;
+import lombok.Getter;
+import lombok.Setter;
 import org.springframework.data.annotation.ReadOnlyProperty;
 
-@Data
+@Getter
+@Setter
+@EqualsAndHashCode(onlyExplicitlyIncluded = true)
 @JsonIgnoreProperties(ignoreUnknown = true)
 @JsonInclude(JsonInclude.Include.NON_NULL)
 public class Vehicle {
+    @EqualsAndHashCode.Include
     Long vehicleid;
     String make;
     String model;
