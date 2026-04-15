@@ -37,4 +37,5 @@ replay_pid*
 /memex/.idea/
 /SAMPLE_DATA/VOSA/
 /memex/target/
+/memex/.gradle/
 /DataGen/target/
