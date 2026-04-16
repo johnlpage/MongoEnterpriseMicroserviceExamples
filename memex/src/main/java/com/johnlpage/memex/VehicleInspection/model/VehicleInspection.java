@@ -16,7 +16,7 @@ import org.springframework.data.annotation.Version;
 import org.springframework.data.mongodb.core.mapping.Document;
 import org.springframework.data.mongodb.core.mapping.Field;
 
-import java.util.Date;
+import java.time.LocalDate;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -45,7 +45,7 @@ public class VehicleInspection {
     @Version
     Long lockVersion;
 
-    Date testdate;
+    LocalDate testdate;
     String testclass;
     String testtype;
     String testresult;
@@ -58,7 +58,7 @@ public class VehicleInspection {
 
     Long capacity;
 
-    Date firstusedate;
+    LocalDate firstusedate;
     /* Use this to flag from the JSON we want to remove the record */
     @Transient
     @DeleteFlag

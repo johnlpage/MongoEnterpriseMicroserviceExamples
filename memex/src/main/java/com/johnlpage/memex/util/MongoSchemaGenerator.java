@@ -143,7 +143,13 @@ public class MongoSchemaGenerator {
         if (type == Boolean.class || type == boolean.class) return "bool";
         if (Date.class.isAssignableFrom(type)) return "date";
         if (type == java.time.Instant.class)
-            return "date"; // Works as logn as we have a typemapper
+            return "date"; // Works as long as we have a typemapper
+        if (type == java.time.LocalDate.class)
+            return "date"; // Stored as BSON Date via native java.time codecs
+        if (type == java.time.LocalTime.class)
+            return "date"; // Stored as BSON Date via native java.time codecs
+        if (type == java.time.LocalDateTime.class)
+            return "date"; // Stored as BSON Date via native java.time codecs
         if (UUID.class.isAssignableFrom(type)) return "string";
 
         // Native BSON types (preferred for performance)
@@ -208,7 +214,8 @@ public class MongoSchemaGenerator {
         if (pkg.startsWith("java.time")) {
             return "Unsupported type: "
                     + type.getName()
-                    + ". Convert to java.util.Date or store as ISO-8601 String or epoch Long.";
+                    + ". Use Instant for timestamps, LocalDate for date-only values, LocalTime for time-only values,"
+                    + " LocalDateTime for combined date/time, or store as ISO-8601 String or epoch Long.";
         }
 
         if (pkg.startsWith("java.sql")) {

@@ -384,8 +384,11 @@ determineType = { String fieldName, Object value, String parentClassName ->
     if (value instanceof String) {
         String strVal = (String) value
 
-        if (strVal ==~ /^\d{4}-\d{2}-\d{2}.*/ || strVal ==~ /.*T\d{2}:\d{2}:\d{2}.*/) {
-            return [type: 'Date', isComplex: false, imports: ['java.util.Date']]
+        if (strVal ==~ /.*T\d{2}:\d{2}:\d{2}.*/) {
+            return [type: 'Instant', isComplex: false, imports: ['java.time.Instant']]
+        }
+        if (strVal ==~ /^\d{4}-\d{2}-\d{2}$/) {
+            return [type: 'LocalDate', isComplex: false, imports: ['java.time.LocalDate']]
         }
         return [type: 'String', isComplex: false]
     }

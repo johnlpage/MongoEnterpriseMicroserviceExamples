@@ -2,10 +2,14 @@ package com.johnlpage.memex.util;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.ZoneOffset;
 import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 
 public class ObjectConverter {
 
@@ -32,18 +36,13 @@ public class ObjectConverter {
             // Try parsing as different date/time types
             if (str.contains("T")) {
               if (str.contains("Z") || str.contains("+") || str.contains("-")) {
-                return Date.from(ZonedDateTime.parse(str, formatter).toInstant());
+                return ZonedDateTime.parse(str, formatter).toInstant();
               } else {
-                return Date.from(
-                    LocalDateTime.parse(str, formatter)
-                        .atZone(java.time.ZoneOffset.UTC)
-                        .toInstant());
+                return LocalDateTime.parse(str, formatter)
+                    .toInstant(ZoneOffset.UTC);
               }
             } else {
-              return Date.from(
-                  LocalDate.parse(str, formatter)
-                      .atStartOfDay(java.time.ZoneOffset.UTC)
-                      .toInstant());
+              return LocalDate.parse(str, formatter);
             }
           } catch (DateTimeParseException e) {
             // Continue to next formatter

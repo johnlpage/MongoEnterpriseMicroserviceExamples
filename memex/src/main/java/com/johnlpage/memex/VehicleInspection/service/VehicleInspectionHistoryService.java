@@ -3,7 +3,7 @@ package com.johnlpage.memex.VehicleInspection.service;
 import com.johnlpage.memex.VehicleInspection.model.VehicleInspection;
 import com.johnlpage.memex.VehicleInspection.repository.VehicleInspectionRepository;
 
-import java.util.Date;
+import java.time.Instant;
 import java.util.stream.Stream;
 
 import org.springframework.stereotype.Service;
@@ -19,7 +19,7 @@ public class VehicleInspectionHistoryService {
         this.repository = repository;
     }
 
-    public Stream<VehicleInspection> asOfDate(Long id, Date asOfDate) {
+    public Stream<VehicleInspection> asOfDate(Long id, Instant asOfDate) {
         return repository.GetRecordByIdAsOfDate(id, asOfDate, VehicleInspection.class);
     }
 }

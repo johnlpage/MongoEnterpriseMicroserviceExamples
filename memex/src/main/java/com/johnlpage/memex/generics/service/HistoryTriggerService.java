@@ -11,6 +11,7 @@ import com.mongodb.bulk.BulkWriteResult;
 import com.mongodb.bulk.BulkWriteUpsert;
 import com.mongodb.client.ClientSession;
 
+import java.time.Instant;
 import java.util.*;
 
 import org.bson.Document;
@@ -60,7 +61,7 @@ public abstract class HistoryTriggerService<T> extends PostWriteTriggerService<T
                 DocumentHistory vih = new DocumentHistory();
                 vih.setRecordId(v.getId());
                 vih.setType("insert");
-                vih.setTimestamp(new Date());
+                vih.setTimestamp(Instant.now());
                 history.add(vih); // Add this history records to the history list
             }
         }
@@ -103,7 +104,7 @@ public abstract class HistoryTriggerService<T> extends PostWriteTriggerService<T
                 previousValues.remove(OptimizedMongoLoadRepositoryImpl.LAST_UPDATE_DATE);
 
                 vih.setChanges(previousValues);
-                vih.setTimestamp(new Date());
+                vih.setTimestamp(Instant.now());
                 history.add(vih); // Add this history records to the history list
             }
         }
@@ -123,7 +124,7 @@ public abstract class HistoryTriggerService<T> extends PostWriteTriggerService<T
                     });
                     vih.setChanges(finalState);
                     vih.setType("delete");
-                    vih.setTimestamp(new Date());
+                    vih.setTimestamp(Instant.now());
                     history.add(vih); // Add this history records to the history list
                 }
             }

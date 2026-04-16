@@ -11,7 +11,7 @@ Feature: Vehicle Inspection REST API - Data Streaming Capabilities
       [
         {
           "testid": <id1>,
-          "testdate": "2023-10-26T10:00:00Z",
+          "testdate": "2023-10-26",
           "testclass": "Class 1",
           "testtype": "Annual",
           "testresult": "PASS",
@@ -19,7 +19,7 @@ Feature: Vehicle Inspection REST API - Data Streaming Capabilities
           "postcode": "SW1A 0AA",
           "fuel": "Petrol",
           "capacity": 56,
-          "firstusedate": "2018-01-15T00:00:00Z",
+          "firstusedate": "2018-01-15",
           "faileditems": [],
           "vehicle": {
             "make": "Toyota",
@@ -30,7 +30,7 @@ Feature: Vehicle Inspection REST API - Data Streaming Capabilities
         },
         {
           "testid": <id2>,
-          "testdate": "2023-10-27T11:00:00Z",
+          "testdate": "2023-10-27",
           "testclass": "Class 2",
           "testtype": "Interim",
           "testresult": "FAIL",
@@ -38,7 +38,7 @@ Feature: Vehicle Inspection REST API - Data Streaming Capabilities
           "postcode": "SW1A 0AB",
           "fuel": "Diesel",
           "capacity": 76,
-          "firstusedate": "2019-03-20T00:00:00Z",
+          "firstusedate": "2019-03-20",
           "faileditems": ["Brakes", "Lights"],
           "vehicle": {
             "make": "Ford",
@@ -88,11 +88,11 @@ Feature: Vehicle Inspection REST API - Data Streaming Capabilities
       [
         {
           "testid": 10001,
-          "testdate": "2023-10-26T10:00:00Z"
+          "testdate": "2023-10-26"
         },
         { // Malformed object, missing closing brace
           "testid": 10002,
-          "testdate": "2023-10-27T11:00:00Z"
+          "testdate": "2023-10-27"
       ]
       """
     Then the response status code should be 207
