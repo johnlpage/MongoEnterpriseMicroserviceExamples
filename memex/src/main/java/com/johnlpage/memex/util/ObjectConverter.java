@@ -30,16 +30,15 @@ public class ObjectConverter {
       return ((Number) input).doubleValue();
     }
     if (input instanceof String str) {
-      if (!str.isEmpty() && str.length() >= 8 && Character.isDigit(str.charAt(0))) {
+      if (str.length() >= 8 && Character.isDigit(str.charAt(0))) {
         for (DateTimeFormatter formatter : DATE_FORMATTERS) {
           try {
             // Try parsing as different date/time types
             if (str.contains("T")) {
-              if (str.contains("Z") || str.contains("+") || str.contains("-")) {
+              if (str.endsWith("Z") || str.matches(".*[+-]\\d{2}(:\\d{2})?$")) {
                 return ZonedDateTime.parse(str, formatter).toInstant();
               } else {
-                return LocalDateTime.parse(str, formatter)
-                    .toInstant(ZoneOffset.UTC);
+                return LocalDateTime.parse(str, formatter).toInstant(ZoneOffset.UTC);
               }
             } else {
               return LocalDate.parse(str, formatter);
