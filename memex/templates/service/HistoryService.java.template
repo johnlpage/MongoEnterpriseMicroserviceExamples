@@ -2,7 +2,7 @@ package __package__.__className__.service;
 
 import __package__.__className__.model.__className__;
 import __package__.__className__.repository.__className__Repository;
-import java.util.Date;
+import java.time.Instant;
 import java.util.stream.Stream;
 import org.springframework.stereotype.Service;
 __idImport__
@@ -18,7 +18,7 @@ public class __className__HistoryService {
         this.repository = repository;
     }
 
-    public Stream<__className__> asOfDate(__idType__ id, Date asOfDate) {
+    public Stream<__className__> asOfDate(__idType__ id, Instant asOfDate) {
         return repository.GetRecordByIdAsOfDate(id, asOfDate, __className__.class);
     }
 }

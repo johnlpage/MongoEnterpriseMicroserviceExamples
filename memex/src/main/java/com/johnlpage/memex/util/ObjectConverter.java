@@ -2,10 +2,14 @@ package com.johnlpage.memex.util;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.ZoneOffset;
 import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 
 public class ObjectConverter {
 
@@ -26,24 +30,18 @@ public class ObjectConverter {
       return ((Number) input).doubleValue();
     }
     if (input instanceof String str) {
-      if (!str.isEmpty() && str.length() >= 8 && Character.isDigit(str.charAt(0))) {
+      if (str.length() >= 8 && Character.isDigit(str.charAt(0))) {
         for (DateTimeFormatter formatter : DATE_FORMATTERS) {
           try {
             // Try parsing as different date/time types
             if (str.contains("T")) {
-              if (str.contains("Z") || str.contains("+") || str.contains("-")) {
-                return Date.from(ZonedDateTime.parse(str, formatter).toInstant());
+              if (str.endsWith("Z") || str.matches(".*[+-]\\d{2}(:\\d{2})?$")) {
+                return ZonedDateTime.parse(str, formatter).toInstant();
               } else {
-                return Date.from(
-                    LocalDateTime.parse(str, formatter)
-                        .atZone(java.time.ZoneOffset.UTC)
-                        .toInstant());
+                return LocalDateTime.parse(str, formatter).toInstant(ZoneOffset.UTC);
               }
             } else {
-              return Date.from(
-                  LocalDate.parse(str, formatter)
-                      .atStartOfDay(java.time.ZoneOffset.UTC)
-                      .toInstant());
+              return LocalDate.parse(str, formatter);
             }
           } catch (DateTimeParseException e) {
             // Continue to next formatter

@@ -13,6 +13,7 @@ import org.springframework.data.mongodb.core.MongoTemplate;
 import org.springframework.data.mongodb.core.aggregation.*;
 import org.springframework.data.mongodb.core.query.Criteria;
 
+import java.time.Instant;
 import java.util.*;
 import java.util.stream.Stream;
 
@@ -29,12 +30,12 @@ public class MongoHistoryRepositoryImpl<T, I> implements MongoHistoryRepository<
         this.mongoVersion = mongoVersion;
     }
 
-    public Stream<T> GetRecordByIdAsOfDate(I recordId, Date asOf, Class<T> clazz) {
+    public Stream<T> GetRecordByIdAsOfDate(I recordId, Instant asOf, Class<T> clazz) {
         Criteria criteria = Criteria.where("_id").is(recordId);
         return GetRecordsAsOfDate(criteria, asOf, clazz);
     }
 
-    public Stream<T> GetRecordsAsOfDate(Criteria criteria, Date asOf, Class<T> clazz) {
+    public Stream<T> GetRecordsAsOfDate(Criteria criteria, Instant asOf, Class<T> clazz) {
 
         List<AggregationOperation> stages = new ArrayList<>();
         String collectionName = AnnotationExtractor.getCollectionName(clazz);

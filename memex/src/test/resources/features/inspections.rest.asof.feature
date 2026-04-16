@@ -16,7 +16,7 @@ Feature: Vehicle Inspection REST API - Point-in-Time History (As Of)
       [
         {
           "testid": 10001,
-          "testdate": "2025-10-27T11:00:00Z",
+          "testdate": "2025-10-27",
           "testclass": "Class 2",
           "testtype": "Interim",
           "testresult": "PASS",
@@ -24,7 +24,7 @@ Feature: Vehicle Inspection REST API - Point-in-Time History (As Of)
           "postcode": "SW1A 0AB",
           "fuel": "Diesel",
           "capacity": 90,
-          "firstusedate": "2019-03-20T00:00:00Z",
+          "firstusedate": "2019-03-20",
           "faileditems": ["Brakes", "Lights"],
           "vehicle": {
             "make": "Ford",

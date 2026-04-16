@@ -16,7 +16,9 @@ import jakarta.servlet.http.HttpServletRequest;
 import java.io.BufferedOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
-import java.util.Date;
+import java.time.Instant;
+import java.time.LocalDateTime;
+import java.time.ZoneOffset;
 import java.util.Iterator;
 import java.util.List;
 import java.util.stream.Stream;
@@ -251,8 +253,9 @@ public class VehicleInspectionController {
 
     @GetMapping(value = "/inspections/asOf", produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<StreamingResponseBody> dataAtDate(
-            @RequestParam(name = "asOfDate") @DateTimeFormat(pattern = "yyyyMMddHHmmss") Date asOfDate,
+            @RequestParam(name = "asOfDate") @DateTimeFormat(pattern = "yyyyMMddHHmmss") LocalDateTime asOfDateParam,
             @RequestParam(name = "id") Long id) {
+        Instant asOfDate = asOfDateParam.atZone(ZoneOffset.UTC).toInstant();
         return ResponseEntity.ok()
                 .contentType(MediaType.APPLICATION_JSON)
                 .body(

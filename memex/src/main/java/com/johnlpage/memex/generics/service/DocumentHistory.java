@@ -2,7 +2,7 @@ package com.johnlpage.memex.generics.service;
 
 import com.fasterxml.jackson.annotation.*;
 
-import java.util.Date;
+import java.time.Instant;
 import java.util.Map;
 
 import lombok.EqualsAndHashCode;
@@ -33,7 +33,7 @@ public class DocumentHistory {
     @EqualsAndHashCode.Include
     ObjectId historyId;
     Object recordId;
-    Date timestamp;
+    Instant timestamp;
     String type; // TOOO enum?
     Map<String, Object> changes;
 }
