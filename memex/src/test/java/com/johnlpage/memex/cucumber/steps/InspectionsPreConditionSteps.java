@@ -129,7 +129,7 @@ public class InspectionsPreConditionSteps {
         try {
             log.info("apiBaseUrl: {}", apiBaseUrl);
             ResponseEntity<String> response = restClient.post()
-                    .uri(apiBaseUrl + "/api/inspections?updateStrategy=UPDATEWITHHISTORY&futz=true")
+                    .uri(apiBaseUrl + "/api/inspections?updateStrategy=UPDATEWITHHISTORY")
                     .contentType(MediaType.APPLICATION_JSON)
                     .body(jsonPayload)
                     .retrieve()
@@ -158,7 +158,7 @@ public class InspectionsPreConditionSteps {
 
         try {
             ResponseEntity<String> response = restClient.post()
-                    .uri(apiBaseUrl + "/api/inspections?updateStrategy=UPDATEWITHHISTORY&futz=true")
+                    .uri(apiBaseUrl + "/api/inspections?updateStrategy=UPDATEWITHHISTORY")
                     .contentType(MediaType.APPLICATION_JSON)
                     .body(jsonPayload)
                     .retrieve()
