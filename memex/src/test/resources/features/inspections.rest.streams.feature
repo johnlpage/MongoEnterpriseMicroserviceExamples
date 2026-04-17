@@ -4,9 +4,9 @@ Feature: Vehicle Inspection REST API - Data Streaming Capabilities
   It includes tests for loading multiple inspections in a single stream request and for streaming out existing inspection data in JSON format.
 
   @post @load_stream @sunny_day
-  Scenario Outline: Successfully load a stream of vehicle inspections with different update strategies and futz options
+  Scenario Outline: Successfully load a stream of vehicle inspections with different update strategies
     Given the vehicle inspections in range 10001-10008 do not exist
-    When I send a POST request to "/api/inspections?updateStrategy=<strategy>&futz=<futz>" with the payload:
+    When I send a POST request to "/api/inspections?updateStrategy=<strategy>" with the payload:
       """
       [
         {
@@ -54,18 +54,18 @@ Feature: Vehicle Inspection REST API - Data Streaming Capabilities
     And the response should contain "success": true
 
     Examples:
-      | strategy          | futz  | id1   | id2   |
-      | REPLACE           | false | 10001 | 10002 |
-      | UPDATE            | false | 10003 | 10004 |
-      | UPDATEWITHHISTORY | true  | 10005 | 10006 |
-      | REPLACE           | true  | 10007 | 10008 |
+      | strategy          | id1   | id2   |
+      | REPLACE           | 10001 | 10002 |
+      | UPDATE            | 10003 | 10004 |
+      | UPDATEWITHHISTORY | 10005 | 10006 |
+      | REPLACE           | 10007 | 10008 |
 
   @post @load_stream @sunny_day
   Scenario: Successfully delete a vehicle inspection
     Given the following vehicle inspections exist:
       | vehicleinspection |
       | {"testid": 10007} |
-    When I send a POST request to "/api/inspections?updateStrategy=UPDATEWITHHISTORY&futz=true" with the payload:
+    When I send a POST request to "/api/inspections?updateStrategy=UPDATEWITHHISTORY" with the payload:
       """
       [
         {
