@@ -86,8 +86,11 @@ const FormViewer = defineComponent({
 async function fetchCollectionInfo() {
     try {
         const collectionInfo = {};
-        // Replace with your actual API endpoint
-        let queryableFields = await fetch("/dummyapi/queryableFields.json" + "?t=" + Date.now());
+        // Base API endpoint is configured in /configapi/apiEndpoint.json
+        let endpointResponse = await fetch("/configapi/apiEndpoint.json" + "?t=" + Date.now());
+        collectionInfo.apiEndpoint = await endpointResponse.json();
+
+        let queryableFields = await fetch("/configapi/queryableFields.json" + "?t=" + Date.now());
         const qFields = await queryableFields.json();
 
         collectionInfo.queryableFields = {}
@@ -103,7 +106,7 @@ async function fetchCollectionInfo() {
             }
         }
 
-        let gridFields = await fetch("/dummyapi/gridFields.json" + "?t=" + Date.now());
+        let gridFields = await fetch("/configapi/gridFields.json" + "?t=" + Date.now());
         collectionInfo.gridFields = await gridFields.json();
         return collectionInfo;
     } catch (error) {
@@ -153,7 +156,7 @@ function formatForGrid(doc, key) {
 async function fetchDocument(context, document) {
     try {
         // This is a POST to let us post a query for porocessing
-        const queryEndpoint = "/api/inspections/query";
+        const queryEndpoint = context.apiEndpoint + "/query";
         const request = {};
         const idField = Object.values(context.gridFields)[0];
         const idValue = document[idField];
@@ -189,7 +192,7 @@ async function runGridQuery(context) {
         context.queryResults = [];
         context.selectedDoc = {Message: "Query is Running"};
         // This is a POST to let us post a query for processing
-        const queryEndpoint = "/api/inspections/query";
+        const queryEndpoint = context.apiEndpoint + "/query";
         const request = {};
         request.filter = context.mongoQuery;
 
@@ -230,7 +233,7 @@ async function runGridSearch(context) {
         context.queryResults = [];
         context.selectedDoc = {Message: "Atlas Search is Running"};
         // This is a POST to let us post a query for processing
-        const queryEndpoint = "/api/inspections/search";
+        const queryEndpoint = context.apiEndpoint + "/search";
         const request = {};
         // request.filter = context.mongoQuery;
 
@@ -283,7 +286,7 @@ function onLoad() {
             return {
                 choices: {}, queryableFields: {}, // Stores the list of items
                 gridFields: {}, labels: {}, queryResults: [], selectedDoc: {}, isQuerying: false, fulltext: "test",
-                showAlt: false
+                showAlt: false, apiEndpoint: "/api/inspections"
             };
         }, computed: {
             mongoQuery: {
@@ -379,6 +382,7 @@ function onLoad() {
                 this.queryableFields = data.queryableFields || {};
                 this.gridFields = data.gridFields || {};
                 this.labels = data.labels || {};
+                this.apiEndpoint = data.apiEndpoint || "/api/inspections";
             });
         }, methods: {
             runGridQuery() {
