@@ -63,15 +63,18 @@ type each field is.
   custom label shown in the UI (the part before `=` is the label, the part after
   is the path).
 - Each **value** is either:
-  - `1` (a number) → a numeric or date field. The UI renders a free-text input,
-    coerces the typed value to a number, and enables `<` and `>` comparison
-    operators.
+  - `1` (a number) → a numeric field. The UI renders a free-text input, coerces
+    the typed value to a number, and enables `<` and `>` comparison operators.
+    Do **not** use `1` for date fields — a date string fails numeric coercion
+    (`Number("2001-01-01")` is `NaN`), which serializes to `null` in the query.
   - An **array of sample string values** → a categorical field. The UI offers
     these values in a dropdown.
   - Any other non-array, non-number value (e.g. `""` or `"text"`) → a free-text
     string field with no dropdown and no numeric coercion. `<` and `>` are still
-    accepted syntactically but the value stays a string; values longer than 9
-    characters are parsed as dates if possible.
+    accepted syntactically; values longer than 9 characters are parsed as dates
+    if possible (rendered as `{"$date": "..."}` in the query). **Use this value
+    for date fields**, since the UI only runs its date-parsing branch for
+    non-numeric-typed fields.
 - The same `payload.` prefix rule applies: use it for `@JsonAnySetter`
   fallback fields, omit it for explicitly-declared model fields.
 
@@ -122,7 +125,7 @@ model:
 ```json
 {
   "companyNumber": 1,
-  "incorporationDate": 1,
+  "incorporationDate": "",
   "Nationality=payload.nationality": ["BRITISH", "IRISH", "AMERICAN"],
   "Town=regAddress.postTown": ["LONDON", "MANCHESTER", "EDINBURGH"],
   "Company Name=payload.companyName": ""
@@ -141,9 +144,12 @@ and entity model in this repository to determine:
 3. Which fields are explicitly declared on the model vs. captured by the
    `@JsonAnySetter` `payload` fallback → prefix only the latter with `payload.`
    in both `gridFields.json` and `queryableFields.json`.
-4. Which fields are numeric/date (value `1`), categorical (value: array of
-   sample strings), or free-text strings (value: any other non-array, non-number
-   such as `""`) → set the values in `queryableFields.json` accordingly.
+4. Which fields are numeric (value `1`), categorical (value: array of
+   sample strings), or free-text strings/dates (value: any other non-array,
+   non-number such as `""`) → set the values in `queryableFields.json`
+   accordingly. **Date fields must use `""`, not `1`** — the UI only parses
+   dates for non-numeric-typed fields, and `Number("2001-01-01")` is `NaN`
+   (which serializes to `null`).
 
 Then overwrite the three files above following the schemas. Do **not** edit
 `main.js`.
