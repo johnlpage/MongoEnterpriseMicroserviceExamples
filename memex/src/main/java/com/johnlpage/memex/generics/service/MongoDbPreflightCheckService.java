@@ -1,5 +1,6 @@
 package com.johnlpage.memex.generics.service;
 
+import com.johnlpage.memex.util.AnnotationExtractor;
 import com.johnlpage.memex.util.MongoSchemaGenerator;
 import com.johnlpage.memex.util.MongoVersionBean;
 import com.mongodb.client.MongoCollection;
@@ -36,6 +37,10 @@ public class MongoDbPreflightCheckService {
     private final MongoTemplate mongoTemplate;
     private final List<CollectionPreflightConfig> collectionConfigs;
 
+    // Lookup of shard key fields by schema class, used by OptimizedMongoLoadRepositoryImpl
+    // to target queries at the correct shard when writing.
+    private final Map<Class<?>, List<String>> shardKeyFieldsByClass = new HashMap<>();
+
     @Value("${memex.preflight.createRequiredIndexes:true}")
     private boolean createRequiredIndexes;
 
@@ -64,6 +69,57 @@ public class MongoDbPreflightCheckService {
         this.context = context;
         this.mongoTemplate = mongoTemplate;
         this.collectionConfigs = collectionConfigs;
+
+        for (CollectionPreflightConfig config : collectionConfigs) {
+            if (config.getSchemaClass() != null && !config.getShardKeyFields().isEmpty()) {
+                validateShardKeyFields(config);
+                shardKeyFieldsByClass.put(config.getSchemaClass(), config.getShardKeyFields());
+            }
+        }
+    }
+
+    /**
+     * Guards against a common mistake: Spring Data MongoDB always maps a class's
+     * {@code @Id}-annotated field to the literal document key {@code "_id"}, regardless of the
+     * Java field's actual name (e.g. {@code listingId}). {@code _id} is always added to write
+     * queries automatically, so it should never be listed in {@code getShardKeyFields()} - and
+     * critically, the Java field name of the {@code @Id} field must not be used either, since
+     * that would silently resolve the field's value but query on a document key that doesn't
+     * exist, causing writes to match zero documents.
+     */
+    private void validateShardKeyFields(CollectionPreflightConfig config) {
+        Class<?> schemaClass = config.getSchemaClass();
+        String idFieldName = AnnotationExtractor.getIdFieldName(schemaClass);
+
+        for (String shardKeyField : config.getShardKeyFields()) {
+            if ("_id".equals(shardKeyField)) {
+                LOG.warn(
+                        "CollectionPreflightConfig for {} lists \"_id\" in getShardKeyFields() - "
+                                + "this is unnecessary, _id is always included in write queries automatically.",
+                        config.getCollectionName());
+                continue;
+            }
+            if (idFieldName != null && idFieldName.equals(shardKeyField)) {
+                throw new IllegalStateException(
+                        "CollectionPreflightConfig for '" + config.getCollectionName() + "' lists '"
+                                + shardKeyField + "' in getShardKeyFields(), but that is the Java field"
+                                + " name of the @Id field on " + schemaClass.getSimpleName()
+                                + ". Spring Data MongoDB always maps @Id fields to the document key"
+                                + " \"_id\" - using the Java field name here would resolve a value but"
+                                + " query on a non-existent document field, causing writes to silently"
+                                + " match zero documents. Remove it - _id is already added to every"
+                                + " write query automatically.");
+            }
+        }
+    }
+
+    /**
+     * @param clazz the model/schema class being written
+     * @return the configured shard key field(s) for that class, or an empty list if the
+     *         collection is unsharded or has no {@link CollectionPreflightConfig} entry.
+     */
+    public List<String> getShardKeyFields(Class<?> clazz) {
+        return shardKeyFieldsByClass.getOrDefault(clazz, List.of());
     }
 
     /**

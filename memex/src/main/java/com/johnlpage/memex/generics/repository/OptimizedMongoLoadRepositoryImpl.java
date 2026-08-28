@@ -4,6 +4,7 @@ import static com.johnlpage.memex.util.AnnotationExtractor.*;
 import static org.springframework.data.mongodb.core.query.Criteria.where;
 
 import com.johnlpage.memex.generics.service.InvalidDataHandlerService;
+import com.johnlpage.memex.generics.service.MongoDbPreflightCheckService;
 import com.johnlpage.memex.generics.service.PostWriteTriggerService;
 import com.johnlpage.memex.util.UpdateStrategy;
 import com.mongodb.bulk.BulkWriteInsert;
@@ -85,6 +86,7 @@ public class OptimizedMongoLoadRepositoryImpl<T> implements OptimizedMongoLoadRe
     private final MongoTemplate mongoTemplate;
     private final MappingMongoConverter mappingMongoConverter;
     private final MongoClient mongoClient;
+    private final MongoDbPreflightCheckService preflightCheckService;
     ValidatorFactory factory = Validation.buildDefaultValidatorFactory();
     Validator validator = factory.getValidator();
 
@@ -136,6 +138,8 @@ public class OptimizedMongoLoadRepositoryImpl<T> implements OptimizedMongoLoadRe
             nOps++;
             Object idValue = getIdFromModel(item);
             Query query = new Query(where("_id").is(idValue));
+            addShardKeyCriteria(query, item, clazz);
+
             if (hasDeleteFlag(item)) {
 
         /* TODO - Figure out history on this, when we delete one we need to keep it in history
@@ -198,6 +202,28 @@ public class OptimizedMongoLoadRepositoryImpl<T> implements OptimizedMongoLoadRe
                 session.abortTransaction();
             }
             throw e; // Rethrow to handle upstream
+        }
+    }
+
+    /**
+     * Adds the collection's shard key field(s) (as configured via {@link
+     * com.johnlpage.memex.generics.service.CollectionPreflightConfig#getShardKeyFields()}) to the
+     * query, when the value is present on the item being written.
+     *
+     * <p>This lets mongos target the operation at the correct shard rather than broadcasting it to
+     * all shards. It's done "where possible" because an item may be partially populated - e.g.
+     * during some update flows only _id and a subset of other fields are set - so any shard key
+     * field that isn't present on the item is simply left off the query.
+     */
+    private void addShardKeyCriteria(Query query, T item, Class<T> clazz) {
+        for (String shardKeyField : preflightCheckService.getShardKeyFields(clazz)) {
+            if ("_id".equals(shardKeyField)) {
+                continue; // Already always included
+            }
+            Object value = getNestedFieldValue(item, shardKeyField);
+            if (value != null) {
+                query.addCriteria(where(shardKeyField).is(value));
+            }
         }
     }
 

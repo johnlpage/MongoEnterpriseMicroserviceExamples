@@ -41,4 +41,21 @@ public interface CollectionPreflightConfig {
     default boolean hasHistoryCollection() {
         return true;
     }
+
+    /**
+     * The shard key field(s) for this collection, as they are stored in the document
+     * (dot-notation for nested fields, e.g. "tenantId" or "location.state"). Do not
+     * include "_id" itself.
+     *
+     * <p>When populated, {@code OptimizedMongoLoadRepositoryImpl} will add these fields
+     * (when present on the item being written) to the query used for updates/replaces/
+     * deletes, alongside "_id". This lets a mongos route the operation directly to the
+     * correct shard instead of broadcasting to all shards.
+     *
+     * @return List of shard key field names, or empty list if this collection is unsharded
+     *         or its shard key does not need to be targeted explicitly.
+     */
+    default List<String> getShardKeyFields() {
+        return List.of();
+    }
 }
