@@ -22,8 +22,13 @@ public class ValueMaker {
   Map<Long, ObjectNode> jsonCache;
 
   ValueMaker(Random rng, String directoryPath) {
+    this(rng, directoryPath, 0L);
+  }
+
+  ValueMaker(Random rng, String directoryPath, long oneupStart) {
     this.rng = rng;
     this.directoryPath = directoryPath;
+    this.oneup = oneupStart;
     processors = new HashMap<>();
     jsonCache = new HashMap<>();
   }

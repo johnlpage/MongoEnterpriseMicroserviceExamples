@@ -20,7 +20,8 @@ public class DataGen {
 
     if (args.length < 3) {
       System.out.println(
-          " 1 Usage: java -jar DataGen.jar definitionDirectory count outputPath [batchSize]");
+          " 1 Usage: java -jar DataGen.jar definitionDirectory count outputPath [batchSize]"
+              + " [oneupStart] [randomSeed]");
       System.exit(1);
     }
     directoryPath = args[0];
@@ -41,7 +42,25 @@ public class DataGen {
       batchSize = Integer.parseInt(args[3]);
     }
 
-    DataGenProcessor processor = new DataGenProcessor(directoryPath);
+    // oneupStart lets you run multiple instances of this tool in parallel (e.g. sharding a
+    // 10M document generation into 10 processes of 1M each) while guaranteeing each process's
+    // @ONEUP values (used for fields like listingId) don't collide: give each process a
+    // different offset, e.g. 0, 1000000, 2000000, ...
+    long oneupStart = 0L;
+    if (args.length >= 5) {
+      oneupStart = Long.parseLong(args[4]);
+    }
+
+    // randomSeed defaults to a fixed value (0) for reproducibility, but that also means every
+    // process seeded the same way draws the exact same sequence of random field values. When
+    // running several processes in parallel to build one large data set, give each a distinct
+    // seed (in addition to a distinct oneupStart) so the generated documents actually differ.
+    long randomSeed = 0L;
+    if (args.length >= 6) {
+      randomSeed = Long.parseLong(args[5]);
+    }
+
+    DataGenProcessor processor = new DataGenProcessor(directoryPath, oneupStart, randomSeed);
     ObjectMapper objectMapper = new ObjectMapper();
     ObjectWriter objectWriter = objectMapper.writer();
     LocalDateTime startTime = LocalDateTime.now();

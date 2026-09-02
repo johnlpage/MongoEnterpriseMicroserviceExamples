@@ -24,9 +24,13 @@ public class DataGenProcessor {
   Random random;
 
   DataGenProcessor(String directoryPath) throws IOException {
+    this(directoryPath, 0L, 0L);
+  }
+
+  DataGenProcessor(String directoryPath, long oneupStart, long randomSeed) throws IOException {
     readCsvFiles(directoryPath);
-    random = new Random(0);
-    valueMaker = new ValueMaker(random, directoryPath);
+    random = new Random(randomSeed);
+    valueMaker = new ValueMaker(random, directoryPath, oneupStart);
     objectMapper = new ObjectMapper();
     buildLookupTree();
   }

@@ -7,7 +7,23 @@ build
 
 usage:
 
-`java -jar DataGen.jsr inputDir docsToGenerate outputFile`
+`java -jar DataGen.jsr inputDir docsToGenerate outputFile [batchSize] [oneupStart] [randomSeed]`
+
+`batchSize` is optional and defaults to 2000. It controls how many documents are held in
+memory at once before being written and released.
+
+`oneupStart` is optional and defaults to 0. It sets the initial value of the `@ONEUP`
+counter (see below) instead of starting at 0. This is intended for running multiple
+instances of the generator in parallel against the same input directory - each instance is
+given a different, non-overlapping `oneupStart` (e.g. 0, 1000000, 2000000, ...) so that
+`@ONEUP` values such as a listing ID do not collide across the output files. Note that all
+`@ONEUP` fields in a given run share a single counter, so a document with two `@ONEUP`
+fields advances the counter by two per document, not one.
+
+`randomSeed` is optional and defaults to 0, giving repeatable output across runs. When
+running multiple instances in parallel a different `randomSeed` should be given to each
+instance in addition to a different `oneupStart`; otherwise every instance draws the same
+sequence of random field values and the parallel runs differ only in their `@ONEUP` fields.
 
 This is designed to Generate JSON data for testing.
 It takes it definition from a directory of compressed CSV files.
