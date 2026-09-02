@@ -359,8 +359,21 @@ function onLoad() {
                                 } else if ("$date" in val) {
                                     // Atlas Search's range operator has no exact-equality
                                     // form for dates, so express an exact date match as an
-                                    // inclusive range where gte === lte.
-                                    must.push({range: {path: f, gte: val.$date, lte: val.$date}});
+                                    // inclusive range where gte === lte. val.$date is the raw
+                                    // ISO string (e.g. "2020-01-01T00:00:00.000Z") - it MUST
+                                    // stay wrapped in the {"$date": ...} MongoDB Extended JSON
+                                    // form, or the server parses it as a plain BSON string
+                                    // instead of a real date, causing Atlas Search to reject it
+                                    // with "Path 'x' needs to be indexed as token" (it falls
+                                    // back to treating a string value as a token-match attempt
+                                    // against a field that isn't indexed as a token).
+                                    must.push({
+                                        range: {
+                                            path: f,
+                                            gte: {"$date": val.$date},
+                                            lte: {"$date": val.$date}
+                                        }
+                                    });
                                 }
                                 // else: unrecognised nested operator shape - ignore, as before.
                             } else if (isNumberOrDate(val)) {
