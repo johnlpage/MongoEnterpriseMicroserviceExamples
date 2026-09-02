@@ -339,18 +339,39 @@ function onLoad() {
                         let mongoQuery = JSON.parse(JSON.stringify(this.mongoQuery)) // Deep copy
 
                         for (let f in mongoQuery) {
-                            // Support for > , < , Dates etc. in Search would go here.
+                            const val = mongoQuery[f];
 
-                            if (isNumberOrDate(mongoQuery[f])) {
+                            // mongoQuery represents "<"/">" filters (and exact date matches)
+                            // as a nested operator object, e.g. {$gt: 3}, {$lt: 500000} or
+                            // {$date: "..."} (see the mongoQuery computed property above) -
+                            // translate those into Atlas Search's "range" operator instead of
+                            // falling through to the plain equals/text handling below, which
+                            // can't represent them (Object.toString() => "[object Object]",
+                            // silently dropped).
+                            if (val && typeof val === "object" && !Array.isArray(val)) {
+                                if ("$gt" in val || "$gte" in val || "$lt" in val || "$lte" in val) {
+                                    const range = {path: f};
+                                    if ("$gt" in val) range.gt = val.$gt;
+                                    if ("$gte" in val) range.gte = val.$gte;
+                                    if ("$lt" in val) range.lt = val.$lt;
+                                    if ("$lte" in val) range.lte = val.$lte;
+                                    must.push({range});
+                                } else if ("$date" in val) {
+                                    // Atlas Search's range operator has no exact-equality
+                                    // form for dates, so express an exact date match as an
+                                    // inclusive range where gte === lte.
+                                    must.push({range: {path: f, gte: val.$date, lte: val.$date}});
+                                }
+                                // else: unrecognised nested operator shape - ignore, as before.
+                            } else if (isNumberOrDate(val)) {
                                 must.push({
                                     equals: {
-                                        path: f, value: mongoQuery[f]
+                                        path: f, value: val
                                     }
                                 })
                             } else {
-                                // FOr now it ignores objects liek $gt, $lt or dates
                                 // Also you can use equals with strings only with a keyword analyzer
-                                asString = mongoQuery[f].toString()
+                                asString = val.toString()
                                 if (asString.startsWith("[object") == false) {
                                     must.push({
                                             text: {

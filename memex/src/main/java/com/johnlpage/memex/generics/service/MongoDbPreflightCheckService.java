@@ -315,11 +315,20 @@ public class MongoDbPreflightCheckService {
                             searchIndexInfo.get("latestDefinition", Document.class).toJson();
 
                     if (!latestDefinition.equals(requiredDefinition.toJson())) {
-                        LOG.error(
-                                "Definition of index '{}'  \n{}  is not \n{}",
-                                requiredName,
-                                latestDefinition,
-                                requiredDefinition);
+                        if (createSearchIndexes) {
+                            LOG.warn(
+                                    "Definition of index '{}'  \n{}  is not \n{}  - updating it",
+                                    requiredName,
+                                    latestDefinition,
+                                    requiredDefinition);
+                            updateSearchIndex(collectionName, requiredName, requiredDefinition);
+                        } else {
+                            LOG.error(
+                                    "Definition of index '{}'  \n{}  is not \n{}",
+                                    requiredName,
+                                    latestDefinition,
+                                    requiredDefinition);
+                        }
                     }
 
                     if (!searchIndexInfo.getString("status").equals("READY")) {
@@ -401,6 +410,25 @@ public class MongoDbPreflightCheckService {
 
         MongoDatabase database = mongoTemplate.getDb();
         database.runCommand(createSearchIndexCommand);
+    }
+
+    /**
+     * Update an existing Atlas Search Index's definition in place. Unlike createSearchIndex,
+     * this is used when an index with the given name already exists but its live definition
+     * (as reported by $listSearchIndexes) no longer matches what the CollectionPreflightConfig
+     * requires - e.g. after editing getSearchIndexes() to add/change field mappings. Atlas
+     * applies the update asynchronously (the index briefly goes back to a non-READY status
+     * while it rebuilds), so this is safe to call every startup - it's a no-op once the live
+     * definition matches again.
+     */
+    void updateSearchIndex(String collection, String name, Document definition) {
+        Document updateSearchIndexCommand =
+                new Document("updateSearchIndex", collection)
+                        .append("name", name)
+                        .append("definition", definition);
+
+        MongoDatabase database = mongoTemplate.getDb();
+        database.runCommand(updateSearchIndexCommand);
     }
 
     /**
