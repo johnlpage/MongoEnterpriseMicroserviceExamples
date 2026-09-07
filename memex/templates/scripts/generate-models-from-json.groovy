@@ -10,13 +10,32 @@ import groovy.json.JsonSlurper
  *     -DbasePackage=com.johnlpage.memex \
  *     -Dentity=NewEntity \
  *     -DidFieldName=myCustomId \
+ *     -DidType=ObjectId \
  *     -DsampleSize=100
+ *
+ * -DidType is optional. Default: String
+ *            Supported: String, ObjectId, Long, UUID
  */
 
 def packageName = basePackage ?: 'com.johnlpage.memex'
 def newEntityName = System.getProperty('entity') ?: "NewEntity"
 def idFieldName = System.getProperty('idFieldName') ?: newEntityName.toLowerCase() + "Id"
 def sampleSize = (System.getProperty('sampleSize') ?: '100').toInteger()
+def idType = System.getProperty('idType') ?: 'String'
+
+// ID Type configuration - mirrors generate-entity.groovy's idTypeMap
+def idTypeMap = [
+        'String'  : [type: 'String', import: null],
+        'ObjectId': [type: 'ObjectId', import: 'org.bson.types.ObjectId'],
+        'Long'    : [type: 'Long', import: null],
+        'UUID'    : [type: 'UUID', import: 'java.util.UUID']
+]
+
+if (!idTypeMap.containsKey(idType)) {
+    throw new RuntimeException("Unsupported idType: ${idType}. Supported: ${idTypeMap.keySet().join(', ')}")
+}
+
+def idConfig = idTypeMap[idType]
 
 // Entity-specific package (e.g., com.johnlpage.memex.NewEntity.model)
 def entityPackage = "${packageName}.${newEntityName}.model"
@@ -38,6 +57,7 @@ println "Base Package: ${packageName}"
 println "Entity Package: ${entityPackage}"
 println "Entity Name: ${newEntityName}"
 println "ID Field Name: ${idFieldName}"
+println "ID Type: ${idType}"
 println "Sample Size: ${sampleSize}"
 println "Output Directory: ${outputDir}"
 println "=========================================="
@@ -454,7 +474,7 @@ determineType = { String fieldName, Object value, String parentClassName ->
  * Process a class and its nested classes recursively
  */
 def processClass = null
-processClass = { Map classes, String className, Map fields, boolean isRoot, String annotationPkg, String utilPkg, String idFieldNameParam ->
+processClass = { Map classes, String className, Map fields, boolean isRoot, String annotationPkg, String utilPkg, String idFieldNameParam, String idTypeParam, Map idConfigParam ->
     def classInfo = [
             name             : className,
             isRoot           : isRoot,
@@ -474,7 +494,8 @@ processClass = { Map classes, String className, Map fields, boolean isRoot, Stri
             ]),
             annotationPackage: annotationPkg,
             utilPackage      : utilPkg,
-            idFieldName      : idFieldNameParam
+            idFieldName      : idFieldNameParam,
+            idType           : idTypeParam
     ]
 
     if (isRoot) {
@@ -484,6 +505,9 @@ processClass = { Map classes, String className, Map fields, boolean isRoot, Stri
                 'org.springframework.data.annotation.Transient',
                 "${annotationPkg}.DeleteFlag"
         ])
+        if (idConfigParam.import) {
+            ((Set) classInfo.imports).add((String) idConfigParam.import)
+        }
     }
 
     fields.each { fieldName, fieldValue ->
@@ -518,7 +542,7 @@ processClass = { Map classes, String className, Map fields, boolean isRoot, Stri
 
         // Process embedded classes for both direct objects AND array elements
         if (typeInfo.embeddedClass) {
-            processClass.call(classes, (String) typeInfo.embeddedClass.name, (Map) typeInfo.embeddedClass.fields, false, annotationPkg, utilPkg, idFieldNameParam)
+            processClass.call(classes, (String) typeInfo.embeddedClass.name, (Map) typeInfo.embeddedClass.fields, false, annotationPkg, utilPkg, idFieldNameParam, idTypeParam, idConfigParam)
         }
     }
 
@@ -575,7 +599,7 @@ def generateClassContent = { Map classInfo, String pkgName, String collectionNam
         // Add ID field first
         sb.append("    @Id\n")
         sb.append("    @EqualsAndHashCode.Include\n")
-        sb.append("    private String ${classInfo.idFieldName};\n\n")
+        sb.append("    private ${classInfo.idType} ${classInfo.idFieldName};\n\n")
 
         // Add version field
         sb.append("    /**\n")
@@ -660,7 +684,7 @@ def rootClassName = newEntityName
 Map classesMap = new LinkedHashMap()
 
 println "Processing JSON structure..."
-processClass(classesMap, rootClassName, (Map) sampleObject, true, annotationPackage, utilPackage, idFieldName)
+processClass(classesMap, rootClassName, (Map) sampleObject, true, annotationPackage, utilPackage, idFieldName, idType, idConfig)
 
 println "\nGenerating ${classesMap.size()} class(es):\n"
 
