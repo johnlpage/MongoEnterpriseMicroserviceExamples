@@ -392,7 +392,7 @@ classes for an Entity including all the new
 derived classes by running the maven goal. This adds a Generic flexible model.
 
 ```shell
- mvn generate-sources -Pgenerate-entity -Dentity=Customer -Dplural=customers -DidFieldName=customerId -DidFieldType=Long
+ mvn generate-sources -Pgenerate-entity -Dentity=Customer -Dplural=customers -DidFieldName=customerId -DidType=Long
 ```
 
 You can delete it with
