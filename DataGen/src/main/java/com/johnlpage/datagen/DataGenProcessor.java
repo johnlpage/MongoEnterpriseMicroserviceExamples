@@ -131,26 +131,57 @@ public class DataGenProcessor {
       where.put(key, ld.format(DateTimeFormatter.ISO_DATE));
     } else if (value instanceof LocalDateTime ld) {
       where.put(key, ld.format(DateTimeFormatter.ISO_DATE));
-    } else if (value instanceof String) {
-      try {
-        where.put(key, Long.parseLong((String) value));
-      } catch (NumberFormatException e) {
+    } else if (value instanceof String strValue) {
+      if (hasUnsafeLeadingZero(strValue)) {
+        // Values like "02150" (a ZIP code) are only digits but Long.parseLong would
+        // silently strip the leading zero, so preserve them as strings instead.
+        if (!strValue.isEmpty() && !strValue.equals("null")) {
+          where.put(key, strValue);
+        }
+      } else {
         try {
-          // the CSV parser considers everything as strings but in JS I'd like some to be numbers
-          where.put(key, Double.parseDouble((String) value));
-        } catch (NumberFormatException e2) {
+          where.put(key, Long.parseLong(strValue));
+        } catch (NumberFormatException e) {
+          try {
+            // the CSV parser considers everything as strings but in JS I'd like some to be numbers
+            where.put(key, Double.parseDouble(strValue));
+          } catch (NumberFormatException e2) {
 
-          if (value.equals("true") || value.equals("false")) {
-            where.put(key, Boolean.parseBoolean((String) value));
-          } else {
-            if (!value.equals("") && !value.equals("null")) {
-              // No Empty fields.
-              where.put(key, (String) value);
+            if (strValue.equals("true") || strValue.equals("false")) {
+              where.put(key, Boolean.parseBoolean(strValue));
+            } else {
+              if (!strValue.equals("") && !strValue.equals("null")) {
+                // No Empty fields.
+                where.put(key, strValue);
+              }
             }
           }
         }
       }
     }
+  }
+
+  /**
+   * Returns true if the value is a purely-digit string (optionally signed) with a leading
+   * zero and more than one digit, e.g. "02150" or "-0123". Such values would still
+   * successfully parse as a Long, but doing so silently discards the leading zero(s), which
+   * is data loss for values like ZIP codes that are conventionally numeric-looking text.
+   * Decimal values such as "0.5" are unaffected since they aren't purely digits.
+   */
+  private boolean hasUnsafeLeadingZero(String value) {
+    String digits = value;
+    if (digits.startsWith("-") || digits.startsWith("+")) {
+      digits = digits.substring(1);
+    }
+    if (digits.length() <= 1 || digits.charAt(0) != '0') {
+      return false;
+    }
+    for (int i = 0; i < digits.length(); i++) {
+      if (!Character.isDigit(digits.charAt(i))) {
+        return false;
+      }
+    }
+    return true;
   }
 
   // Read the CSV Files into a has of Lists

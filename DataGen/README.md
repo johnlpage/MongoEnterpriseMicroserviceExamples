@@ -165,3 +165,12 @@ written into the generated JSON document the tool tries, in order: 64-bit intege
 floating point, then boolean (`true`/`false`), falling back to a string. Empty cells and
 the literal text `null` are omitted from the document entirely rather than being written
 as an empty string/null.
+
+As an exception to the above, a value made up entirely of digits (optionally with a
+leading `-`/`+` sign) that has more than one digit and starts with `0` - e.g. `"02150"`
+(a ZIP code) or `"-0123"` - is *not* coerced to an integer, since `Integer`/`Long`
+parsing would silently discard the leading zero(s). Such values are written to the
+output document as strings instead. This check only applies to purely-digit values, so
+decimals like `"0.5"` are unaffected and still coerce to a floating point number as
+normal. There is currently no per-column way to opt out of numeric/boolean coercion
+generally - only this specific leading-zero case is protected.
