@@ -285,7 +285,7 @@ function onLoad() {
         data() {
             return {
                 choices: {}, queryableFields: {}, // Stores the list of items
-                gridFields: {}, labels: {}, queryResults: [], selectedDoc: {}, isQuerying: false, fulltext: "test",
+                gridFields: {}, labels: {}, queryResults: [], selectedDoc: {}, isQuerying: false, fulltext: "",
                 showAlt: false, apiEndpoint: "/api/inspections"
             };
         }, computed: {

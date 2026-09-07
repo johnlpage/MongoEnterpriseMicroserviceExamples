@@ -57,7 +57,7 @@
                 </div>
                 <div class="container-fluid mt-3 border">
                     Atlas Search
-                    <input :type="'text'" class="form-control mt-3 " v-model="fulltext">
+                    <input :type="'text'" class="form-control mt-3 " v-model="fulltext" placeholder="type free text query here">
                     <button :disabled="isQuerying" @click="runGridSearch" class="btn btn-primary mt-3 mb-3 w-100"
                             type="button">Atlas Search (Lucene)
                     </button>
