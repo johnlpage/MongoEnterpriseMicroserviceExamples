@@ -1,8 +1,8 @@
 package com.johnlpage.datagen;
 
+import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.ObjectWriter;
-import com.fasterxml.jackson.databind.node.ObjectNode;
 import java.io.BufferedWriter;
 import java.io.FileWriter;
 import java.io.IOException;
@@ -71,9 +71,9 @@ public class DataGen {
           docsInBatch = numberOfJsonDocuments - docs;
         }
 
-        List<ObjectNode> documents = processor.generateJsonDocuments(docsInBatch);
+        List<JsonNode> documents = processor.generateJsonDocuments(docsInBatch);
 
-        for (ObjectNode document : documents) {
+        for (JsonNode document : documents) {
           writer.write(objectWriter.writeValueAsString(document));
           writer.newLine();
         }

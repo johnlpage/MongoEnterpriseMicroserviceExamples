@@ -1,5 +1,6 @@
 package com.johnlpage.datagen;
 
+import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
@@ -50,11 +51,16 @@ public class DataGenProcessor {
     return new CSVParser(bufferedReader, format);
   }
 
-  List<ObjectNode> generateJsonDocuments(int numberOfJsonDocuments) throws IOException {
-    List<ObjectNode> documentsGenerated = new ArrayList<>();
+  List<JsonNode> generateJsonDocuments(int numberOfJsonDocuments) throws IOException {
+    List<JsonNode> documentsGenerated = new ArrayList<>();
 
     for (int i = 0; i < numberOfJsonDocuments; i++) {
       ObjectNode jsonNode = objectMapper.createObjectNode();
+      // If a "SCALAR" column is used (see setNode/README for details), the entire
+      // generated document for this iteration becomes this raw scalar value instead
+      // of the accumulated ObjectNode - used to build arrays of plain strings/numbers
+      // via @ARRAY(subdirectory,n) rather than arrays of sub-objects.
+      JsonNode scalarOverride = null;
 
       for (Map.Entry<String, Integer> entry : maxProbability.entrySet()) {
         int totalProbability = entry.getValue();
@@ -72,6 +78,15 @@ public class DataGenProcessor {
             } else {
               value = asString;
             }
+
+            if (field.equals("SCALAR")) {
+              // Special field name: the value of this column becomes the whole
+              // generated "document" for this array element - a bare scalar - rather
+              // than being nested as a field of an object. See README for details.
+              scalarOverride = valueToJsonNode(value);
+              continue;
+            }
+
             // Nested values
             if (field.contains(".")) {
               String[] parts = field.split("\\.");
@@ -93,7 +108,7 @@ public class DataGenProcessor {
           }
         }
       }
-      documentsGenerated.add(jsonNode);
+      documentsGenerated.add(scalarOverride != null ? scalarOverride : jsonNode);
       /*  System.out.println(
       objectMapper.writerWithDefaultPrettyPrinter().writeValueAsString(jsonNode));*/
     }
@@ -110,55 +125,76 @@ public class DataGenProcessor {
         where.set(key, (ObjectNode) value);
       }
 
-    } else if (value instanceof List) {
+    } else if (value instanceof List<?> list) {
       ArrayNode arrayNode = objectMapper.createArrayNode();
-      // Add all ObjectNodes from the list to the ArrayNode
-      //noinspection unchecked
-      for (ObjectNode objectNode : (List<ObjectNode>) value) {
-        arrayNode.add(objectNode);
+      // Elements are always JsonNode: either whole sub-documents (ObjectNode, the
+      // normal case) or bare scalars (e.g. TextNode/LongNode) when the sub-generator's
+      // CSVs used the special "SCALAR" field name - see README for @ARRAY + SCALAR.
+      for (Object item : list) {
+        if (item instanceof JsonNode node) {
+          arrayNode.add(node);
+        }
       }
 
       where.set(key, arrayNode);
-    } else if (value instanceof Double) {
-      where.put(key, (Double) value);
-    } else if (value instanceof Long) {
-      where.put(key, (Long) value);
-    } else if (value instanceof Integer) {
-      where.put(key, (Integer) value);
-    } else if (value instanceof Boolean) {
-      where.put(key, (Boolean) value);
+    } else {
+      JsonNode node = valueToJsonNode(value);
+      if (node != null) {
+        where.set(key, node);
+      }
+    }
+  }
+
+  /**
+   * Converts a raw generated value (String, Long, Double, Boolean, LocalDate,
+   * LocalDateTime, ...) into the equivalent JsonNode, applying the same
+   * numeric/boolean coercion rules used for ordinary object fields. Returns null for
+   * values that should be omitted entirely (empty strings, the literal "null").
+   */
+  private JsonNode valueToJsonNode(Object value) {
+    if (value instanceof JsonNode node) {
+      return node;
+    } else if (value instanceof Double d) {
+      return objectMapper.getNodeFactory().numberNode(d);
+    } else if (value instanceof Long l) {
+      return objectMapper.getNodeFactory().numberNode(l);
+    } else if (value instanceof Integer n) {
+      return objectMapper.getNodeFactory().numberNode(n);
+    } else if (value instanceof Boolean b) {
+      return objectMapper.getNodeFactory().booleanNode(b);
     } else if (value instanceof LocalDate ld) {
-      where.put(key, ld.format(DateTimeFormatter.ISO_DATE));
+      return objectMapper.getNodeFactory().textNode(ld.format(DateTimeFormatter.ISO_DATE));
     } else if (value instanceof LocalDateTime ld) {
-      where.put(key, ld.format(DateTimeFormatter.ISO_DATE));
+      return objectMapper.getNodeFactory().textNode(ld.format(DateTimeFormatter.ISO_DATE));
     } else if (value instanceof String strValue) {
       if (hasUnsafeLeadingZero(strValue)) {
         // Values like "02150" (a ZIP code) are only digits but Long.parseLong would
         // silently strip the leading zero, so preserve them as strings instead.
         if (!strValue.isEmpty() && !strValue.equals("null")) {
-          where.put(key, strValue);
+          return objectMapper.getNodeFactory().textNode(strValue);
         }
-      } else {
+        return null;
+      }
+      try {
+        return objectMapper.getNodeFactory().numberNode(Long.parseLong(strValue));
+      } catch (NumberFormatException e) {
         try {
-          where.put(key, Long.parseLong(strValue));
-        } catch (NumberFormatException e) {
-          try {
-            // the CSV parser considers everything as strings but in JS I'd like some to be numbers
-            where.put(key, Double.parseDouble(strValue));
-          } catch (NumberFormatException e2) {
-
-            if (strValue.equals("true") || strValue.equals("false")) {
-              where.put(key, Boolean.parseBoolean(strValue));
-            } else {
-              if (!strValue.equals("") && !strValue.equals("null")) {
-                // No Empty fields.
-                where.put(key, strValue);
-              }
+          // the CSV parser considers everything as strings but in JS I'd like some to be numbers
+          return objectMapper.getNodeFactory().numberNode(Double.parseDouble(strValue));
+        } catch (NumberFormatException e2) {
+          if (strValue.equals("true") || strValue.equals("false")) {
+            return objectMapper.getNodeFactory().booleanNode(Boolean.parseBoolean(strValue));
+          } else {
+            if (!strValue.equals("") && !strValue.equals("null")) {
+              // No Empty fields.
+              return objectMapper.getNodeFactory().textNode(strValue);
             }
+            return null;
           }
         }
       }
     }
+    return null;
   }
 
   /**

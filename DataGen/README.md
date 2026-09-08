@@ -129,6 +129,11 @@ everywhere else. Arguments are given in parentheses, comma-separated.
   `"@ARRAY(faileditems,19)"` produces an array of 19 documents built from
   `<inputDir>/faileditems/*.csv[.gz]`.
 
+  By default each array element is a JSON *object* built from all the columns in the
+  sub-directory's CSV file(s), exactly like the top-level document. If you want an array
+  of plain scalars instead (e.g. an array of strings or numbers) rather than an array of
+  objects, see the special `SCALAR` field name below.
+
 ### Special field name: `ROOT`
 
 If a column is named `ROOT` (instead of a normal field name or dotted path), its
@@ -136,6 +141,44 @@ generated value (which must be a JSON object, typically via `@JSON(...)`) *repla
 the entire document being built at that point, rather than being nested as a field
 inside it. This is only really useful combined with `@ARRAY`, to generate an array of
 sub-documents whose shape is not a wrapper object but literally the object itself.
+
+### Special field name: `SCALAR` - arrays of scalars
+
+`ROOT` (above) lets an `@ARRAY` sub-generator produce an array of *objects* whose shape
+is the object itself, instead of a wrapper. `SCALAR` is the equivalent for arrays of
+plain scalars - strings, numbers, booleans - with no object wrapper at all, e.g.
+`["red", "green", "blue"]` or `[3, 17, 42]` rather than `[{"colour": "red"}, ...]`.
+
+If a column is named `SCALAR`, its generated value *becomes* the whole "document" for
+that array element, written out as a bare JSON value (string/number/boolean) instead of
+being nested as a field of an object. As with `ROOT`, this is only meaningful inside an
+`@ARRAY(subdirectory,n)` sub-generator, and the CSV file(s) in that subdirectory should
+contain only the `SCALAR` and `probability` columns (any other columns in the same file
+are ignored for the purposes of that array element's value, since there's no object to
+put them in).
+
+Example - a `tags` array of 0-4 random colour strings, with an occasional random
+integer thrown in:
+
+`<inputDir>/tagsref.csv`:
+```
+"tags","probability"
+"@ARRAY(tags,4)",100
+```
+
+`<inputDir>/tags/tag.csv`:
+```
+"SCALAR","probability"
+"red",25
+"green",25
+"blue",25
+"@INTEGER(1,100)",25
+```
+
+produces documents containing e.g.:
+```json
+{ "tags": ["red", "blue", "blue", 57] }
+```
 
 ### How multiple CSV files combine into one document
 

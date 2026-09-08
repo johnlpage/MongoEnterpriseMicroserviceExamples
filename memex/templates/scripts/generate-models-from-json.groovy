@@ -404,11 +404,38 @@ determineType = { String fieldName, Object value, String parentClassName ->
     if (value instanceof String) {
         String strVal = (String) value
 
-        if (strVal ==~ /.*T\d{2}:\d{2}:\d{2}.*/) {
-            return [type: 'Instant', isComplex: false, imports: ['java.time.Instant']]
+        // Full ISO-8601 instant with an explicit offset or 'Z' - Jackson's default
+        // JSR-310 InstantDeserializer handles this with no annotation needed.
+        if (strVal ==~ /.*T\d{2}:\d{2}:\d{2}(\.\d+)?(Z|[+-]\d{2}:?\d{2})$/) {
+            return [
+                    type   : 'Instant',
+                    isComplex: false,
+                    imports: ['java.time.Instant']
+            ]
         }
+
+        // Date-time without an offset (e.g. DataGen's plain "yyyy-MM-dd'T'HH:mm:ss").
+        // Jackson can't map this straight to Instant without knowing the pattern/zone,
+        // so emit an explicit @JsonFormat telling it how to parse it (assume UTC).
+        if (strVal ==~ /.*T\d{2}:\d{2}:\d{2}.*/) {
+            return [
+                    type      : 'Instant',
+                    isComplex : false,
+                    imports   : ['java.time.Instant', 'com.fasterxml.jackson.annotation.JsonFormat'],
+                    jsonFormat: '@JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "yyyy-MM-dd\'T\'HH:mm:ss", timezone = "UTC")'
+            ]
+        }
+
+        // Plain date (e.g. DataGen's "yyyy-MM-dd"). Jackson's default LocalDate
+        // deserializer already handles ISO_LOCAL_DATE, but we pin the pattern
+        // explicitly so the generated model doesn't silently rely on global config.
         if (strVal ==~ /^\d{4}-\d{2}-\d{2}$/) {
-            return [type: 'LocalDate', isComplex: false, imports: ['java.time.LocalDate']]
+            return [
+                    type      : 'LocalDate',
+                    isComplex : false,
+                    imports   : ['java.time.LocalDate', 'com.fasterxml.jackson.annotation.JsonFormat'],
+                    jsonFormat: '@JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "yyyy-MM-dd")'
+            ]
         }
         return [type: 'String', isComplex: false]
     }
@@ -527,7 +554,8 @@ processClass = { Map classes, String className, Map fields, boolean isRoot, Stri
                 javaName         : javaFieldName,
                 type             : typeInfo.type,
                 isId             : typeInfo.isId ?: false,
-                needsJsonProperty: needsJsonProperty
+                needsJsonProperty: needsJsonProperty,
+                jsonFormat       : typeInfo.jsonFormat
         ]
 
         if (typeInfo.imports) {
@@ -628,6 +656,12 @@ def generateClassContent = { Map classInfo, String pkgName, String collectionNam
             sb.append("     * due to JavaBean getter naming conventions (get${fieldMap.javaName.capitalize()} -> ${fieldMap.javaName.toLowerCase()}).\n")
             sb.append("     */\n")
             sb.append("    @JsonProperty(\"${fieldMap.originalName}\")\n")
+        }
+
+        // Add @JsonFormat annotation for temporal fields so Jackson knows how to
+        // parse the plain string values DataGen emits (no offset/zone info).
+        if (fieldMap.jsonFormat) {
+            sb.append("    ${fieldMap.jsonFormat}\n")
         }
 
         sb.append("    private ${fieldMap.type} ${fieldMap.javaName};\n\n")
