@@ -12,13 +12,37 @@ usage:
 `batchSize` is optional and defaults to 2000. It controls how many documents are held in
 memory at once before being written and released.
 
-`oneupStart` is optional and defaults to 0. It sets the initial value of the `@ONEUP`
+`oneupStart` is optional and defaults to 0. It sets the initial value of every `@ONEUP`
 counter (see below) instead of starting at 0. This is intended for running multiple
 instances of the generator in parallel against the same input directory - each instance is
 given a different, non-overlapping `oneupStart` (e.g. 0, 1000000, 2000000, ...) so that
-`@ONEUP` values such as a listing ID do not collide across the output files. Note that all
-`@ONEUP` fields in a given run share a single counter, so a document with two `@ONEUP`
-fields advances the counter by two per document, not one.
+`@ONEUP` values such as a listing ID do not collide across the output files.
+
+Note that `@ONEUP` does **not** use one single counter shared across the entire input
+directory tree. Instead, each independent generator "site" gets its own counter, seeded
+from the same `oneupStart`:
+
+- All `@ONEUP` columns across all the top-level CSV files (i.e. everything that
+  contributes directly to the root document) share **one** counter. So if the root
+  document has two different top-level `@ONEUP` fields, that one counter advances by two
+  per document, not one.
+- Each distinct `@ARRAY(subdirectory,n)` reference gets its **own, separate** counter for
+  any `@ONEUP` column(s) inside that subdirectory's CSV files. This counter persists
+  across the whole run (i.e. across every document and every array element generated from
+  that subdirectory), independently incrementing from `oneupStart`, but it is entirely
+  independent from the root document's counter and from every other `@ARRAY`
+  subdirectory's counter - even other subdirectories used at the same nesting level.
+
+For example, with a root `claim_number` `@ONEUP` field and two different `@ARRAY`
+sub-generators each contributing their own `@ONEUP` field (say `item_id` and `doc_id`),
+you get three independent, contiguous sequences - `claim_number` 1, 2, 3, ...; `item_id`
+1, 2, 3, ... (across every array element in every document); and `doc_id` 1, 2, 3, ...
+(likewise) - all starting from `oneupStart`, but not interleaved with each other. This is
+usually exactly what you want: each identifier field gets its own clean, compact, unique
+range rather than an arbitrary shared range split across unrelated fields. Every one of
+these per-site counters is seeded from the same `oneupStart`, so passing a distinct
+`oneupStart` per parallel instance still keeps every `@ONEUP` field - root-level or nested
+inside any `@ARRAY` - collision-free across instances.
 
 `randomSeed` is optional and defaults to 0, giving repeatable output across runs. When
 running multiple instances in parallel a different `randomSeed` should be given to each
@@ -80,10 +104,13 @@ There are Special values that start with @ you can use where a litteral is not w
 "@ONEUP",100
 ```
 
-Would add a number which increases by one starting at 1. Note the counter is shared
-per generator run: if a single document has two `@ONEUP` fields (or one is nested inside
-an `@ARRAY` sub-generator), each occurrence advances the same counter, so it increases by
-two per document rather than one.
+Would add a number which increases by one starting at 1. Note the counter is only shared
+between `@ONEUP` fields at the same "site": two `@ONEUP` fields both directly in top-level
+CSV files (i.e. both contributing to the root document) do share one counter, so it
+increases by two per document rather than one. But a `@ONEUP` field nested inside an
+`@ARRAY` sub-generator gets its **own independent** counter, separate from the root
+document's counter and from every other `@ARRAY` subdirectory's counter - see the
+`oneupStart` description above and the `@ONEUP` entry below for details.
 
 ### Special (`@...`) value reference
 
@@ -91,7 +118,10 @@ All of these are only recognised in a CSV cell - they are ordinary literal strin
 everywhere else. Arguments are given in parentheses, comma-separated.
 
 - **`@ONEUP`** - no arguments. Auto-incrementing counter, starts at 0 (or at the
-  `oneupStart` command-line argument) and increases by 1 each time it is evaluated.
+  `oneupStart` command-line argument) and increases by 1 each time it is evaluated. Not
+  truly global: the root document's top-level `@ONEUP` columns all share one counter, but
+  each distinct `@ARRAY(subdirectory,n)` gets its own separate counter (still seeded from
+  the same `oneupStart`) - see the `oneupStart` description near the top of this file.
 
 - **`@INTEGER(from,to)`** - a random whole number, inclusive of both `from` and `to`.
   Example: `@INTEGER(1,6)` simulates a die roll.
@@ -128,6 +158,15 @@ everywhere else. Arguments are given in parentheses, comma-separated.
   arrays such as line items, history entries, or failed-test details. Example:
   `"@ARRAY(faileditems,19)"` produces an array of 19 documents built from
   `<inputDir>/faileditems/*.csv[.gz]`.
+
+  The recursive sub-generator for a given subdirectory is created once and reused for
+  every document/array in the whole run, so `@ONEUP` and random values keep progressing
+  across the entire run rather than resetting per document - but as noted in the
+  `oneupStart`/`@ONEUP` sections above, that sub-generator's `@ONEUP` counter is entirely
+  separate from the root document's counter and from any other `@ARRAY` subdirectory's
+  counter, while its random values are still derived from (and so vary with) the
+  top-level `randomSeed`, and its `@ONEUP` counter still starts from the same
+  `oneupStart` - so parallel instances remain collision-free.
 
   By default each array element is a JSON *object* built from all the columns in the
   sub-directory's CSV file(s), exactly like the top-level document. If you want an array

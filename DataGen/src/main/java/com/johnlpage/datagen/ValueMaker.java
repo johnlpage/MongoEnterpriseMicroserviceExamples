@@ -16,6 +16,16 @@ import java.nio.charset.StandardCharsets;
 public class ValueMaker {
   Random rng;
   Long oneup = 0L;
+  // Kept separately from `oneup` (which advances as @ONEUP is evaluated) so that when a
+  // new @ARRAY sub-generator/ValueMaker is lazily created (see @ARRAY handling below), it
+  // can be seeded with the *original* oneupStart passed in on the command line, not
+  // whatever value this generator's own @ONEUP counter has already advanced to. This is
+  // what makes `oneupStart` actually protect against @ONEUP collisions across multiple
+  // parallel instances even for @ONEUP fields nested inside @ARRAY sub-directories -
+  // every generator/sub-generator in a given run/process starts counting from the same
+  // process-wide oneupStart (each still keeps its own independent counter from there, per
+  // CSV-file/@ARRAY site - see README).
+  long oneupStart;
   String directoryPath;
   Map<String, DataGenProcessor> processors;
 
@@ -29,6 +39,7 @@ public class ValueMaker {
     this.rng = rng;
     this.directoryPath = directoryPath;
     this.oneup = oneupStart;
+    this.oneupStart = oneupStart;
     processors = new HashMap<>();
     jsonCache = new HashMap<>();
   }
@@ -94,7 +105,14 @@ public class ValueMaker {
       // Cache the Processors
       DataGenProcessor subProcessor = processors.get(parts[0]);
       if (subProcessor == null) {
-        subProcessor = new DataGenProcessor(directoryPath + "/" + parts[0]);
+        // Propagate this run's oneupStart so @ONEUP fields inside the sub-generator get
+        // the same non-colliding starting point as top-level @ONEUP fields when running
+        // multiple instances in parallel with different oneupStart values (see README).
+        // Derive the sub-generator's random seed from this generator's own rng (rather
+        // than hard-coding 0) so its output also actually varies with the top-level
+        // randomSeed, instead of every run/instance producing identical nested content.
+        subProcessor =
+            new DataGenProcessor(directoryPath + "/" + parts[0], oneupStart, rng.nextLong());
         processors.put(parts[0], subProcessor);
       }
 

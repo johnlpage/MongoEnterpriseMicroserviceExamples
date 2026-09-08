@@ -404,13 +404,31 @@ You can delete it with
 # Model Generation
 
 You can also Generate a data specific model from a JSON file using the maven
-goal below. customId should be the name of the id field in the JSON and entity
+goal below. `-DidFieldName` is the name of the id field to generate.
 
 ```shell
 
  mvn generate-sources -Pgenerate-models-from-json   -DjsonFile=../DataGen/mot.json  -DbasePackage=com.johnlpage.memex  -Dentity=Customer  -DidFieldName=customerId
 
 ```
+
+**Important:** `-DidFieldName` must exactly match the id key as it appears in
+your source JSON (including case and underscores) - unless that JSON key is
+literally `_id`. The generator does not rename/camelCase fields; every JSON
+key is emitted as a Java field with that exact same name. So:
+
+- If your JSON's id key is `_id`, `-DidFieldName` can be any Java identifier
+  you like, e.g. `-DidFieldName=customerId`.
+- If your JSON's id key is anything else, e.g. `claim_number`, you must pass
+  that exact string, e.g. `-DidFieldName=claim_number` - **not** a camelCase
+  `claimNumber`.
+
+Passing a `-DidFieldName` that doesn't match a non-`_id` JSON key will
+silently generate two separate fields: an empty, unpopulated `@Id` field
+using the name you passed, and a second, populated-but-unannotated ordinary
+field using the original JSON key name. Always inspect the generated model
+class afterwards to confirm there's a single, correctly `@Id`-annotated,
+populated field.
 
 # Testing
 

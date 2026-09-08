@@ -15,6 +15,26 @@ import groovy.json.JsonSlurper
  *
  * -DidType is optional. Default: String
  *            Supported: String, ObjectId, Long, UUID
+ *
+ * -DidFieldName is the Java field name to use for the @Id field, AND it must
+ *   also be the *exact* name of the id key as it appears in the source JSON -
+ *   including case and underscores - UNLESS that JSON key is literally "_id".
+ *   This script does not rename/camelCase fields: every JSON key becomes a
+ *   Java field of the same name verbatim (e.g. JSON key "claim_number" becomes
+ *   Java field "claim_number", not "claimNumber"). The only exception is the
+ *   JSON key "_id" specifically, which is always mapped to whatever
+ *   -DidFieldName you pass (e.g. -DidFieldName=claimNumber with a JSON "_id"
+ *   key produces "private String claimNumber;").
+ *   So:
+ *     - Source JSON id key is "_id"           -> -DidFieldName can be any
+ *       valid Java identifier you like, e.g. -DidFieldName=claimNumber.
+ *     - Source JSON id key is anything else,
+ *       e.g. "claim_number"                   -> -DidFieldName MUST be that
+ *       exact string, e.g. -DidFieldName=claim_number (NOT claimNumber).
+ *   Passing a -DidFieldName that doesn't match a non-"_id" JSON key will
+ *   silently generate TWO fields: an empty/unpopulated @Id field with the
+ *   name you passed, and a separate populated-but-unannotated ordinary field
+ *   with the original JSON key name.
  */
 
 def packageName = basePackage ?: 'com.johnlpage.memex'
