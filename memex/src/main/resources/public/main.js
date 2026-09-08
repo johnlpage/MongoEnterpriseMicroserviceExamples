@@ -279,6 +279,14 @@ function isNumberOrDate(value) {
     return false;
 }
 
+function entityNameFromEndpoint(endpoint) {
+    if (!endpoint || typeof endpoint !== "string") return "Inspections";
+    const trimmed = endpoint.replace(/\/+$/, "");
+    const last = trimmed.split("/").pop();
+    if (!last) return "Inspections";
+    return last.charAt(0).toUpperCase() + last.slice(1);
+}
+
 function onLoad() {
     const app = Vue.createApp({
         components: {FormViewer},
@@ -286,7 +294,7 @@ function onLoad() {
             return {
                 choices: {}, queryableFields: {}, // Stores the list of items
                 gridFields: {}, labels: {}, queryResults: [], selectedDoc: {}, isQuerying: false, fulltext: "",
-                showAlt: false, apiEndpoint: "/api/inspections"
+                showAlt: false, apiEndpoint: "/api/inspections", entityName: "Inspections"
             };
         }, computed: {
             mongoQuery: {
@@ -417,6 +425,7 @@ function onLoad() {
                 this.gridFields = data.gridFields || {};
                 this.labels = data.labels || {};
                 this.apiEndpoint = data.apiEndpoint || "/api/inspections";
+                this.entityName = entityNameFromEndpoint(this.apiEndpoint);
             });
         }, methods: {
             runGridQuery() {
