@@ -94,7 +94,10 @@ There are Special values that start with @ you can use where a litteral is not w
 "@ONEUP",100
 ```
 
-Would add a number which increases by one starting at 1. Each `@ONEUP` column is its own
+Would add a number which increases by one starting at 1. Writing the value as
+`@ONEUP(cus,8)` instead would give the same counter as a zero-padded string with a
+prefix: `"cus00000001"`, `"cus00000002"`, ... (see the `@ONEUP(prefix,width)` entry
+below). Each `@ONEUP` column is its own
 independent sequence - two `@ONEUP` fields in different columns (or in different CSV
 files, or in different `@ARRAY` subdirectories) never share a counter; each counts
 1, 2, 3, ... separately across the whole run - see the `oneupStart` description above
@@ -110,6 +113,16 @@ everywhere else. Arguments are given in parentheses, comma-separated.
   1 - or at the `oneupStart` command-line argument if one was supplied - and increases by
   1 each time that column is evaluated. No two `@ONEUP` fields share a counter, at any
   level of nesting - see the `oneupStart` description near the top of this file.
+
+- **`@ONEUP(prefix,width)`** - string form of `@ONEUP`, for prefixed human-style
+  identifiers such as `"cus00001522"`. Emits `prefix` followed by the counter
+  zero-padded to `width` digits, as a single JSON string - e.g. `@ONEUP(cus,8)` produces
+  `"cus00000001"`, `"cus00000002"`, ... (and `1522` documents later, `"cus00001522"`).
+  `width` is optional: `@ONEUP(cus)` produces `"cus1"`, `"cus2"`, ... It uses the same
+  per-column counter sequence and the same starting value (1, or `oneupStart`) as the
+  plain form, and the result is always a string - even when it is entirely digits
+  (e.g. `@ONEUP(,8)` -> `"00000001"`), the leading zeros are preserved and it is never
+  coerced to a number.
 
 - **`@INTEGER(from,to)`** - a random whole number, inclusive of both `from` and `to`.
   Example: `@INTEGER(1,6)` simulates a die roll.
@@ -257,7 +270,8 @@ so use it sparingly:
   via `@JSON`. Use one fixed representative value per grouping instead (e.g. one
   lat/lon per city).
 - There is no string concatenation - composite strings (e.g. street addresses) must be
-  complete literal values in the CSV, not built from parts.
+  complete literal values in the CSV, not built from parts. The `@ONEUP(prefix,width)`
+  form above is the one exception, covering prefixed/padded ID-style strings.
 - `@DATE`/`@DATETIME` only ever emit a date, `YYYY-MM-DD` - never a time component.
 - There are no arithmetic or derived fields - to make fields loosely correlate
   (e.g. price vs. an estimate), draw them from the same weighted CSV row with similarly

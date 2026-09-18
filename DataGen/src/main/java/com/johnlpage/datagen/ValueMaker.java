@@ -65,6 +65,22 @@ public class ValueMaker {
       return input;
     }
 
+    if (input.startsWith("@ONEUP(")) {
+      // String form of @ONEUP for prefixed, zero-padded identifiers, e.g.
+      // @ONEUP(cus,8) -> "cus00001522". Uses the same per-column counter
+      // sequence and starting value (1, or oneupStart) as the plain form.
+      long start = oneupStart == 0 ? 1L : oneupStart;
+      Long oneup = oneupCounters.merge(sequenceId, start, (current, unused) -> current + 1);
+      String prefix = args[0].trim();
+      if (args.length > 1) {
+        int width = Integer.parseInt(args[1].trim());
+        if (width > 0) {
+          return prefix + String.format("%0" + width + "d", oneup);
+        }
+      }
+      return prefix + oneup;
+    }
+
     if (input.startsWith("@INTEGER(")) {
       int from = Integer.parseInt(args[0]);
       int to = Integer.parseInt(args[1]);
