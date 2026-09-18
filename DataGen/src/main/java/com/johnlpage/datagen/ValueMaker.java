@@ -15,16 +15,18 @@ import java.nio.charset.StandardCharsets;
 /** This class is used to generate values rather than use explicit ones */
 public class ValueMaker {
   Random rng;
-  Long oneup = 0L;
-  // Kept separately from `oneup` (which advances as @ONEUP is evaluated) so that when a
-  // new @ARRAY sub-generator/ValueMaker is lazily created (see @ARRAY handling below), it
-  // can be seeded with the *original* oneupStart passed in on the command line, not
-  // whatever value this generator's own @ONEUP counter has already advanced to. This is
-  // what makes `oneupStart` actually protect against @ONEUP collisions across multiple
-  // parallel instances even for @ONEUP fields nested inside @ARRAY sub-directories -
-  // every generator/sub-generator in a given run/process starts counting from the same
-  // process-wide oneupStart (each still keeps its own independent counter from there, per
-  // CSV-file/@ARRAY site - see README).
+  // Each @ONEUP column (keyed by "CSV filename:field name") has its own independent
+  // counter - @ONEUP is no longer a shared sequence. Counters are created lazily on
+  // first evaluation; each starts at 1, or at the oneupStart supplied on the command
+  // line (oneupStart defaults to 0, which is treated as "not supplied" - see README).
+  Map<String, Long> oneupCounters = new HashMap<>();
+  // The run-wide oneupStart passed in on the command line. Kept separately from the
+  // per-column counters so that when a new @ARRAY sub-generator/ValueMaker is lazily
+  // created (see @ARRAY handling below) it can be seeded with the *original* oneupStart,
+  // and so that every per-column @ONEUP counter in this generator starts from the same
+  // process-wide oneupStart. This is what makes `oneupStart` protect against @ONEUP
+  // collisions across multiple parallel instances, even for @ONEUP fields nested inside
+  // @ARRAY sub-directories.
   long oneupStart;
   String directoryPath;
   Map<String, DataGenProcessor> processors;
@@ -38,19 +40,20 @@ public class ValueMaker {
   ValueMaker(Random rng, String directoryPath, long oneupStart) {
     this.rng = rng;
     this.directoryPath = directoryPath;
-    this.oneup = oneupStart;
     this.oneupStart = oneupStart;
     processors = new HashMap<>();
     jsonCache = new HashMap<>();
   }
 
-  Object expandValue(String input) throws IOException {
+  Object expandValue(String input, String sequenceId) throws IOException {
     if (!input.startsWith("@")) {
       return input;
     }
     if (input.equals("@ONEUP")) {
-      oneup++;
-      return oneup;
+      // Independent counter per sequence (CSV column), starting at 1 - or at the
+      // oneupStart supplied on the command line (0 means "not supplied", so start at 1).
+      long start = oneupStart == 0 ? 1L : oneupStart;
+      return oneupCounters.merge(sequenceId, start, (current, unused) -> current + 1);
     }
 
     String[] args;
@@ -71,7 +74,9 @@ public class ValueMaker {
     if (input.startsWith("@DOUBLE(")) {
       double to = Double.parseDouble(args[0]);
       double from = Double.parseDouble(args[1]);
-      return (rng.nextDouble() * (to - from)) + from;
+      // Round to 2 decimal places - typical for prices/monetary-style test data -
+      // avoiding binary floating-point artefacts like 0.7000000000000001.
+      return Math.round(((rng.nextDouble() * (to - from)) + from) * 100.0) / 100.0;
     }
 
     if (input.startsWith("@DATE(")) {

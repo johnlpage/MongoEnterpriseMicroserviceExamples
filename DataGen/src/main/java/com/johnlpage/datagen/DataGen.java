@@ -44,8 +44,9 @@ public class DataGen {
 
     // oneupStart lets you run multiple instances of this tool in parallel (e.g. sharding a
     // 10M document generation into 10 processes of 1M each) while guaranteeing each process's
-    // @ONEUP values (used for fields like listingId) don't collide: give each process a
-    // different offset, e.g. 0, 1000000, 2000000, ...
+    // @ONEUP values (used for fields like listingId) don't collide: every @ONEUP sequence
+    // starts at 1, or at oneupStart if supplied, so give each process a different,
+    // non-overlapping offset, e.g. 0, 1000001, 2000001, ...
     long oneupStart = 0L;
     if (args.length >= 5) {
       oneupStart = Long.parseLong(args[4]);

@@ -74,7 +74,9 @@ public class DataGenProcessor {
             Object value;
             String asString = record.get(field);
             if (asString.startsWith("@")) {
-              value = valueMaker.expandValue(asString);
+              // Each @ONEUP column is its own sequence, keyed by the CSV file it comes
+              // from plus the field (column) name - see ValueMaker/README.
+              value = valueMaker.expandValue(asString, entry.getKey() + ":" + field);
             } else {
               value = asString;
             }
