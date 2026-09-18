@@ -16,6 +16,12 @@ import org.apache.commons.csv.CSVRecord;
 
 public class DataGenProcessor {
 
+  // @DATETIME values are emitted as full ISO-8601 UTC date-times (seconds always
+  // present, trailing Z) so they can be deserialized directly into Instant /
+  // OffsetDateTime - unlike @DATE (LocalDate), which is date-only YYYY-MM-DD.
+  private static final DateTimeFormatter UTC_DATE_TIME =
+      DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss'Z'");
+
   private final Map<String, List<CSVRecord>> csvData = new HashMap<>();
   private final Map<String, List<String>> fieldNames = new HashMap<>();
   private final Map<String, TreeSet<CSVLine>> csvTrees = new HashMap<>();
@@ -166,8 +172,8 @@ public class DataGenProcessor {
       return objectMapper.getNodeFactory().booleanNode(b);
     } else if (value instanceof LocalDate ld) {
       return objectMapper.getNodeFactory().textNode(ld.format(DateTimeFormatter.ISO_DATE));
-    } else if (value instanceof LocalDateTime ld) {
-      return objectMapper.getNodeFactory().textNode(ld.format(DateTimeFormatter.ISO_DATE));
+    } else if (value instanceof LocalDateTime ldt) {
+      return objectMapper.getNodeFactory().textNode(ldt.format(UTC_DATE_TIME));
     } else if (value instanceof String strValue) {
       if (hasUnsafeLeadingZero(strValue)) {
         // Values like "02150" (a ZIP code) are only digits but Long.parseLong would

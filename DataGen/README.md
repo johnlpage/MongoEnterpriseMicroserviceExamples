@@ -9,6 +9,15 @@ usage:
 
 `java -jar DataGen.jsr inputDir docsToGenerate outputFile [batchSize] [oneupStart] [randomSeed]`
 
+The output file is **JSONL** (JSON Lines) - *not* a JSON array. Each generated document
+is written as a single compact JSON object on its own line, with no commas between
+documents and no enclosing `[ ]` brackets. This makes the output streamable: you can
+feed it directly to `mongoimport` (which accepts JSONL), process it line-by-line, or
+split it for parallel loading, without ever holding the whole dataset in memory or
+parsing it as one giant document. (If you need a JSON array for a specific tool, convert
+it afterwards, e.g. with `jq -s '.'` - but most tooling, including `mongoimport` and
+`mongosh`'s file readers, prefers JSONL.)
+
 `batchSize` is optional and defaults to 2000. It controls how many documents are held in
 memory at once before being written and released.
 
@@ -134,12 +143,16 @@ everywhere else. Arguments are given in parentheses, comma-separated.
 - **`@DATE(startDate,endDate)`** - a random calendar date (no time component) between
   the two dates inclusive, formatted `YYYY-MM-DD`, e.g. `@DATE(2022-01-02,2022-12-31)`.
 
-- **`@DATETIME(startDateTime,endDateTime)`** - a random date/time between the two
+- **`@DATETIME(startDateTime,endDateTime)`** - a random date *and time* between the two
   ISO-8601 local date-times, e.g. `@DATETIME(2022-01-01T00:00:00,2022-12-31T23:59:00)`.
-  Note: despite the name, the generator currently only randomises by whole minutes
-  within the number of *days* between the two bounds, and it is written out in
-  `YYYY-MM-DD` date-only format (the time-of-day portion is calculated but not
-  emitted) - treat this field as date-precision only, not true datetime precision.
+  Unlike `@DATE`, the time-of-day is included: the value is randomised to whole-minute
+  precision between the two bounds (inclusive of both) and written out as a full
+  ISO-8601 UTC date-time string, `YYYY-MM-DDTHH:MM:SSZ` (e.g. `2022-05-14T13:07:00Z`).
+  Because the output carries a `Z` offset, it can be deserialized directly into an
+  `Instant` (or `OffsetDateTime`, or anything else that understands ISO-8601), which a
+  date-only `YYYY-MM-DD` value cannot. If you don't need the time component, use
+  `@DATE` instead. The input bounds are local date-times with no offset - the generator
+  treats them as UTC when emitting the `Z` suffix.
 
 - **`@JSON({...})`** - embeds a literal, hand-written JSON object as the value of this
   field. Useful for fixed nested sub-documents where you don't need per-field
@@ -272,7 +285,8 @@ so use it sparingly:
 - There is no string concatenation - composite strings (e.g. street addresses) must be
   complete literal values in the CSV, not built from parts. The `@ONEUP(prefix,width)`
   form above is the one exception, covering prefixed/padded ID-style strings.
-- `@DATE`/`@DATETIME` only ever emit a date, `YYYY-MM-DD` - never a time component.
+- `@DATE` emits a date only, `YYYY-MM-DD` - never a time component; `@DATETIME` emits a
+  date *and* time, `YYYY-MM-DDTHH:MM:SSZ` (see above). Neither has sub-minute precision.
 - There are no arithmetic or derived fields - to make fields loosely correlate
   (e.g. price vs. an estimate), draw them from the same weighted CSV row with similarly
   scoped ranges, rather than computing one from the other.

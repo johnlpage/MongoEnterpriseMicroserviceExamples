@@ -154,11 +154,11 @@ public class ValueMaker {
 
   private LocalDateTime getRandomDateTimeBetween(
       LocalDateTime startDateTime, LocalDateTime endDateTime) {
-    // Calculate the number of days between startDate and endDate
-    long minutesBetween = ChronoUnit.DAYS.between(startDateTime, endDateTime);
-    // Generate a random number of days to add to the startDate
-    long randomMinutes = rng.nextInt((int) minutesBetween + 1);
-    // Return the result of adding the random number of days to startDate
+    // Randomise to whole-minute precision, inclusive of both bounds. Use nextDouble
+    // rather than nextInt so ranges longer than Integer.MAX_VALUE minutes (~4000
+    // years) don't overflow the int bound of Random.nextInt.
+    long minutesBetween = ChronoUnit.MINUTES.between(startDateTime, endDateTime);
+    long randomMinutes = (long) (rng.nextDouble() * (minutesBetween + 1));
     return startDateTime.plusMinutes(randomMinutes);
   }
 }
