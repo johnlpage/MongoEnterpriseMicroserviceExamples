@@ -144,6 +144,18 @@ public class RestApiSteps {
         }
     }
 
+    @Then("each item in the response array should contain {string}: {int}")
+    public void eachItemInTheResponseArrayShouldContain(String key, int value) {
+        assertNotNull(response.getBody(), "Response body should not be null");
+        JsonPath jsonPath = response.jsonPath();
+        List<Map<String, Object>> list = jsonPath.getList("$");
+        assertFalse(list.isEmpty(), "Response array should not be empty for this check");
+        for (Map<String, Object> item : list) {
+            assertThat(item, hasKey(key));
+            assertThat(item.get(key), equalTo(value));
+        }
+    }
+
     @Then("the {string} header should be {string}")
     public void theContentTypeHeaderShouldBe(String header, String expectedContentType) {
         assertNotNull(response, "Response should not be null");
