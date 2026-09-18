@@ -2,6 +2,7 @@ package com.johnlpage.memex.generics.repository;
 
 import static com.johnlpage.memex.util.AnnotationExtractor.renameKeysRecursively;
 
+import com.johnlpage.memex.util.MongoFieldPathMapper;
 import com.mongodb.client.MongoCollection;
 import com.mongodb.client.model.Aggregates;
 
@@ -12,6 +13,7 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.function.Function;
 
 import lombok.RequiredArgsConstructor;
 import org.bson.Document;
@@ -243,6 +245,20 @@ public class OptimizedMongoQueryRepositoryImpl<T> implements OptimizedMongoQuery
             Document searchSpec = queryRequest.get("search", new Document());
 
             Document projection = queryRequest.get("projection", new Document());
+
+            MappingMongoConverter mongoConverter = (MappingMongoConverter) mongoTemplate.getConverter();
+            MappingContext<? extends PersistentEntity<?, ?>, ? extends PersistentProperty<?>>
+                    mappingContext = mongoConverter.getMappingContext();
+            MongoPersistentEntity<?> persistentEntity =
+                    (MongoPersistentEntity<?>) mappingContext.getPersistentEntity(clazz);
+            Function<Class<?>, MongoPersistentEntity<?>> entityLookup =
+                    type -> (MongoPersistentEntity<?>) mappingContext.getPersistentEntity(type);
+
+            searchSpec =
+                    MongoFieldPathMapper.mapAtlasSearchSpec(
+                            searchSpec, persistentEntity, entityLookup);
+            projection =
+                    MongoFieldPathMapper.mapProjection(projection, persistentEntity, entityLookup);
 
             // Both sorting and filtering are options with Atlas Search but better not as pipeline stages.
             // Document sort = queryRequest.get("sort", new Document());

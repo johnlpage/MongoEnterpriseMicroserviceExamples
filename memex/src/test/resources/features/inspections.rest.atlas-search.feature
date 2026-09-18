@@ -19,7 +19,7 @@ Feature: Vehicle Inspection REST API - Atlas Search Functionality
           }
         },
          "projection": {
-           "_id": 1,
+           "testid": 1,
            "vehicle": 1,
            "score": { "$meta": "searchScore" }
          }
@@ -27,6 +27,7 @@ Feature: Vehicle Inspection REST API - Atlas Search Functionality
       """
     Then the response status code should be 200
     And the response should be a non empty JSON array
+    And each item in the response array should contain "testid": 10001
     And each item in the response array should contain "vehicle.model": "Corolla"
 
 #  Uncomment once the code is fixed
