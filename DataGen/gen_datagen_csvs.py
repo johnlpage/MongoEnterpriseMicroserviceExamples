@@ -236,7 +236,20 @@ class Field:
         self.classification = None  # set by classify()
         self.csv_value = None  # the literal / @DIRECTIVE to emit (for non-categorical)
         self.categorical_values = None  # Counter of value(str) -> count (for categorical)
+        # True for fields whose source values were strings - emitted as an
+        # @STRING(path) header so DataGen never coerces all-digit values
+        # (e.g. zip 95814, npi, cpt codes) to numbers in the JSONL.
+        self.force_string = False
         self.notes = []
+
+
+def header_name(f):
+    """Column header for a field: @STRING(path) when the field's source values
+    were strings (per-column force-string opt-out, see DataGen README), else
+    the plain dotted path."""
+    if f.force_string:
+        return "@STRING({})".format(f.path)
+    return f.path
 
 
 def classify_field(path, node, cutoff, min_prevalence, level_record_count, report):
@@ -328,6 +341,11 @@ def classify_field(path, node, cutoff, min_prevalence, level_record_count, repor
 
     # --- String -------------------------------------------------------------
     if is_string:
+        # Source values were strings: mark the column so the emitted CSV header
+        # is @STRING(path) and DataGen keeps values (even all-digit ones) as
+        # JSON strings. DATE/DATETIME-classified fields don't need this (their
+        # generated values always contain '-'/'T' and are never coercible).
+        f.force_string = True
         if distinct <= cutoff:
             f.classification = "CATEGORICAL"
             f.categorical_values = Counter({str(k): v for k, v in node.values.items()})
@@ -745,7 +763,7 @@ def process_level(node, level_records, out_dir, cutoff, min_prevalence, max_arra
             f = field_by_path[group_paths[0]]
             name = sanitize_name(f.path.rsplit(".", 1)[-1], used_names) + ".csv.gz"
             rows = [[v, c] for v, c in f.categorical_values.items()]
-            write_csv_gz(out_dir, name, [f.path, "probability"], rows, report)
+            write_csv_gz(out_dir, name, [header_name(f), "probability"], rows, report)
         else:
             gfields = [field_by_path[p] for p in group_paths]
             records_values = {f.path: [stringify(collect_scalar_value(r, f.path)) for r in level_records] for f in gfields}
@@ -757,13 +775,13 @@ def process_level(node, level_records, out_dir, cutoff, min_prevalence, max_arra
                 combo_counts[key] += 1
             leaf_names = [p.rsplit(".", 1)[-1] for p in group_paths]
             name = sanitize_name("_".join(leaf_names)[:60], used_names) + ".csv.gz"
-            header = list(group_paths) + ["probability"]
+            header = [header_name(field_by_path[p]) for p in group_paths] + ["probability"]
             rows = [list(key) + [c] for key, c in combo_counts.items()]
             write_csv_gz(out_dir, name, header, rows, report)
 
     # --- write constants (bundled into one row/file) ------------------------
     if constant_fields:
-        header = [f.path for f in constant_fields] + ["probability"]
+        header = [header_name(f) for f in constant_fields] + ["probability"]
         row = [next(iter(f.categorical_values.keys())) if f.categorical_values else "" for f in constant_fields]
         max_occ = max((f.node.occ for f in constant_fields), default=1)
         write_csv_gz(out_dir, "constants.csv.gz", header, [row + [max_occ]], report)
@@ -771,7 +789,7 @@ def process_level(node, level_records, out_dir, cutoff, min_prevalence, max_arra
     # --- write other (synthetic/date/id/free-text) fields, one per file -----
     for f in other_fields:
         name = sanitize_name(f.path.rsplit(".", 1)[-1], used_names) + ".csv.gz"
-        write_csv_gz(out_dir, name, [f.path, "probability"], [[f.csv_value, f.node.occ]], report)
+        write_csv_gz(out_dir, name, [header_name(f), "probability"], [[f.csv_value, f.node.occ]], report)
 
     # --- arrays --------------------------------------------------------------
     for path, arr_node in array_paths:

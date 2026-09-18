@@ -9,6 +9,7 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
+import java.util.stream.Collectors;
 import java.util.zip.GZIPInputStream;
 import org.apache.commons.csv.CSVFormat;
 import org.apache.commons.csv.CSVParser;
@@ -22,8 +23,34 @@ public class DataGenProcessor {
   private static final DateTimeFormatter UTC_DATE_TIME =
       DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss'Z'");
 
+  /**
+   * One column of a CSV definition file. A header written as {@code
+   * @STRING(fieldname)} marks the whole column as forced-string: every value it
+   * produces is written as a JSON string, never coerced to a number/boolean (see
+   * forceStringValue). Any other header is a plain field name (dotted path, or the
+   * reserved names ROOT/SCALAR/probability) with normal coercion behaviour.
+   */
+  private static final class FieldSpec {
+    final String rawHeader; // original header text, used for CSVRecord.get()
+    final String name; // field name (dotted path/reserved name) after stripping @STRING(...)
+    final boolean forceString;
+
+    FieldSpec(String rawHeader, String name, boolean forceString) {
+      this.rawHeader = rawHeader;
+      this.name = name;
+      this.forceString = forceString;
+    }
+
+    static FieldSpec parse(String header) {
+      if (header.startsWith("@STRING(") && header.endsWith(")") && header.length() > "@STRING()".length()) {
+        return new FieldSpec(header, header.substring("@STRING(".length(), header.length() - 1), true);
+      }
+      return new FieldSpec(header, header, false);
+    }
+  }
+
   private final Map<String, List<CSVRecord>> csvData = new HashMap<>();
-  private final Map<String, List<String>> fieldNames = new HashMap<>();
+  private final Map<String, List<FieldSpec>> fieldNames = new HashMap<>();
   private final Map<String, TreeSet<CSVLine>> csvTrees = new HashMap<>();
   private final Map<String, Integer> maxProbability = new HashMap<>();
   ValueMaker valueMaker;
@@ -75,16 +102,22 @@ public class DataGenProcessor {
         CSVLine chosen = csvTree.higher(new CSVLine(randomValue, null));
 
         CSVRecord record = Objects.requireNonNull(chosen).getCsvRecord();
-        for (String field : fieldNames.get(entry.getKey())) {
+        for (FieldSpec spec : fieldNames.get(entry.getKey())) {
+          String field = spec.name;
           if (!field.equals("probability")) {
             Object value;
-            String asString = record.get(field);
+            String asString = record.get(spec.rawHeader);
             if (asString.startsWith("@")) {
               // Each @ONEUP column is its own sequence, keyed by the CSV file it comes
               // from plus the field (column) name - see ValueMaker/README.
               value = valueMaker.expandValue(asString, entry.getKey() + ":" + field);
             } else {
               value = asString;
+            }
+
+            // @STRING(fieldname) header: force the whole column to strings.
+            if (spec.forceString) {
+              value = forceStringValue(value);
             }
 
             if (field.equals("SCALAR")) {
@@ -151,6 +184,35 @@ public class DataGenProcessor {
         where.set(key, node);
       }
     }
+  }
+
+  /**
+   * Coerces a generated value to a JSON string for columns whose header is
+   * {@code @STRING(fieldname)}. JsonNode values from @JSON/@ARRAY/cell-level
+   * @STRING(...) pass through unchanged (there is no meaningful string form of a
+   * whole object/array); plain empty strings and the literal "null" are omitted
+   * (null), matching the rule for ordinary fields; numbers/booleans/dates (results
+   * of @INTEGER/@ONEUP/@DOUBLE/@DATE/@DATETIME) are stringified - dates keep their
+   * usual formatted text form via valueToJsonNode. Returns a TextNode rather than a
+   * String so valueToJsonNode's numeric coercion can never re-apply to it.
+   */
+  private Object forceStringValue(Object value) {
+    if (value == null || value instanceof JsonNode) {
+      return value;
+    }
+    if (value instanceof LocalDate || value instanceof LocalDateTime) {
+      return valueToJsonNode(value);
+    }
+    String s;
+    if (value instanceof String strValue) {
+      if (strValue.isEmpty() || strValue.equals("null")) {
+        return null;
+      }
+      s = strValue;
+    } else {
+      s = String.valueOf(value);
+    }
+    return objectMapper.getNodeFactory().textNode(s);
   }
 
   /**
@@ -248,7 +310,9 @@ public class DataGenProcessor {
           if (!records.isEmpty()) {
             csvData.put(filename, records);
           }
-          fieldNames.put(filename, parser.getHeaderNames());
+          fieldNames.put(
+              filename,
+              parser.getHeaderNames().stream().map(FieldSpec::parse).collect(Collectors.toList()));
         }
       }
     } else {

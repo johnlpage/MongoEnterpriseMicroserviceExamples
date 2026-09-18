@@ -1,6 +1,7 @@
 package com.johnlpage.datagen;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.JsonNodeFactory;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import java.io.IOException;
 import java.time.LocalDate;
@@ -105,6 +106,20 @@ public class ValueMaker {
       LocalDateTime startDateTime = LocalDateTime.parse(args[0]);
       LocalDateTime endDateTime = LocalDateTime.parse(args[1]);
       return getRandomDateTimeBetween(startDateTime, endDateTime);
+    }
+
+    if (input.startsWith("@STRING(")) {
+      // Force this cell's value to be a JSON string, bypassing the usual
+      // numeric/boolean coercion of all-digit cells (e.g. @STRING(95814) stays
+      // "95814"). The raw text between the parentheses is used verbatim - no
+      // JSON de-quoting - the same arg extraction as @JSON, so commas and
+      // embedded ')' work. An empty @STRING() omits the field (null), matching
+      // the "no empty fields" rule for plain empty cells. Returning a TextNode
+      // means valueToJsonNode's JsonNode passthrough keeps it a string.
+      if (argString.isEmpty()) {
+        return null;
+      }
+      return JsonNodeFactory.instance.textNode(argString);
     }
 
     if (input.startsWith("@JSON(")) {

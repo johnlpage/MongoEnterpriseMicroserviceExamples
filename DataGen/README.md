@@ -154,6 +154,31 @@ everywhere else. Arguments are given in parentheses, comma-separated.
   `@DATE` instead. The input bounds are local date-times with no offset - the generator
   treats them as UTC when emitting the `Z` suffix.
 
+- **`@STRING(text)`** - *as a cell value*: forces this one cell's value to be a JSON
+  string, never coerced to a number/boolean - e.g. `@STRING(95814)` produces
+  `"95814"`, not `95814`. The raw text between the parentheses is used verbatim (no
+  JSON de-quoting - the surrounding CSV quoting is all you need), so values
+  containing commas or parentheses work, e.g. `@STRING(958 14 (downtown))`. An empty
+  `@STRING()` omits the field, matching the "no empty fields" rule. Use it for
+  one-off cells; for a whole column of semantically-string values (ZIP codes, NPIs,
+  CPT/CVX codes, ...) prefer the column-header form below, which avoids wrapping
+  every cell.
+
+- **`@STRING(fieldname)`** - *as a column header*: marks the entire column as
+  forced-string. Write the header as `"@STRING(address.zip)"` instead of
+  `"address.zip"` and every value that column produces is emitted as a JSON string:
+  plain literals (so `95814` and `02108` both come out as strings - no mixed types
+  in the JSONL) *and* the results of `@...` specials in that column (`@INTEGER`,
+  `@ONEUP`, `@DOUBLE`, `@DATE`, `@DATETIME` - e.g. `@INTEGER(1,100)` yields `"57"`).
+  Only the header changes; the data cells stay verbatim. Rules: plain empty cells
+  and the literal `null` are still omitted (the usual "no empty fields" behaviour);
+  `@JSON`/`@ARRAY` values in a forced column pass through unchanged (an object/array
+  has no meaningful string form); and the marker composes with dotted paths
+  (`@STRING(address.zip)` -> nested `address.zip`) and with `SCALAR`
+  (`@STRING(SCALAR)` -> an array of string scalars). This is what
+  `gen_datagen_csvs.py` emits automatically for any field whose source values were
+  strings.
+
 - **`@JSON({...})`** - embeds a literal, hand-written JSON object as the value of this
   field. Useful for fixed nested sub-documents where you don't need per-field
   randomisation, or where you want to enumerate a small number of realistic whole
@@ -268,8 +293,12 @@ leading `-`/`+` sign) that has more than one digit and starts with `0` - e.g. `"
 parsing would silently discard the leading zero(s). Such values are written to the
 output document as strings instead. This check only applies to purely-digit values, so
 decimals like `"0.5"` are unaffected and still coerce to a floating point number as
-normal. There is currently no per-column way to opt out of numeric/boolean coercion
-generally - only this specific leading-zero case is protected.
+normal. To opt out of numeric/boolean coercion for a whole column, write the column
+header as `@STRING(fieldname)`; for a single cell, use the `@STRING(text)` special
+value - both are described in the special value reference above, and either one
+guarantees the value is emitted as a JSON string (e.g. a `zip` column containing
+`95814` and `02108` comes out as consistently-typed strings instead of a mix of
+numbers and strings).
 
 ### Limitations - manage your expectations
 
