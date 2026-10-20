@@ -56,3 +56,5 @@ DataGen --generates--> JSONL data --POST /api/inspections--> memex --MongoDB-->
 The original `SAMPLE_DATA/` (UK VOSA MOT dataset scripts), `Notes/`, and
 sample JSON files have been moved to the
 [MEMEX_Workshop](https://github.com/johnlpage/MEMEX_Workshop) private repo.
+`companies250k.json` (403MB raw) is stored there as `companies250k.json.gz`
+to stay under GitHub's file size limit.
