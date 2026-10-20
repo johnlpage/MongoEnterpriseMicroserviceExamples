@@ -1,49 +1,58 @@
-# MongoDB Enterprise Microservice Examples (Memex)
+# MongoDB Enterprise Java Examples
 
-## Memex
+This monorepo contains three sibling projects that together demonstrate
+enterprise-grade MongoDB patterns in Java:
 
-***More Documentation in the README in the memex Subdirectory***
+## [memex](memex/) - MongoDB Enterprise Microservice Examples
 
-This Project contains a set of example of Enterprise
-Microservices using Java, Spring Boot , Spring Data MongoDB and
-native MongoDB capabilities.
+A **Spring Boot 3.4 / Java 17** microservice that showcases production MongoDB
+patterns: streaming bulk-load with upsert strategies (REPLACE, UPDATE,
+UPDATEWITHHISTORY, INSERT), ACID-transaction change-history, Atlas Search,
+Kafka ingestion, dynamic config-driven query endpoints with query-costing,
+and downstream streaming with native BSON-to-JSON conversion.
 
-It is freely licensed using Apache 2 to allow you to take the code and
-do whatever you want with it.
+Build: `mvn clean package` in `memex/` -> `memex-1.0.jar`
 
-It's been provided with a Web Service / REST Controller to
-make it easy to access and test and learn from but this can easily be replaced with
-Kafka or Batch based processing. Several of the services
-are designed to work with streams.
+## [DataGen](DataGen/) - Probabilistic Data Generator
 
-It also includes a simple frontend. Unlike the services code the frontend this is _not_ intended as any sort of howto
-example, it's as simplistic as possible and is purely to allow you to experiment
-without having
-to use cURL for querying.
+A **standalone Java 17 CLI** that generates large volumes of realistic JSONL
+test data from a directory of weighted CSV (or `.csv.gz`) definition files.
+Supports auto-incrementing IDs (`@ONEUP`), random integers/doubles/dates
+(`@INTEGER`, `@DOUBLE`, `@DATE`, `@DATETIME`), nested arrays
+(`@ARRAY(subdir,n)`), embedded literal JSON, and parallel sharded generation.
+The output is streamable JSONL ready for `mongoimport` or memex's bulk-load
+endpoints.
 
-The Services included are
+    java -jar DataGen-1.0.jar <inputDir> <docsToGenerate> <outputFile>
 
-* Bulk Load / Update JSON
-* Bulk Load / Update JSON with History
-* Pre and Post write Triggers
-* Basic CRUD Operations
-* Query including Query Costing engine
-* Atlas Search
-* Launch Preflight (Check for indexes, constraints etc.)
-* Bulk streaming output
+## [mxtest](mxtest/) - Minimal HTTP API Test Client
 
-## DataGen
+A **single-file Java 17 CLI** (267 lines) for manually exercising REST
+endpoints. It sends GET/POST/DELETE requests, pretty-prints JSON responses,
+supports field-filtering via dotted paths, and loads POST bodies from files.
+Its only dependency is Gson. Think of it as a lightweight, JSON-aware `curl`
+for quick ad-hoc testing of memex endpoints.
 
-A statistical/probabilistic based data generator used to generate
-JSON data statistically similar to a source data set.
+    java -jar mxtest-1.0.jar GET|POST|DELETE <URL> [field1,field2...]
 
-## SAMPLE_DATA
+## How they fit together
 
-This was developed using the UK VOSA MOT Dataset ( 15 years
-of motor vehicle annual inspections). This cdata is available
-as CSV with scripts to load it into MySQL. This directory has
-scripts to download the data, load it into MySQL ( I have Postgres
-versions somewhere too) and then a config for MongoSyphon to
-convert it from tabular to document format. This all is now an
-exercise for the reader as DataGen produces near identical data.
+```
+DataGen --generates--> JSONL data --POST /api/inspections--> memex --MongoDB-->
+                                                                ^
+                                                             tested via
+                                                                |
+                                                            mxtest (HTTP CLI)
+```
 
+- **DataGen** creates statistically realistic JSON datasets
+- **memex** runs as a Spring Boot service, loading that data into MongoDB and
+  demonstrating enterprise patterns (streaming, history, search, Kafka, etc.)
+- **mxtest** is a lightweight HTTP client for manually hitting memex's REST
+  endpoints and inspecting responses
+
+## Workshop materials
+
+The original `SAMPLE_DATA/` (UK VOSA MOT dataset scripts), `Notes/`, and
+sample JSON files have been moved to the
+[MEMEX_Workshop](https://github.com/johnlpage/MEMEX_Workshop) private repo.
